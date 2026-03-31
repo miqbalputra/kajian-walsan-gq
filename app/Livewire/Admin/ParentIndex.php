@@ -1,0 +1,448 @@
+<?php
+
+namespace App\Livewire\Admin;
+
+use App\Imports\ParentsImport;
+use App\Models\ClassRoom;
+use App\Models\ParentModel;
+use App\Models\Role;
+use App\Models\Student;
+use App\Models\User;
+use BaconQrCode\Renderer\Image\SvgImageBackEnd;
+use BaconQrCode\Renderer\ImageRenderer;
+use BaconQrCode\Renderer\RendererStyle\RendererStyle;
+use BaconQrCode\Writer;
+use Illuminate\Support\Facades\Hash;
+use Livewire\Component;
+use Livewire\WithFileUploads;
+use Livewire\WithPagination;
+use Maatwebsite\Excel\Facades\Excel;
+
+class ParentIndex extends Component
+{
+    use WithPagination;
+    use WithFileUploads;
+
+    public $search = '';
+    public $typeFilter = '';
+    public $classFilter = '';
+    public $perPage = 10;
+
+    // Modal state
+    public $showModal = false;
+    public $showDeleteModal = false;
+    public $showCardModal = false;
+    public $showBatchPrintModal = false;
+    public $showImportModal = false;
+    public $showCredentialsModal = false;
+    public $editMode = false;
+    public $parentId = null;
+
+    // Form fields
+    public $name = '';
+    public $username = '';
+    public $email = '';
+    public $password = '';
+    public $phone = '';
+    public $type = 'father';
+    public $occupation = '';
+    public $address = '';
+    public $is_single_parent = false;
+    public $selectedChildren = [];
+
+    // Card data
+    public $cardParent = null;
+    public $qrCodeSvg = '';
+
+    // Batch print data
+    public $batchPrintClassId = '';
+    public $batchPrintParents = [];
+
+    // Import
+    public $importFile;
+    public $importedCredentials = [];
+
+    protected function rules()
+    {
+        return [
+            'name' => 'required|string|max:100',
+            'username' => 'required|string|max:50',
+            'email' => 'required|email|max:255',
+            // Phone validation: Indonesian format (optional +62/62/0 prefix, 8-13 digits)
+            'phone' => ['nullable', 'string', 'max:20', 'regex:/^(\+62|62|0)?[0-9]{8,13}$/'],
+            'type' => 'required|in:father,mother',
+            'occupation' => 'nullable|string|max:100',
+            'address' => 'nullable|string|max:500',
+            'is_single_parent' => 'boolean',
+            'selectedChildren' => 'array',
+        ];
+    }
+
+    public function updatingSearch()
+    {
+        $this->resetPage();
+    }
+
+    public function updatingPerPage()
+    {
+        $this->resetPage();
+    }
+
+    public function openCreateModal()
+    {
+        $this->reset(['name', 'email', 'password', 'phone', 'type', 'occupation', 'address', 'is_single_parent', 'selectedChildren', 'editMode', 'parentId']);
+        $this->type = 'father';
+        $this->showModal = true;
+    }
+
+    public function openEditModal($id)
+    {
+        $parent = ParentModel::with('user', 'students')->findOrFail($id);
+        $this->parentId = $id;
+        $this->name = $parent->user->name;
+        $this->username = $parent->user->username;
+        $this->email = $parent->user->email;
+        $this->phone = $parent->user->phone;
+        $this->type = $parent->type;
+        $this->occupation = $parent->occupation;
+        $this->address = $parent->address;
+        $this->is_single_parent = $parent->is_single_parent;
+        $this->selectedChildren = $parent->students->pluck('id')->toArray();
+        $this->password = '';
+        $this->editMode = true;
+        $this->showModal = true;
+    }
+
+    public function save()
+    {
+        $this->validate();
+
+        // Validate username uniqueness
+        $usernameQuery = User::where('username', $this->username);
+        // Validate email uniqueness
+        $emailQuery = User::where('email', $this->email);
+
+        if ($this->editMode) {
+            $parent = ParentModel::findOrFail($this->parentId);
+            $usernameQuery->where('id', '!=', $parent->user_id);
+            $emailQuery->where('id', '!=', $parent->user_id);
+        }
+
+        if ($usernameQuery->exists()) {
+            $this->addError('username', 'Username sudah digunakan.');
+            return;
+        }
+
+        if ($emailQuery->exists()) {
+            $this->addError('email', 'Email sudah digunakan.');
+            return;
+        }
+
+        if ($this->editMode) {
+            // Update existing
+            $parent = ParentModel::findOrFail($this->parentId);
+            $user = $parent->user;
+
+            $user->update([
+                'name' => $this->name,
+                'username' => $this->username,
+                'email' => $this->email,
+                'phone' => $this->phone,
+            ]);
+
+            if ($this->password) {
+                $user->update(['password' => Hash::make($this->password)]);
+            }
+
+            $parent->update([
+                'type' => $this->type,
+                'occupation' => $this->occupation,
+                'address' => $this->address,
+                'is_single_parent' => $this->is_single_parent,
+            ]);
+
+            // Sync children
+            $parent->students()->sync($this->selectedChildren);
+
+            $this->dispatch('notify', ['type' => 'success', 'message' => 'Data orang tua berhasil diperbarui!']);
+        } else {
+            // Create new
+            $waliSantriRole = Role::where('name', 'wali_santri')->first();
+
+            $user = User::create([
+                'name' => $this->name,
+                'username' => $this->username,
+                'email' => $this->email,
+                'password' => Hash::make($this->password ?: 'password'),
+                'phone' => $this->phone,
+                'role_id' => $waliSantriRole?->id,
+                'is_active' => true,
+            ]);
+
+            $parent = ParentModel::create([
+                'user_id' => $user->id,
+                'type' => $this->type,
+                'occupation' => $this->occupation,
+                'address' => $this->address,
+                'is_single_parent' => $this->is_single_parent,
+            ]);
+
+            // Attach children
+            if (!empty($this->selectedChildren)) {
+                $parent->students()->attach($this->selectedChildren, [
+                    'relationship' => 'biological',
+                    'is_primary_contact' => $this->type === 'father',
+                ]);
+            }
+
+            $this->dispatch('notify', ['type' => 'success', 'message' => 'Orang tua berhasil ditambahkan!']);
+        }
+
+        $this->showModal = false;
+        $this->reset(['name', 'username', 'email', 'password', 'phone', 'type', 'occupation', 'address', 'is_single_parent', 'selectedChildren', 'editMode', 'parentId']);
+    }
+
+    public function confirmDelete($id)
+    {
+        $this->parentId = $id;
+        $this->showDeleteModal = true;
+    }
+
+    public function delete()
+    {
+        $parent = ParentModel::with(['user', 'attendances'])->findOrFail($this->parentId);
+
+        // PROTEKSI: Blokir hapus jika punya riwayat presensi
+        $attendanceCount = $parent->attendances()->count();
+        if ($attendanceCount > 0) {
+            $this->showDeleteModal = false;
+            $this->dispatch('notify', [
+                'type' => 'error',
+                'message' => "Tidak bisa dihapus! {$parent->user->name} memiliki {$attendanceCount} riwayat presensi. Gunakan fitur Nonaktifkan saja."
+            ]);
+            return;
+        }
+
+        // Delete user (cascade will handle parent record)
+        $parent->user->delete();
+
+        $this->showDeleteModal = false;
+        $this->parentId = null;
+        $this->dispatch('notify', ['type' => 'success', 'message' => 'Data orang tua berhasil dihapus!']);
+    }
+
+    public function showCard($id)
+    {
+        $this->cardParent = ParentModel::with('user', 'students.classRoom')->findOrFail($id);
+
+        // Generate QR Code using bacon-qr-code
+        $renderer = new ImageRenderer(
+            new RendererStyle(400),
+            new SvgImageBackEnd()
+        );
+        $writer = new Writer($renderer);
+        $this->qrCodeSvg = $writer->writeString($this->cardParent->qr_code_string);
+
+        $this->showCardModal = true;
+    }
+
+    public function openBatchPrintModal()
+    {
+        $this->batchPrintClassId = '';
+        $this->batchPrintParents = [];
+        $this->showBatchPrintModal = true;
+    }
+
+    public function loadParentsByClass()
+    {
+        if (!$this->batchPrintClassId) {
+            $this->batchPrintParents = [];
+            return;
+        }
+
+        // Get all parents who have children in the selected class
+        $parents = ParentModel::with(['user', 'students.classRoom'])
+            ->whereHas('students', function ($query) {
+                $query->where('class_id', $this->batchPrintClassId);
+            })
+            ->get();
+
+        $renderer = new ImageRenderer(
+            new RendererStyle(250),
+            new SvgImageBackEnd()
+        );
+        $writer = new Writer($renderer);
+
+        $this->batchPrintParents = $parents->map(function ($parent) use ($writer) {
+            return [
+                'id' => $parent->id,
+                'name' => $parent->user->name,
+                'type' => $parent->type_display,
+                'qr_code' => $parent->qr_code_string,
+                'qr_svg' => $writer->writeString($parent->qr_code_string),
+                'children' => $parent->students->map(fn($s) => [
+                    'name' => $s->name,
+                    'class' => $s->classRoom?->name ?? '-',
+                    'nis' => $s->nis
+                ])->toArray()
+            ];
+        })->toArray();
+    }
+
+    public function downloadTemplate()
+    {
+        // Create Excel template using PhpSpreadsheet
+        $spreadsheet = new \PhpOffice\PhpSpreadsheet\Spreadsheet();
+        $sheet = $spreadsheet->getActiveSheet();
+        $sheet->setTitle('Template Orang Tua');
+
+        // Header style
+        $headerStyle = [
+            'font' => ['bold' => true, 'color' => ['rgb' => 'FFFFFF']],
+            'fill' => ['fillType' => \PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID, 'startColor' => ['rgb' => '8B5CF6']],
+            'alignment' => ['horizontal' => \PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER],
+            'borders' => ['allBorders' => ['borderStyle' => \PhpOffice\PhpSpreadsheet\Style\Border::BORDER_THIN]],
+        ];
+
+        // Headers
+        $headers = ['Nama', 'Tipe (Ayah/Ibu)', 'Email', 'Telepon', 'NIK', 'Pekerjaan', 'Alamat', 'Single Parent (Ya/Tidak)', 'NIS Anak'];
+        $sheet->fromArray($headers, null, 'A1');
+        $sheet->getStyle('A1:I1')->applyFromArray($headerStyle);
+
+        // Sample data
+        $sampleData = [
+            ['Budi Santoso', 'Ayah', 'budi@email.com', '081234567890', '3201011234567890', 'Wiraswasta', 'Jl. Merdeka No. 1', 'Tidak', '12345'],
+            ['Siti Aminah', 'Ibu', 'siti@email.com', '081987654321', '3201019876543210', 'Ibu Rumah Tangga', 'Jl. Merdeka No. 1', 'Tidak', '12345'],
+        ];
+        $sheet->fromArray($sampleData, null, 'A2');
+
+        // Set column widths
+        foreach (range('A', 'I') as $col) {
+            $sheet->getColumnDimension($col)->setAutoSize(true);
+        }
+
+        // Add instructions sheet
+        $instructionSheet = $spreadsheet->createSheet();
+        $instructionSheet->setTitle('Petunjuk');
+        $instructions = [
+            ['PETUNJUK PENGISIAN TEMPLATE ORANG TUA'],
+            [''],
+            ['Kolom yang wajib diisi:'],
+            ['- Nama: Nama lengkap orang tua'],
+            [''],
+            ['Format Tipe:'],
+            ['- Ayah, Father, Bapak untuk Ayah'],
+            ['- Ibu, Mother untuk Ibu'],
+            [''],
+            ['NIS Anak:'],
+            ['- Masukkan NIS siswa untuk menghubungkan orang tua dengan anak'],
+            ['- NIS harus sudah ada di database siswa'],
+            [''],
+            ['Catatan:'],
+            ['- Username & password akan digenerate otomatis'],
+            ['- Password default: walsan + 4 digit terakhir telepon'],
+            ['- Jika email kosong, akan digenerate dari nama'],
+        ];
+        foreach ($instructions as $row => $data) {
+            $instructionSheet->setCellValue('A' . ($row + 1), $data[0]);
+        }
+        $instructionSheet->getStyle('A1')->getFont()->setBold(true)->setSize(14);
+        $instructionSheet->getColumnDimension('A')->setWidth(60);
+
+        // Set first sheet as active
+        $spreadsheet->setActiveSheetIndex(0);
+
+        // Save to temp file
+        $fileName = 'template_import_orang_tua.xlsx';
+        $tempPath = storage_path('app/public/' . $fileName);
+
+        // Ensure directory exists
+        if (!file_exists(storage_path('app/public'))) {
+            mkdir(storage_path('app/public'), 0755, true);
+        }
+
+        $writer = new \PhpOffice\PhpSpreadsheet\Writer\Xlsx($spreadsheet);
+        $writer->save($tempPath);
+
+        return response()->download($tempPath, $fileName, [
+            'Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        ])->deleteFileAfterSend(true);
+    }
+
+    public function import()
+    {
+        $this->validate([
+            'importFile' => 'required|file|mimes:xlsx,xls,csv,txt|max:5120',
+        ]);
+
+        try {
+            $import = new ParentsImport();
+            Excel::import($import, $this->importFile->getRealPath());
+
+            $this->showImportModal = false;
+            $this->importFile = null;
+
+            $summary = $import->getSummary();
+            $this->dispatch('notify', ['type' => 'success', 'message' => $summary]);
+
+            // Show credentials if any
+            if (!empty($import->credentials)) {
+                $this->importedCredentials = $import->credentials;
+                $this->showCredentialsModal = true;
+            }
+
+            // Show errors if any
+            if (!empty($import->errors)) {
+                foreach (array_slice($import->errors, 0, 5) as $error) {
+                    $this->dispatch('notify', ['type' => 'warning', 'message' => $error]);
+                }
+            }
+
+            $this->resetPage();
+        } catch (\Maatwebsite\Excel\Validators\ValidationException $e) {
+            $failures = $e->failures();
+            foreach (array_slice($failures, 0, 3) as $failure) {
+                $this->addError('importFile', "Baris {$failure->row()}: " . implode(', ', $failure->errors()));
+            }
+        } catch (\Exception $e) {
+            $this->addError('importFile', 'Gagal import: ' . $e->getMessage());
+        }
+    }
+
+    public function render()
+    {
+        $query = ParentModel::with(['user', 'students.classRoom'])
+            ->whereHas('user', function ($query) {
+                if ($this->search) {
+                    $query->where('name', 'like', '%' . $this->search . '%')
+                        ->orWhere('username', 'like', '%' . $this->search . '%')
+                        ->orWhere('email', 'like', '%' . $this->search . '%');
+                }
+            })
+            ->when($this->typeFilter, function ($query) {
+                $query->where('type', $this->typeFilter);
+            })
+            ->when($this->classFilter, function ($query) {
+                $query->whereHas('students', function ($q) {
+                    $q->where('class_id', $this->classFilter);
+                });
+            })
+            ->orderBy('created_at', 'desc');
+
+        // Handle "all" option
+        if ($this->perPage === 'all') {
+            $parents = $query->get();
+        } else {
+            $parents = $query->paginate((int) $this->perPage);
+        }
+
+        $allStudents = Student::where('is_active', true)->orderBy('name')->get();
+        $allClasses = ClassRoom::orderBy('name')->get();
+
+        return view('livewire.admin.parent-index', [
+            'parents' => $parents,
+            'allStudents' => $allStudents,
+            'allClasses' => $allClasses,
+        ])->layout('components.layouts.admin', ['title' => 'Manajemen Orang Tua']);
+    }
+}

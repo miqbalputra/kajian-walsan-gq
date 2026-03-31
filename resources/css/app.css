@@ -1,0 +1,232 @@
+@import 'tailwindcss';
+
+@source '../../vendor/laravel/framework/src/Illuminate/Pagination/resources/views/*.blade.php';
+@source '../../storage/framework/views/*.php';
+@source '../**/*.blade.php';
+@source '../**/*.js';
+
+/* Custom Theme for Presensi Kajian */
+@theme {
+    /* Typography */
+    --font-sans: 'Inter', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji';
+
+    /* Primary: Emerald Green */
+    --color-primary-50: oklch(0.98 0.02 155);
+    --color-primary-100: oklch(0.95 0.04 155);
+    --color-primary-200: oklch(0.90 0.08 155);
+    --color-primary-300: oklch(0.82 0.12 155);
+    --color-primary-400: oklch(0.72 0.16 155);
+    --color-primary-500: oklch(0.62 0.17 155);
+    --color-primary-600: oklch(0.52 0.15 155);
+    --color-primary-700: oklch(0.44 0.13 155);
+    --color-primary-800: oklch(0.36 0.10 155);
+    --color-primary-900: oklch(0.28 0.08 155);
+    --color-primary-950: oklch(0.18 0.05 155);
+
+    /* Secondary: Sky Blue */
+    --color-secondary-50: oklch(0.98 0.02 220);
+    --color-secondary-100: oklch(0.95 0.04 220);
+    --color-secondary-200: oklch(0.90 0.08 220);
+    --color-secondary-300: oklch(0.82 0.12 220);
+    --color-secondary-400: oklch(0.72 0.16 220);
+    --color-secondary-500: oklch(0.60 0.17 220);
+    --color-secondary-600: oklch(0.52 0.15 220);
+    --color-secondary-700: oklch(0.44 0.13 220);
+    --color-secondary-800: oklch(0.36 0.10 220);
+    --color-secondary-900: oklch(0.28 0.08 220);
+    --color-secondary-950: oklch(0.18 0.05 220);
+
+    /* Accent: Orange */
+    --color-accent-50: oklch(0.98 0.03 60);
+    --color-accent-100: oklch(0.95 0.06 55);
+    --color-accent-200: oklch(0.90 0.10 50);
+    --color-accent-300: oklch(0.82 0.15 45);
+    --color-accent-400: oklch(0.75 0.18 40);
+    --color-accent-500: oklch(0.68 0.20 35);
+    --color-accent-600: oklch(0.58 0.18 30);
+    --color-accent-700: oklch(0.48 0.15 28);
+    --color-accent-800: oklch(0.40 0.12 26);
+    --color-accent-900: oklch(0.32 0.08 24);
+    --color-accent-950: oklch(0.22 0.05 22);
+
+    /* Slate Palette for Dark Mode */
+    --color-slate-50: #f8fafc;
+    --color-slate-100: #f1f5f9;
+    --color-slate-200: #e2e8f0;
+    --color-slate-300: #cbd5e1;
+    --color-slate-400: #94a3b8;
+    --color-slate-500: #64748b;
+    --color-slate-600: #475569;
+    --color-slate-700: #334155;
+    --color-slate-800: #1e293b;
+    --color-slate-900: #0f172a;
+    --color-slate-950: #020617;
+}
+
+/* Enable class-based dark mode for Tailwind v4 */
+@custom-variant dark (&:where(.dark, .dark *));
+
+/* Global Dark Mode Overrides - FORCE visibility */
+.dark,
+.dark body {
+    background-color: #020617 !important;
+    /* slate-950 */
+    color: #e2e8f0 !important;
+    /* slate-200 */
+}
+
+/* Base containers - excluding elements that must remain light/accented */
+.dark .bg-white:not(.keep-white) {
+    background-color: #0f172a !important;
+    /* slate-900 */
+}
+
+.dark .bg-gray-50,
+.dark .bg-gray-100,
+.dark .bg-slate-50 {
+    background-color: #020617 !important;
+    /* slate-950 */
+}
+
+.dark .text-gray-900,
+.dark .text-slate-900,
+.dark .text-gray-800,
+.dark .text-slate-800 {
+    color: #ffffff !important;
+}
+
+.dark .text-gray-700,
+.dark .text-slate-700 {
+    color: #cbd5e1 !important;
+    /* slate-300 */
+}
+
+.dark .text-gray-600,
+.dark .text-gray-700,
+.dark .text-slate-600 {
+    color: #94a3b8 !important;
+    /* slate-400 */
+}
+
+.dark .text-gray-500,
+.dark .text-slate-500,
+.dark .text-gray-400 {
+    color: #64748b !important;
+    /* slate-500 */
+}
+
+.dark .material-symbols-rounded:not([class*="text-"]) {
+    color: #e2e8f0;
+    /* default light gray */
+}
+
+/* Specific colored icons that should remain visible but slightly adjusted */
+.dark .text-primary-600 {
+    color: var(--color-primary-400) !important;
+}
+
+.dark .text-blue-600 {
+    color: #60a5fa !important;
+}
+
+.dark .text-pink-600 {
+    color: #f472b6 !important;
+}
+
+.dark .text-emerald-600 {
+    color: #34d399 !important;
+}
+
+.dark .text-amber-600 {
+    color: #fbbf24 !important;
+}
+
+.dark .text-red-600 {
+    color: #f87171 !important;
+}
+
+.dark .border-gray-100,
+.dark .border-gray-200,
+.dark .border-slate-100,
+.dark .border-slate-200,
+.dark .border-gray-300 {
+    border-color: #1e293b !important;
+    /* slate-800 */
+}
+
+.dark shadow-sm,
+.dark .shadow,
+.dark .shadow-md,
+.dark .shadow-lg,
+.dark .shadow-xl,
+.dark .shadow-2xl {
+    box-shadow: none !important;
+}
+
+/* Specific elements that often remain white */
+.dark input,
+.dark select,
+.dark textarea {
+    background-color: #1e293b !important;
+    color: #ffffff !important;
+    border-color: #334155 !important;
+}
+
+.dark table thead th {
+    background-color: #1e293b !important;
+    color: #e2e8f0 !important;
+}
+
+/* Fix jarring white hover on tables in dark mode */
+.dark tr:hover,
+.dark .hover\:bg-gray-50:hover {
+    background-color: #1e293b !important;
+    /* slate-800 */
+}
+
+/* Base Styles */
+html {
+    scroll-behavior: smooth;
+    -webkit-tap-highlight-color: transparent;
+}
+
+body {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+}
+
+/* Alpine.js cloak to prevent flash of unstyled content */
+[x-cloak] {
+    display: none !important;
+}
+
+/* Smooth GPU-accelerated transitions */
+.will-change-transform {
+    will-change: transform, opacity;
+}
+
+.transform-gpu {
+    transform: translateZ(0);
+    backface-visibility: hidden;
+    perspective: 1000px;
+}
+
+/* Material Symbols Font Class */
+.material-symbols-rounded {
+    font-family: 'Material Symbols Rounded';
+    font-weight: normal;
+    font-style: normal;
+    font-size: 24px;
+    line-height: 1;
+    letter-spacing: normal;
+    text-transform: none;
+    display: inline-block;
+    white-space: nowrap;
+    word-wrap: normal;
+    direction: ltr;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+    font-feature-settings: 'liga';
+}
