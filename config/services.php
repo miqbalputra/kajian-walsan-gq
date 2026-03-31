@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 
 return [
 
@@ -40,4 +40,10 @@ return [
         'webhook_url' => env('N8N_WEBHOOK_URL', ''),
     ],
 
+
+    'google' => [
+        'client_id'     => env('GOOGLE_CLIENT_ID'),
+        'client_secret' => env('GOOGLE_CLIENT_SECRET'),
+        'redirect'      => env('GOOGLE_REDIRECT_URI', '/auth/google/callback'),
+    ],
 ];

@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Auth\GoogleController;
 use App\Http\Controllers\Auth\QrLoginController;
 use App\Http\Controllers\HomeController;
 use App\Livewire\Admin\AttendanceValidation;
@@ -28,6 +29,10 @@ Route::middleware('guest')->group(function () {
     Route::get('/qr-login', [QrLoginController::class, 'showScanner'])->name('qr.login');
     Route::post('/qr-login', [QrLoginController::class, 'login'])->name('qr.login.process');
     Route::post('/qr-validate', [QrLoginController::class, 'validate'])->name('qr.validate');
+
+    // Google OAuth - Login
+    Route::get('/auth/google', [GoogleController::class, 'redirect'])->name('google.redirect');
+    Route::get('/auth/google/callback', [GoogleController::class, 'callback'])->name('google.callback');
 });
 
 // Authenticated Routes
@@ -82,6 +87,11 @@ Route::middleware('auth')->group(function () {
         Route::get('/schedule', \App\Livewire\WaliSantri\KajianSchedule::class)->name('schedule');
         Route::get('/profile', \App\Livewire\WaliSantri\Profile::class)->name('profile');
     });
+
+    // Google OAuth - Link/Unlink (untuk user yang sudah login)
+    Route::get('/auth/google/link', [GoogleController::class, 'linkRedirect'])->name('google.link');
+    Route::get('/auth/google/link/callback', [GoogleController::class, 'linkCallback'])->name('google.link.callback');
+    Route::post('/auth/google/unlink', [GoogleController::class, 'unlink'])->name('google.unlink');
 
     // Web Push Subscription Routes
     Route::post('/push-subscription', [\App\Http\Controllers\PushSubscriptionController::class, 'store'])->name('push.store');
