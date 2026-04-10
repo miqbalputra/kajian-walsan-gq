@@ -114,6 +114,7 @@
 {{-- Service Worker Registration & PWA Install Logic --}}
 <script>
     // Register Service Worker
+    /* 
     if ('serviceWorker' in navigator) {
         window.addEventListener('load', () => {
             navigator.serviceWorker.register('/sw.js')
@@ -130,6 +131,7 @@
                 });
         });
     }
+    */
 
     // Alpine.js PWA Install Component
     function pwaInstall() {

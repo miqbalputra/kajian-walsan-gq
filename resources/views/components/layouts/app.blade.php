@@ -46,6 +46,8 @@
             font-family: 'Material Symbols Rounded', sans-serif;
             font-variation-settings: 'FILL' 1, 'wght' 400, 'GRAD' 0, 'opsz' 24;
         }
+        /* Prevent Alpine.js flash of unstyled content */
+        [x-cloak] { display: none !important; }
     </style>
 
     <!-- Dark Mode Initializer -->

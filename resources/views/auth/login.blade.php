@@ -117,7 +117,7 @@
                                    active:scale-[0.98] transition-all duration-200 flex items-center justify-center gap-3 shadow-xl shadow-primary-600/20"
                             :disabled="loading">
                             <span class="material-symbols-rounded" x-show="!loading">login</span>
-                            <span x-show="loading">
+                            <span x-show="loading" style="display:none">
                                 <svg class="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg"
                                     fill="none" viewBox="0 0 24 24">
                                     <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor"
@@ -127,7 +127,7 @@
                                     </path>
                                 </svg>
                             </span>
-                            <span x-text="loading ? 'Memproses...' : 'Masuk sekarang'"></span>
+                            <span x-text="loading ? 'Memproses...' : 'Masuk sekarang'">Masuk sekarang</span>
                         </button>
 
                         <!-- Divider -->
@@ -162,7 +162,7 @@
                 </div>
 
                 <!-- QR Code Login Section -->
-                <div x-show="showQrLogin" x-transition:enter="transition ease-out duration-300"
+                <div x-show="showQrLogin" style="display:none" x-transition:enter="transition ease-out duration-300"
                     x-transition:enter-start="opacity-0 translate-y-4"
                     x-transition:enter-end="opacity-100 translate-y-0" class="text-center">
                     <div class="py-6">
