@@ -57,7 +57,7 @@ APP_NAME="Presensi Kajian Walsan"
 APP_ENV=production
 APP_KEY=base64:EGtvPn/CmtaGp3r+HXVZn5hgBoRwcSPd0DRAogX8vPg=
 APP_DEBUG=false
-APP_URL=https://tahsin.griyaquran.web.id
+APP_URL=https://kajian.griyaquran.web.id
 
 # DATABASE (Ambil dari detail PostgreSQL di Coolify)
 DB_CONNECTION=pgsql
@@ -84,7 +84,7 @@ CLOUDINARY_FOLDER=kajian-walsan
 ## 5. Domain & SSL
 
 1. Pergi ke tab **Settings** pada aplikasi.
-2. Masukkan domain kamu di kolom **FQDN**: `https://tahsin.griyaquran.web.id`.
+2. Masukkan domain kamu di kolom **FQDN**: `https://kajian.griyaquran.web.id`.
 3. Coolify akan otomatis mengurus sertifikat SSL (Let's Encrypt).
 4. Klik **Deploy**.
 
