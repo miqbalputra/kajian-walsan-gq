@@ -1,4 +1,4 @@
-﻿FROM php:8.2-fpm-alpine
+FROM php:8.2-fpm-alpine
 
 # Install system dependencies
 RUN apk add --no-cache \
@@ -12,24 +12,18 @@ RUN apk add --no-cache \
     supervisor \
     nodejs \
     npm \
+    libpq-dev \
     postgresql-dev \
     oniguruma-dev \
     freetype-dev \
-    libjpeg-turbo-dev
+    libjpeg-turbo-dev \
+    icu-dev
 
-# Install PHP extensions
-RUN docker-php-ext-configure gd --with-freetype --with-jpeg \
-    && docker-php-ext-install \
-        pdo \
-        pdo_pgsql \
-        pgsql \
-        mbstring \
-        exif \
-        pcntl \
-        bcmath \
-        gd \
-        zip \
-        opcache
+# Install PHP extensions (Split to reduce RAM usage during build)
+RUN docker-php-ext-install pdo pdo_pgsql pgsql \
+    && docker-php-ext-install mbstring exif pcntl bcmath zip opcache intl \
+    && docker-php-ext-configure gd --with-freetype --with-jpeg \
+    && docker-php-ext-install gd
 
 # Install Composer
 COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
