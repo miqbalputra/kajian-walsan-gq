@@ -15,6 +15,9 @@ php artisan key:generate --no-interaction --force
 # Jalankan migrations
 php artisan migrate --force --no-interaction
 
+# Hapus compiled views agar Blaze bisa compile ulang dengan optimasi
+php artisan view:clear
+
 # Cache config untuk production
 php artisan config:cache
 php artisan route:cache
