@@ -1,35 +1,23 @@
 FROM php:8.2-fpm-alpine
 
-# Install system dependencies
-RUN apk add --no-cache \
-    git \
-    curl \
-    libpng-dev \
-    libzip-dev \
-    zip \
-    unzip \
-    nginx \
-    supervisor \
-    nodejs \
-    npm \
-    mariadb-dev \
-    mariadb-client \
-    oniguruma-dev \
-    freetype-dev \
-    libjpeg-turbo-dev \
-    icu-dev \
-    libxml2-dev
+# Install system dependencies and helper script
+ADD https://github.com/mlocati/docker-php-extension-installer/releases/latest/download/install-php-extensions /usr/local/bin/
 
-# Install PHP extensions (Dipecah satu per satu untuk menghemat RAM di VPS kecil)
-RUN docker-php-ext-install pdo pdo_mysql
-RUN docker-php-ext-install mbstring
-RUN docker-php-ext-install exif
-RUN docker-php-ext-install pcntl
-RUN docker-php-ext-install bcmath
-RUN docker-php-ext-install zip
-RUN docker-php-ext-install intl
-RUN docker-php-ext-install opcache
-RUN docker-php-ext-configure gd --with-freetype --with-jpeg && docker-php-ext-install gd
+RUN chmod +x /usr/local/bin/install-php-extensions && \
+    apk add --no-cache git curl nginx supervisor nodejs npm mariadb-client
+
+# Install PHP extensions using the helper script
+# This script handles all necessary system dependencies automatically and is more memory efficient
+RUN install-php-extensions \
+    pdo_mysql \
+    mbstring \
+    exif \
+    pcntl \
+    bcmath \
+    zip \
+    intl \
+    opcache \
+    gd
 
 # Install Composer
 COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
