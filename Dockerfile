@@ -17,13 +17,19 @@ RUN apk add --no-cache \
     oniguruma-dev \
     freetype-dev \
     libjpeg-turbo-dev \
-    icu-dev
+    icu-dev \
+    libxml2-dev
 
-# Install PHP extensions (Split to reduce RAM usage during build)
-RUN docker-php-ext-install pdo pdo_mysql \
-    && docker-php-ext-install mbstring exif pcntl bcmath zip opcache intl \
-    && docker-php-ext-configure gd --with-freetype --with-jpeg \
-    && docker-php-ext-install gd
+# Install PHP extensions (Dipecah satu per satu untuk menghemat RAM di VPS kecil)
+RUN docker-php-ext-install pdo pdo_mysql
+RUN docker-php-ext-install mbstring
+RUN docker-php-ext-install exif
+RUN docker-php-ext-install pcntl
+RUN docker-php-ext-install bcmath
+RUN docker-php-ext-install zip
+RUN docker-php-ext-install intl
+RUN docker-php-ext-install opcache
+RUN docker-php-ext-configure gd --with-freetype --with-jpeg && docker-php-ext-install gd
 
 # Install Composer
 COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
