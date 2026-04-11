@@ -1,6 +1,6 @@
 # Panduan Instalasi Coolify & Deploy App Kajian Walsan
 
-Berikut adalah panduan langkah-demi-langkah untuk menginstal Coolify di VPS dan men-deploy aplikasi Kajian Walsan v2 menggunakan PostgreSQL.
+Berikut adalah panduan langkah-demi-langkah untuk menginstal Coolify di VPS dan men-deploy aplikasi Kajian Walsan v2 menggunakan **MariaDB**.
 
 ---
 
@@ -16,26 +16,26 @@ Setelah instalasi selesai, buka browser dan akses `http://IP_VPS_KAMU:8000`. Sel
 
 ---
 
-## 2. Setup PostgreSQL di Coolify
+## 2. Setup MariaDB di Coolify
 
 1. Di dashboard Coolify, klik **Resources** > **New**.
-2. Pilih **Database** > **PostgreSQL**.
+2. Pilih **Databases** > **MariaDB**.
 3. Isi informasi berikut:
    - **Name**: `kajian-walsan-db`
-   - **User**: `postgres` (atau sesuai keinginan)
+   - **User**: `mariadb_user` (atau sesuai keinginan)
    - **Password**: (generate password yang kuat)
    - **Database Name**: `kajian_walsan`
 4. Klik **Continue**.
-5. Setelah terbuat, buka tab **Settings** pada database tersebut dan centang **Make it public** (hanya jika kamu ingin mengimpor database dari PC lokal menggunakan DBeaver/pgAdmin).
-6. Catat **Internal Connection String** untuk digunakan di aplikasi.
+5. Setelah terbuat, buka tab **Settings** pada database tersebut dan centang **Make it public** (hanya jika kamu ingin mengimpor database dari PC lokal menggunakan DBeaver/HeidiSQL).
+6. Catat **Internal Connection String** atau detail Host, Port, User, Password untuk digunakan di aplikasi.
 
 ---
 
-## 3. Impor Database (Opsional tapi Direkomendasikan)
+## 3. Impor Database (Opsional)
 
-Jika kamu ingin mengimpor data awal (admin, roles, settings) secara manual:
-1. Gunakan file `database_postgres.sql` yang sudah saya buatkan.
-2. Di Coolify, kamu bisa buka menu **Terminal** pada resource PostgreSQL atau gunakan tool seperti **DBeaver** (jika public access aktif).
+Aplikasi ini sebenarnya sudah memiliki **Migrations & Seeders** yang lengkap. Namun jika ingin menggunakan file SQL:
+1. Gunakan file `database_mariadb.sql` yang sudah saya buatkan.
+2. Di Coolify, kamu bisa buka menu **Terminal** pada resource MariaDB atau gunakan tool seperti **DBeaver** (jika public access aktif).
 3. Jalankan query dari file SQL tersebut ke database `kajian_walsan`.
 
 ---
@@ -59,12 +59,13 @@ APP_KEY=base64:EGtvPn/CmtaGp3r+HXVZn5hgBoRwcSPd0DRAogX8vPg=
 APP_DEBUG=false
 APP_URL=https://kajian.griyaquran.web.id
 
-# DATABASE (Ambil dari detail PostgreSQL di Coolify)
-DB_CONNECTION=pgsql
-DB_HOST=postgresql
-DB_PORT=5432
+# DATABASE (Ambil dari detail MariaDB di Coolify)
+# Tips: Di Coolify, DB_HOST biasanya adalah nama resource database-nya (misal: kajian-walsan-db)
+DB_CONNECTION=mariadb
+DB_HOST=kajian-walsan-db
+DB_PORT=3306
 DB_DATABASE=kajian_walsan
-DB_USERNAME=postgres
+DB_USERNAME=mariadb_user
 DB_PASSWORD=password_db_kamu
 
 SESSION_DRIVER=database
@@ -90,11 +91,11 @@ CLOUDINARY_FOLDER=kajian-walsan
 
 ---
 
-## 6. Verifikasi & Troubleshooting
+## 6. Verifikasi & Seeding Data
 
-Aplikasi ini sudah dikonfigurasi untuk menjalankan `php artisan migrate --force` secara otomatis saat startup (lewat `entrypoint.sh`).
+Aplikasi ini sudah dikonfigurasi untuk menjalankan `php artisan migrate --force` secara otomatis saat startup.
 
-Jika kamu ingin menjalankan seeder (untuk data dummy/awal):
+**PENTING**: Untuk mengisi data awal (Admin, Roles, dll), jalankan seeder sekali saja:
 1. Buka tab **Terminal** pada aplikasi di Coolify.
 2. Jalankan perintah:
    ```bash
@@ -104,4 +105,4 @@ Jika kamu ingin menjalankan seeder (untuk data dummy/awal):
 ---
 
 > [!TIP]
-> Pastikan port 80, 443, dan 8000 terbuka di Firewall VPS/Cloud Provider kamu.
+> MariaDB di Coolify secara default hanya dapat diakses secara internal oleh aplikasi di dalam network Docker yang sama. Jika ingin akses dari luar, jangan lupa centang **Make it public** di setting database.

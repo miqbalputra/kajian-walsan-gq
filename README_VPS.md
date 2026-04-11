@@ -1,6 +1,6 @@
 # Panduan Deploy - App Kajian Walsan v2 VPS
 
-Panduan deployment kini telah diperbarui untuk menggunakan **Coolify** dan **PostgreSQL Lokal di VPS**.
+Panduan deployment kini telah diperbarui untuk menggunakan **Coolify** dan **MariaDB**.
 
 ---
 
@@ -11,10 +11,10 @@ Untuk panduan instalasi lengkap, silakan buka file:
 
 ---
 
-## 🗄️ Database PostgreSQL
+## 🗄️ Database MariaDB
 
-Jika Anda memerlukan file SQL untuk diimpor secara manual ke database PostgreSQL di VPS, gunakan file:
-👉 **[database_postgres.sql](./database_postgres.sql)**
+Jika Anda memerlukan file SQL untuk diimpor secara manual ke database MariaDB di VPS, gunakan file:
+👉 **[database_mariadb.sql](./database_mariadb.sql)**
 
 File ini berisi:
 1. Seluruh struktur tabel (Schema)
@@ -27,10 +27,10 @@ File ini berisi:
 ## ⚡ Ringkasan Cepat Coolify
 
 1. **Instal Coolify**: `curl -fsSL https://get.coollabs.io/coolify/install.sh | bash`
-2. **Setup Resource**: Buat `PostgreSQL` dan `GitHub Application`.
+2. **Setup Resource**: Buat `MariaDB` dan `GitHub Application`.
 3. **Environment Variables**: Sesuaikan `DB_HOST`, `DB_PASSWORD`, dll di dashboard Coolify.
 4. **Deploy**: Biarkan Dockerfile menangani build dan auto-migration.
 
 ---
 
-*Panduan sebelumnya (Dokploy + Supabase) sudah dianggap usang dan digantikan dengan metode self-hosted yang lebih stabil di VPS.*
+*Metode deployment ini menggunakan MariaDB yang lebih hemat resource di VPS.*

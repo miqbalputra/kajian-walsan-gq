@@ -12,15 +12,15 @@ RUN apk add --no-cache \
     supervisor \
     nodejs \
     npm \
-    libpq-dev \
-    postgresql-dev \
+    mariadb-dev \
+    mariadb-client \
     oniguruma-dev \
     freetype-dev \
     libjpeg-turbo-dev \
     icu-dev
 
 # Install PHP extensions (Split to reduce RAM usage during build)
-RUN docker-php-ext-install pdo pdo_pgsql pgsql \
+RUN docker-php-ext-install pdo pdo_mysql \
     && docker-php-ext-install mbstring exif pcntl bcmath zip opcache intl \
     && docker-php-ext-configure gd --with-freetype --with-jpeg \
     && docker-php-ext-install gd
