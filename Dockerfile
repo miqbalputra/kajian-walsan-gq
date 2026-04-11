@@ -37,16 +37,23 @@ RUN npm ci
 # Copy application files
 COPY . .
 
+# Create necessary storage directories and set permissions
+RUN mkdir -p storage/framework/cache/data \
+    && mkdir -p storage/framework/app/cache \
+    && mkdir -p storage/framework/sessions \
+    && mkdir -p storage/framework/views \
+    && mkdir -p storage/logs \
+    && mkdir -p bootstrap/cache \
+    && chown -R www-data:www-data /var/www/html/storage \
+    && chown -R www-data:www-data /var/www/html/bootstrap/cache \
+    && chmod -R 775 /var/www/html/storage \
+    && chmod -R 775 /var/www/html/bootstrap/cache
+
 # Build frontend assets
 RUN npm run build
 
 # Run composer scripts after full copy
 RUN composer dump-autoload --optimize
-
-# Set permissions
-RUN chown -R www-data:www-data /var/www/html \
-    && chmod -R 755 /var/www/html/storage \
-    && chmod -R 755 /var/www/html/bootstrap/cache
 
 # Copy nginx config
 COPY docker/nginx.conf /etc/nginx/nginx.conf
