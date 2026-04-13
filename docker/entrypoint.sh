@@ -23,6 +23,12 @@ php artisan config:cache
 php artisan route:cache
 php artisan view:cache
 
+# Pastikan direktori upload ada (Livewire temp + public subfolders)
+mkdir -p /var/www/html/storage/app/livewire-tmp
+mkdir -p /var/www/html/storage/app/public/attendance-proofs
+mkdir -p /var/www/html/storage/app/public/izin-documents
+mkdir -p /var/www/html/storage/app/public/reupload-proofs
+
 # Pastikan storage link ada
 php artisan storage:link --force 2>/dev/null || true
 

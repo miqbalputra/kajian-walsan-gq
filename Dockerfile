@@ -45,6 +45,10 @@ RUN mkdir -p storage/framework/cache/data \
     && mkdir -p storage/framework/views \
     && mkdir -p storage/logs \
     && mkdir -p bootstrap/cache \
+    && mkdir -p storage/app/livewire-tmp \
+    && mkdir -p storage/app/public/attendance-proofs \
+    && mkdir -p storage/app/public/izin-documents \
+    && mkdir -p storage/app/public/reupload-proofs \
     && chown -R www-data:www-data /var/www/html/storage \
     && chown -R www-data:www-data /var/www/html/bootstrap/cache \
     && chmod -R 775 /var/www/html/storage \

@@ -52,19 +52,27 @@ class CloudinaryService
     {
         $timestamp = time();
         $folder = $this->folder . '/' . $subfolder;
+
+        // Determine resource type BEFORE building signature
+        $extension = strtolower($file->getClientOriginalExtension());
+        $resourceType = in_array($extension, ['pdf', 'doc', 'docx']) ? 'raw' : 'image';
+
+        // Transformation only applies to images, NOT raw files
         $quality = config('cloudinary.quality', 'auto:eco');
         $maxWidth = config('cloudinary.max_width', 1200);
         $maxHeight = config('cloudinary.max_height', 1200);
+        $transformation = ($resourceType === 'image')
+            ? "q_{$quality},w_{$maxWidth},h_{$maxHeight},c_limit"
+            : null;
 
-        // Build transformation: auto-compress & resize
-        $transformation = "q_{$quality},w_{$maxWidth},h_{$maxHeight},c_limit";
-
-        // Generate signature
+        // Generate signature - only include params that will be sent
         $params = [
-            'folder' => $folder,
+            'folder'    => $folder,
             'timestamp' => $timestamp,
-            'transformation' => $transformation,
         ];
+        if ($transformation) {
+            $params['transformation'] = $transformation;
+        }
 
         ksort($params);
         $signatureString = collect($params)
@@ -73,20 +81,21 @@ class CloudinaryService
         $signatureString .= $this->apiSecret;
         $signature = sha1($signatureString);
 
-        try {
-            // Determine resource type
-            $extension = strtolower($file->getClientOriginalExtension());
-            $resourceType = in_array($extension, ['pdf', 'doc', 'docx']) ? 'raw' : 'image';
+        // Build POST payload
+        $payload = [
+            'api_key'   => $this->apiKey,
+            'timestamp' => $timestamp,
+            'signature' => $signature,
+            'folder'    => $folder,
+        ];
+        if ($transformation) {
+            $payload['transformation'] = $transformation;
+        }
 
+        try {
             $response = Http::timeout(30)
                 ->attach('file', file_get_contents($file->getRealPath()), $file->getClientOriginalName())
-                ->post("https://api.cloudinary.com/v1_1/{$this->cloudName}/{$resourceType}/upload", [
-                    'api_key' => $this->apiKey,
-                    'timestamp' => $timestamp,
-                    'signature' => $signature,
-                    'folder' => $folder,
-                    'transformation' => $transformation,
-                ]);
+                ->post("https://api.cloudinary.com/v1_1/{$this->cloudName}/{$resourceType}/upload", $payload);
 
             if ($response->successful()) {
                 $data = $response->json();
@@ -94,36 +103,42 @@ class CloudinaryService
 
                 if ($secureUrl) {
                     Log::info('[Cloudinary] Upload success', [
-                        'public_id' => $data['public_id'] ?? '',
-                        'bytes' => $data['bytes'] ?? 0,
-                        'format' => $data['format'] ?? '',
-                        'url' => $secureUrl,
+                        'public_id'     => $data['public_id'] ?? '',
+                        'resource_type' => $resourceType,
+                        'bytes'         => $data['bytes'] ?? 0,
+                        'format'        => $data['format'] ?? '',
+                        'url'           => $secureUrl,
                     ]);
 
                     return [
-                        'url' => $secureUrl,
+                        'url'      => $secureUrl,
                         'is_cloud' => true,
                     ];
                 }
             }
 
-            // Log error and fallback to local
+            // Log full Cloudinary error response
             Log::error('[Cloudinary] Upload failed', [
-                'status' => $response->status(),
-                'body' => $response->body(),
+                'resource_type' => $resourceType,
+                'extension'     => $extension,
+                'status'        => $response->status(),
+                'body'          => $response->body(),
             ]);
 
         } catch (\Exception $e) {
             Log::error('[Cloudinary] Exception during upload', [
                 'message' => $e->getMessage(),
+                'trace'   => $e->getTraceAsString(),
             ]);
         }
 
         // Fallback to local storage on failure
-        Log::warning('[Cloudinary] Falling back to local storage');
+        Log::warning('[Cloudinary] Falling back to local storage', [
+            'subfolder' => $subfolder,
+        ]);
         $path = $file->store($subfolder, 'public');
         return [
-            'url' => $path,
+            'url'      => $path,
             'is_cloud' => false,
         ];
     }
