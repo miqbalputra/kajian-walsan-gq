@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 
 namespace App\Http\Controllers\Auth;
 
@@ -70,6 +70,7 @@ class GoogleController extends Controller
     public function linkRedirect()
     {
         return Socialite::driver('google')
+            ->redirectUrl(route('google.link.callback'))
             ->with(['state' => 'link_account'])
             ->redirect();
     }
@@ -80,7 +81,9 @@ class GoogleController extends Controller
     public function linkCallback(Request $request)
     {
         try {
-            $googleUser = Socialite::driver('google')->user();
+            $googleUser = Socialite::driver('google')
+                ->redirectUrl(route('google.link.callback'))
+                ->user();
         } catch (\Exception $e) {
             return redirect()->route('wali-santri.profile')->with('google-error', 'Gagal menghubungkan akun Google. Coba lagi.');
         }

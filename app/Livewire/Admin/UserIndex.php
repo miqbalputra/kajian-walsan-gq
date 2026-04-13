@@ -166,6 +166,24 @@ class UserIndex extends Component
         $this->dispatch('notify', ['type' => 'success', 'message' => 'User berhasil dihapus!']);
     }
 
+    /**
+     * Admin: lepaskan kaitan akun Google dari user.
+     * Berguna jika HP hilang atau user minta reset.
+     */
+    public function unlinkGoogle($id)
+    {
+        $user = User::findOrFail($id);
+
+        if (!$user->hasGoogleLinked()) {
+            $this->dispatch('notify', ['type' => 'error', 'message' => 'User ini belum menautkan akun Google.']);
+            return;
+        }
+
+        $user->update(['google_id' => null, 'google_token' => null]);
+
+        $this->dispatch('notify', ['type' => 'success', 'message' => "Akun Google {$user->name} berhasil dilepaskan. User bisa menautkan ulang."]);
+    }
+
     public function render()
     {
         $query = User::with('role')

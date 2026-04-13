@@ -200,4 +200,56 @@ class CloudinaryService
         // Local file - use storage URL
         return asset('storage/' . $path);
     }
+
+    /**
+     * Delete a file from Cloudinary by public_id.
+     * Silently fails — deletion is not critical.
+     */
+    public function delete(string $publicId, string $resourceType = 'image'): bool
+    {
+        if (!$this->enabled) {
+            return false;
+        }
+
+        try {
+            $timestamp = time();
+            $signParams = [
+                'public_id'     => $publicId,
+                'timestamp'     => $timestamp,
+            ];
+
+            // Build signature string
+            ksort($signParams);
+            $signString = collect($signParams)
+                ->map(fn($v, $k) => "{$k}={$v}")
+                ->implode('&');
+            $signString .= $this->apiSecret;
+            $signature = sha1($signString);
+
+            $response = \Illuminate\Support\Facades\Http::asMultipart()->post(
+                "https://api.cloudinary.com/v1_1/{$this->cloudName}/{$resourceType}/destroy",
+                [
+                    'public_id' => $publicId,
+                    'timestamp' => $timestamp,
+                    'api_key'   => $this->apiKey,
+                    'signature' => $signature,
+                ]
+            );
+
+            $result = $response->json();
+
+            \Illuminate\Support\Facades\Log::info('[Cloudinary] Delete result', [
+                'public_id' => $publicId,
+                'result'    => $result['result'] ?? 'unknown',
+            ]);
+
+            return ($result['result'] ?? '') === 'ok';
+        } catch (\Exception $e) {
+            \Illuminate\Support\Facades\Log::warning('[Cloudinary] Delete failed', [
+                'public_id' => $publicId,
+                'error'     => $e->getMessage(),
+            ]);
+            return false;
+        }
+    }
 }

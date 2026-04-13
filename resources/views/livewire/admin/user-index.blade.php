@@ -94,30 +94,46 @@
                                 </span>
                             </td>
                             <td class="px-6 py-4">
-                                @if($user->is_active)
-                                    <span
-                                        class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-green-100 text-green-700">
-                                        <span class="w-1.5 h-1.5 rounded-full bg-green-600"></span>
-                                        Aktif
-                                    </span>
-                                @else
-                                    <span
-                                        class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-red-100 text-red-700">
-                                        <span class="w-1.5 h-1.5 rounded-full bg-red-600"></span>
-                                        Nonaktif
-                                    </span>
-                                @endif
+                                <div class="flex flex-col gap-1">
+                                    @if($user->is_active)
+                                        <span
+                                            class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-green-100 text-green-700 w-fit">
+                                            <span class="w-1.5 h-1.5 rounded-full bg-green-600"></span>
+                                            Aktif
+                                        </span>
+                                    @else
+                                        <span
+                                            class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-red-100 text-red-700 w-fit">
+                                            <span class="w-1.5 h-1.5 rounded-full bg-red-600"></span>
+                                            Nonaktif
+                                        </span>
+                                    @endif
+                                    @if($user->hasGoogleLinked())
+                                        <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-blue-50 text-blue-600 w-fit">
+                                            <svg class="w-3 h-3" viewBox="0 0 24 24"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/></svg>
+                                            Google
+                                        </span>
+                                    @endif
+                                </div>
                             </td>
                             <td class="px-6 py-4 text-sm text-gray-500">
                                 {{ $user->created_at->format('d/m/Y') }}
                             </td>
                             <td class="px-6 py-4 text-right">
-                                <div class="flex items-center justify-end gap-2">
+                                <div class="flex items-center justify-end gap-1">
                                     <button wire:click="openEditModal({{ $user->id }})"
                                         class="p-2 text-gray-600 hover:text-primary-600 hover:bg-primary-50 rounded-lg transition-colors"
                                         title="Edit User">
                                         <span class="material-symbols-rounded text-xl">edit_square</span>
                                     </button>
+                                    @if($user->hasGoogleLinked())
+                                        <button wire:click="unlinkGoogle({{ $user->id }})"
+                                            wire:confirm="Yakin ingin melepaskan akun Google dari {{ $user->name }}?"
+                                            class="p-2 text-gray-600 hover:text-orange-600 hover:bg-orange-50 rounded-lg transition-colors"
+                                            title="Lepas Akun Google">
+                                            <span class="material-symbols-rounded text-xl">link_off</span>
+                                        </button>
+                                    @endif
                                     @if($user->id !== auth()->id())
                                         <button wire:click="confirmDelete({{ $user->id }})"
                                             class="p-2 text-gray-600 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
