@@ -415,18 +415,18 @@
                                 <div class="border-2 border-dashed border-slate-200 rounded-3xl p-8 text-center hover:border-primary-500 hover:bg-primary-50/30 transition-all cursor-pointer relative group"
                                     x-data="{ compressing: false }" data-compress-container>
                                     <input type="file" accept="image/jpeg,image/png"
+                                        wire:model="proofPhoto"
                                         class="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-                                        x-on:change.stop="
-                                            compressing = true;
+                                        x-on:change="
                                             const input = $event.target;
                                             if (input.files[0] && input.files[0].type.startsWith('image/')) {
+                                                compressing = true;
                                                 const compressed = await window.ImageCompressor.compress(input.files[0]);
                                                 const dt = new DataTransfer();
                                                 dt.items.add(compressed);
                                                 input.files = dt.files;
+                                                compressing = false;
                                             }
-                                            compressing = false;
-                                            @this.upload('proofPhoto', input.files[0]);
                                         ">
 
                                     @if($proofPhoto)
@@ -506,18 +506,18 @@
                                     x-data="{ compressing: false }" data-compress-container>
                                     <input type="file"
                                         accept="image/jpeg,image/png,application/pdf"
+                                        wire:model="izinDocument"
                                         class="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-                                        x-on:change.stop="
-                                            compressing = true;
+                                        x-on:change="
                                             const input = $event.target;
                                             if (input.files[0] && input.files[0].type.startsWith('image/')) {
+                                                compressing = true;
                                                 const compressed = await window.ImageCompressor.compress(input.files[0]);
                                                 const dt = new DataTransfer();
                                                 dt.items.add(compressed);
                                                 input.files = dt.files;
+                                                compressing = false;
                                             }
-                                            compressing = false;
-                                            @this.upload('izinDocument', input.files[0]);
                                         ">
 
                                     @if($izinDocument)
@@ -603,18 +603,18 @@
                                 <div class="border-2 border-dashed border-slate-200 rounded-3xl p-8 text-center hover:border-red-500 hover:bg-red-50/30 transition-all cursor-pointer relative group"
                                     x-data="{ compressing: false }" data-compress-container>
                                     <input type="file" accept="image/jpeg,image/png,application/pdf"
+                                        wire:model="reuploadFile"
                                         class="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-                                        x-on:change.stop="
-                                            compressing = true;
+                                        x-on:change="
                                             const input = $event.target;
                                             if (input.files[0] && input.files[0].type.startsWith('image/')) {
+                                                compressing = true;
                                                 const compressed = await window.ImageCompressor.compress(input.files[0]);
                                                 const dt = new DataTransfer();
                                                 dt.items.add(compressed);
                                                 input.files = dt.files;
+                                                compressing = false;
                                             }
-                                            compressing = false;
-                                            @this.upload('reuploadFile', input.files[0]);
                                         ">
 
                                     @if($reuploadFile)
