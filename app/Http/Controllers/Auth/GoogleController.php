@@ -97,6 +97,14 @@ class GoogleController extends Controller
     {
         $callbackUrl = $this->getLinkCallbackUrl();
 
+        // LOGGING UNTUK DETEKSI DOUBLE REQUEST
+        Log::info('[Google Link] Callback hit', [
+            'code_preview' => substr($request->code, 0, 10),
+            'auth_user'    => Auth::id(),
+            'ip'           => $request->ip(),
+            'user_agent'   => $request->userAgent()
+        ]);
+
         try {
             $googleUser = Socialite::driver('google')
                 ->redirectUrl($callbackUrl)
