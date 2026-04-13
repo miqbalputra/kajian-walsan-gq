@@ -6,12 +6,13 @@ use App\Http\Controllers\Controller;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Log;
 use Laravel\Socialite\Facades\Socialite;
 
 class GoogleController extends Controller
 {
     /**
-     * Redirect ke Google OAuth
+     * Redirect ke Google OAuth (Login page)
      */
     public function redirect()
     {
@@ -26,6 +27,7 @@ class GoogleController extends Controller
         try {
             $googleUser = Socialite::driver('google')->user();
         } catch (\Exception $e) {
+            Log::error('[Google Login] Callback failed', ['error' => $e->getMessage()]);
             return redirect()->route('login')->withErrors(['google' => 'Gagal login dengan Google. Silakan coba lagi.']);
         }
 
@@ -66,29 +68,43 @@ class GoogleController extends Controller
 
     /**
      * Link akun Google ke akun yang sudah login (dari halaman Profil)
+     * Menggunakan stateless() karena user sudah authenticated —
+     * tidak perlu CSRF state check dari Socialite.
      */
     public function linkRedirect()
     {
         return Socialite::driver('google')
             ->redirectUrl(route('google.link.callback'))
-            ->with(['state' => 'link_account'])
+            ->stateless()
             ->redirect();
     }
 
     /**
-     * Handle callback untuk link akun Google
+     * Handle callback untuk link akun Google (stateless)
      */
     public function linkCallback(Request $request)
     {
         try {
             $googleUser = Socialite::driver('google')
                 ->redirectUrl(route('google.link.callback'))
+                ->stateless()
                 ->user();
         } catch (\Exception $e) {
+            Log::error('[Google Link] Callback failed', [
+                'error'   => $e->getMessage(),
+                'trace'   => $e->getTraceAsString(),
+                'request' => $request->all(),
+            ]);
             return redirect()->route('wali-santri.profile')->with('google-error', 'Gagal menghubungkan akun Google. Coba lagi.');
         }
 
         $user = Auth::user();
+
+        if (!$user) {
+            return redirect()->route('login')->withErrors([
+                'google' => 'Sesi Anda telah berakhir. Silakan login ulang lalu hubungkan Google.'
+            ]);
+        }
 
         // Cek apakah google_id sudah dipakai akun lain
         $existing = User::where('google_id', $googleUser->getId())->where('id', '!=', $user->id)->first();
@@ -101,6 +117,8 @@ class GoogleController extends Controller
             'google_token' => $googleUser->token,
             'email'        => $user->email ?? $googleUser->getEmail(),
         ]);
+
+        Log::info('[Google Link] Success', ['user_id' => $user->id, 'google_id' => $googleUser->getId()]);
 
         return redirect()->route('wali-santri.profile')->with('google-success', 'Akun Google berhasil dihubungkan! Sekarang Anda bisa login dengan Google.');
     }
@@ -121,3 +139,4 @@ class GoogleController extends Controller
         return redirect()->route('wali-santri.profile')->with('google-success', 'Akun Google berhasil dilepaskan.');
     }
 }
+
