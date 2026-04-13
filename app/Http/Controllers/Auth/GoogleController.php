@@ -67,13 +67,24 @@ class GoogleController extends Controller
     }
 
     /**
+     * Helper: Dapatkan URL callback untuk link flow berdasarkan config(services.google.redirect)
+     * Ini menjamin HTTPS / base URL sama dengan yang di-approve Google.
+     */
+    private function getLinkCallbackUrl()
+    {
+        $loginCallbackUrl = config('services.google.redirect');
+        // Ganti '/auth/google/callback' menjadi '/auth/google/link/callback'
+        return str_replace('/auth/google/callback', '/auth/google/link/callback', $loginCallbackUrl);
+    }
+
+    /**
      * Link akun Google ke akun yang sudah login (dari halaman Profil)
      * Menggunakan stateless() karena user sudah authenticated —
      * tidak perlu CSRF state check dari Socialite.
      */
     public function linkRedirect()
     {
-        $callbackUrl = config('app.url') . '/auth/google/link/callback';
+        $callbackUrl = $this->getLinkCallbackUrl();
 
         return Socialite::driver('google')
             ->redirectUrl($callbackUrl)
@@ -86,7 +97,7 @@ class GoogleController extends Controller
      */
     public function linkCallback(Request $request)
     {
-        $callbackUrl = config('app.url') . '/auth/google/link/callback';
+        $callbackUrl = $this->getLinkCallbackUrl();
 
         try {
             $googleUser = Socialite::driver('google')
