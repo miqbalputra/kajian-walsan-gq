@@ -67,14 +67,12 @@ class GoogleController extends Controller
     }
 
     /**
-     * Helper: Dapatkan URL callback untuk link flow berdasarkan config(services.google.redirect)
-     * Ini menjamin HTTPS / base URL sama dengan yang di-approve Google.
+     * Helper: Dapatkan URL callback untuk link flow.
      */
     private function getLinkCallbackUrl()
     {
-        $loginCallbackUrl = config('services.google.redirect');
-        // Ganti '/auth/google/callback' menjadi '/auth/google/link/callback'
-        return str_replace('/auth/google/callback', '/auth/google/link/callback', $loginCallbackUrl);
+        // Secara eksplisit paksakan URL HTTPS agar 100% cocok dengan Google Console
+        return rtrim(config('app.url'), '/') . '/auth/google/link/callback';
     }
 
     /**
@@ -105,11 +103,14 @@ class GoogleController extends Controller
                 ->stateless()
                 ->user();
         } catch (\Throwable $e) {
+            $serverTime = now()->format('Y-m-d H:i:s P');
             Log::error('[Google Link] Callback failed', [
                 'error'        => $e->getMessage(),
                 'callback_url' => $callbackUrl,
+                'server_time'  => $serverTime,
+                'request_code' => $request->code ? 'present' : 'missing',
             ]);
-            return redirect()->route('wali-santri.profile')->with('google-error', 'Gagal menghubungkan akun Google: ' . $e->getMessage());
+            return redirect()->route('wali-santri.profile')->with('google-error', "Gagal menghubungkan akun Google: {$e->getMessage()}. (Info Debug: Pastikan jam server VPS akurat. Jam server saat ini: {$serverTime}. URL: {$callbackUrl})");
         }
 
         $user = Auth::user();
