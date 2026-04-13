@@ -32,6 +32,7 @@ class Dashboard extends Component
     public $izinDocument = null;
     public $reuploadFile = null;
     public $reuploadAttendanceId = null;
+    public $reuploadIsPendingReplace = false; // true jika mengganti foto pending (bukan rejected)
     public $notes = '';
 
     protected $rules = [
@@ -230,15 +231,16 @@ class Dashboard extends Component
     /**
      * Buka modal re-upload untuk attendance yang ditolak.
      */
-    public function openReuploadModal($attendanceId)
+    public function openReuploadModal($attendanceId, bool $isPendingReplace = false)
     {
         $this->reuploadAttendanceId = $attendanceId;
         $this->reuploadFile = null;
+        $this->reuploadIsPendingReplace = $isPendingReplace;
         $this->showReuploadModal = true;
     }
 
     /**
-     * Submit file ulang untuk attendance yang ditolak.
+     * Submit file ulang untuk attendance yang ditolak ATAU ganti foto yang masih pending.
      */
     public function reuploadProof()
     {
@@ -246,13 +248,14 @@ class Dashboard extends Component
             'reuploadFile' => 'required|image|mimes:jpg,jpeg,png|max:2048',
         ], [
             'reuploadFile.required' => 'File bukti wajib diupload.',
-            'reuploadFile.mimes' => 'Format file harus JPG atau PNG.',
-            'reuploadFile.max' => 'Ukuran file maksimal 2MB.',
+            'reuploadFile.mimes'    => 'Format file harus JPG atau PNG.',
+            'reuploadFile.max'      => 'Ukuran file maksimal 2MB.',
         ]);
 
+        // Boleh replace jika status rejected ATAU pending (belum diapprove)
         $attendance = Attendance::where('id', $this->reuploadAttendanceId)
             ->where('parent_id', $this->parent->id)
-            ->where('validation_status', 'rejected')
+            ->whereIn('validation_status', ['rejected', 'pending'])
             ->first();
 
         if (!$attendance) {
@@ -261,24 +264,51 @@ class Dashboard extends Component
             return;
         }
 
+        // Hapus foto lama dari Cloudinary (jika ada)
+        if ($attendance->proof_file) {
+            $this->deleteOldProofFile($attendance->proof_file);
+        }
+
         // Upload file baru via Cloudinary/local
         $cloudinary = app(CloudinaryService::class);
         $folder = $attendance->status === 'izin' ? 'izin-documents' : 'attendance-proofs';
-        $result = $cloudinary->upload($this->reuploadFile, $folder);
-        $path = $result['url'];
+        $result  = $cloudinary->upload($this->reuploadFile, $folder);
+        $path    = $result['url'];
 
-        // Update record: ganti file, reset status ke pending
+        // Update record
         $attendance->update([
-            'proof_file' => $path,
-            'validation_status' => 'pending',
+            'proof_file'       => $path,
+            'validation_status' => 'pending', // reset ke pending (baik dari rejected maupun replace)
             'rejection_reason' => null,
-            'validated_by' => null,
-            'validated_at' => null,
+            'validated_by'     => null,
+            'validated_at'     => null,
         ]);
 
         $this->showReuploadModal = false;
-        $this->reset(['reuploadFile', 'reuploadAttendanceId']);
-        session()->flash('message', 'Bukti berhasil diupload ulang. Menunggu validasi admin.');
+        $this->reset(['reuploadFile', 'reuploadAttendanceId', 'reuploadIsPendingReplace']);
+
+        $message = $this->reuploadIsPendingReplace
+            ? 'Foto bukti berhasil diganti. Menunggu validasi admin.'
+            : 'Bukti berhasil diupload ulang. Menunggu validasi admin.';
+        session()->flash('message', $message);
+    }
+
+    /**
+     * Hapus file lama dari Cloudinary (jika URL Cloudinary).
+     * Untuk local file, biarkan saja (tidak kritis).
+     */
+    protected function deleteOldProofFile(string $url): void
+    {
+        if (!CloudinaryService::isCloudinaryUrl($url)) {
+            return;
+        }
+
+        // Extract public_id dari Cloudinary URL
+        // Format: https://res.cloudinary.com/{cloud}/image/upload/v{ver}/{public_id}.{ext}
+        if (preg_match('#/upload/(?:v\d+/)?(.+?)(?:\.[a-z0-9]+)?$#i', $url, $m)) {
+            $publicId = $m[1];
+            app(CloudinaryService::class)->delete($publicId);
+        }
     }
 
     public function openFeedbackModal($eventId)

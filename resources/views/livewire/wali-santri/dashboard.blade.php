@@ -189,6 +189,18 @@
                                         </a>
                                     </div>
                                 @endif
+
+                                {{-- Tombol ganti foto: hanya muncul jika masih PENDING (belum diapprove) --}}
+                                @if($this->myAttendanceToday->validation_status === 'pending' && in_array($this->myAttendanceToday->method, ['upload']))
+                                    <div class="mt-3 pt-3 border-t border-green-100">
+                                        <button wire:click="openReuploadModal({{ $this->myAttendanceToday->id }}, true)"
+                                            class="w-full py-2.5 bg-yellow-500 text-white rounded-xl font-semibold text-sm flex items-center justify-center gap-2 hover:bg-yellow-600 transition-colors shadow shadow-yellow-400/20">
+                                            <span class="material-symbols-rounded text-lg">swap_horiz</span>
+                                            Ganti Foto Bukti
+                                        </button>
+                                        <p class="text-[10px] text-yellow-600 mt-1.5">Foto lama akan otomatis dihapus</p>
+                                    </div>
+                                @endif
                             </div>
                         @endif
                     @else
@@ -578,7 +590,7 @@
         </div>
     @endif
 
-    <!-- Re-upload Modal -->
+    <!-- Re-upload / Ganti Foto Modal -->
     @if($showReuploadModal)
         <div class="fixed inset-0 z-[70] overflow-y-auto" aria-modal="true">
             <div class="flex items-end justify-center min-h-screen pt-10 px-0 sm:px-4">
@@ -589,12 +601,16 @@
                     <div class="w-16 h-1.5 bg-slate-200 rounded-full mx-auto mb-8"></div>
 
                     <div class="flex items-center gap-3 mb-2">
-                        <div class="w-10 h-10 bg-red-100 rounded-xl flex items-center justify-center">
-                            <span class="material-symbols-rounded text-red-600">upload_file</span>
+                        <div class="w-10 h-10 {{ $reuploadIsPendingReplace ? 'bg-yellow-100' : 'bg-red-100' }} rounded-xl flex items-center justify-center">
+                            <span class="material-symbols-rounded {{ $reuploadIsPendingReplace ? 'text-yellow-600' : 'text-red-600' }}">{{ $reuploadIsPendingReplace ? 'swap_horiz' : 'upload_file' }}</span>
                         </div>
-                        <h3 class="text-2xl font-black text-slate-900">Upload Ulang Bukti</h3>
+                        <h3 class="text-2xl font-black text-slate-900">{{ $reuploadIsPendingReplace ? 'Ganti Foto Bukti' : 'Upload Ulang Bukti' }}</h3>
                     </div>
-                    <p class="text-slate-500 text-sm mb-6 leading-relaxed">Bukti sebelumnya ditolak. Silakan upload file baru yang sesuai.</p>
+                    <p class="text-slate-500 text-sm mb-6 leading-relaxed">
+                        {{ $reuploadIsPendingReplace
+                            ? 'Foto bukti lama akan dihapus dan diganti dengan foto baru. Presensi Anda tetap tercatat menunggu validasi.'
+                            : 'Bukti sebelumnya ditolak. Silakan upload file baru yang sesuai.' }}
+                    </p>
 
                     <form wire:submit="reuploadProof">
                         <div class="space-y-6">
@@ -653,11 +669,11 @@
                                 Batal
                             </button>
                             <button type="submit"
-                                class="flex-1 px-6 py-4 bg-red-600 text-white rounded-2xl font-bold hover:bg-red-700 flex items-center justify-center gap-3 shadow-xl shadow-red-500/20 transition-all active:scale-95"
+                                class="flex-1 px-6 py-4 {{ $reuploadIsPendingReplace ? 'bg-yellow-500 hover:bg-yellow-600 shadow-yellow-400/20' : 'bg-red-600 hover:bg-red-700 shadow-red-500/20' }} text-white rounded-2xl font-bold flex items-center justify-center gap-3 shadow-xl transition-all active:scale-95"
                                 wire:loading.attr="disabled">
                                 <span wire:loading wire:target="reuploadProof"
                                     class="material-symbols-rounded animate-spin text-xl">progress_activity</span>
-                                <span wire:loading.remove wire:target="reuploadProof">Kirim Ulang</span>
+                                <span wire:loading.remove wire:target="reuploadProof">{{ $reuploadIsPendingReplace ? 'Ganti Foto' : 'Kirim Ulang' }}</span>
                                 <span wire:loading wire:target="reuploadProof">Mengirim...</span>
                             </button>
                         </div>
