@@ -189,7 +189,7 @@ class Dashboard extends Component
     public function submitIzin()
     {
         $this->validate([
-            'izinDocument' => 'required|file|mimes:jpg,jpeg,png,pdf|max:2048',
+            'izinDocument' => 'required|image|mimes:jpg,jpeg,png|max:2048',
             'notes' => 'required|string|max:500',
         ]);
 
@@ -243,10 +243,10 @@ class Dashboard extends Component
     public function reuploadProof()
     {
         $this->validate([
-            'reuploadFile' => 'required|file|mimes:jpg,jpeg,png,pdf|max:2048',
+            'reuploadFile' => 'required|image|mimes:jpg,jpeg,png|max:2048',
         ], [
             'reuploadFile.required' => 'File bukti wajib diupload.',
-            'reuploadFile.mimes' => 'Format file harus JPG, PNG, atau PDF.',
+            'reuploadFile.mimes' => 'Format file harus JPG atau PNG.',
             'reuploadFile.max' => 'Ukuran file maksimal 2MB.',
         ]);
 

@@ -443,7 +443,7 @@
                                             </div>
                                             <div>
                                                 <p class="text-sm font-bold text-slate-700">Klik untuk upload foto</p>
-                                                <p class="text-[10px] text-slate-400 font-medium uppercase tracking-wider mt-1">JPG/PNG, Max 2MB</p>
+                                                <p class="text-[10px] text-slate-400 font-medium uppercase tracking-wider mt-1">JPG/PNG, Maks 2MB</p>
                                             </div>
                                         </div>
                                     @endif
@@ -505,7 +505,7 @@
                                 <div class="border-2 border-dashed border-slate-200 rounded-3xl p-8 text-center hover:border-amber-500 hover:bg-amber-50/30 transition-all cursor-pointer relative group"
                                     x-data="{ compressing: false }" data-compress-container>
                                     <input type="file"
-                                        accept="image/jpeg,image/png,application/pdf"
+                                        accept="image/jpeg,image/png"
                                         wire:model="izinDocument"
                                         class="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
                                         x-on:change="
@@ -535,7 +535,7 @@
                                             </div>
                                             <div>
                                                 <p class="text-sm font-bold text-slate-700">Klik untuk upload surat</p>
-                                                <p class="text-[10px] text-slate-400 font-medium uppercase tracking-wider mt-1">JPG/PNG/PDF, Max 2MB</p>
+                                                <p class="text-[10px] text-slate-400 font-medium uppercase tracking-wider mt-1">JPG/PNG, Maks 2MB</p>
                                             </div>
                                         </div>
                                     @endif
@@ -602,7 +602,7 @@
                                 <label class="block text-xs font-black text-slate-400 uppercase tracking-widest mb-3">File Bukti Baru <span class="text-red-500">*</span></label>
                                 <div class="border-2 border-dashed border-slate-200 rounded-3xl p-8 text-center hover:border-red-500 hover:bg-red-50/30 transition-all cursor-pointer relative group"
                                     x-data="{ compressing: false }" data-compress-container>
-                                    <input type="file" accept="image/jpeg,image/png,application/pdf"
+                                    <input type="file" accept="image/jpeg,image/png"
                                         wire:model="reuploadFile"
                                         class="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
                                         x-on:change="
@@ -632,7 +632,7 @@
                                             </div>
                                             <div>
                                                 <p class="text-sm font-bold text-slate-700">Klik untuk upload file baru</p>
-                                                <p class="text-[10px] text-slate-400 font-medium uppercase tracking-wider mt-1">JPG/PNG/PDF, Max 2MB</p>
+                                                <p class="text-[10px] text-slate-400 font-medium uppercase tracking-wider mt-1">JPG/PNG, Maks 2MB</p>
                                             </div>
                                         </div>
                                     @endif

@@ -53,7 +53,7 @@ class CloudinaryService
         $timestamp = time();
         $folder = $this->folder . '/' . $subfolder;
 
-        // Determine resource type BEFORE building signature
+        // Determine resource type — saat ini hanya image (PDF dinonaktifkan)
         $extension = strtolower($file->getClientOriginalExtension());
         $resourceType = in_array($extension, ['pdf', 'doc', 'docx']) ? 'raw' : 'image';
 
