@@ -73,8 +73,10 @@ class GoogleController extends Controller
      */
     public function linkRedirect()
     {
+        $callbackUrl = config('app.url') . '/auth/google/link/callback';
+
         return Socialite::driver('google')
-            ->redirectUrl(route('google.link.callback'))
+            ->redirectUrl($callbackUrl)
             ->stateless()
             ->redirect();
     }
@@ -84,18 +86,19 @@ class GoogleController extends Controller
      */
     public function linkCallback(Request $request)
     {
+        $callbackUrl = config('app.url') . '/auth/google/link/callback';
+
         try {
             $googleUser = Socialite::driver('google')
-                ->redirectUrl(route('google.link.callback'))
+                ->redirectUrl($callbackUrl)
                 ->stateless()
                 ->user();
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             Log::error('[Google Link] Callback failed', [
-                'error'   => $e->getMessage(),
-                'trace'   => $e->getTraceAsString(),
-                'request' => $request->all(),
+                'error'        => $e->getMessage(),
+                'callback_url' => $callbackUrl,
             ]);
-            return redirect()->route('wali-santri.profile')->with('google-error', 'Gagal menghubungkan akun Google. Coba lagi.');
+            return redirect()->route('wali-santri.profile')->with('google-error', 'Gagal menghubungkan akun Google: ' . $e->getMessage());
         }
 
         $user = Auth::user();
