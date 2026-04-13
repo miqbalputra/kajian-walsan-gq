@@ -84,8 +84,14 @@ class GoogleController extends Controller
     {
         $callbackUrl = $this->getLinkCallbackUrl();
 
+        // Enkripsi ID user ke parameter state.
+        // Tujuannya agar jika request direbut oleh Antivirus/Pre-fetcher di background,
+        // backend tetap tahu akun siapa yang harus dilink tanpa butuh auth session.
+        $statePayload = encrypt(Auth::id() . '|' . time());
+
         return Socialite::driver('google')
             ->redirectUrl($callbackUrl)
+            ->with(['state' => $statePayload])
             ->stateless()
             ->redirect();
     }
@@ -97,52 +103,71 @@ class GoogleController extends Controller
     {
         $callbackUrl = $this->getLinkCallbackUrl();
 
-        // LOGGING UNTUK DETEKSI DOUBLE REQUEST
-        Log::info('[Google Link] Callback hit', [
-            'code_preview' => substr($request->code, 0, 10),
-            'auth_user'    => Auth::id(),
-            'ip'           => $request->ip(),
-            'user_agent'   => $request->userAgent()
-        ]);
+        // 1. Ekstrak User ID dari state jika ada
+        $intendedUserId = null;
+        if ($request->has('state')) {
+            try {
+                $decrypted = decrypt($request->state);
+                $intendedUserId = explode('|', $decrypted)[0] ?? null;
+            } catch (\Throwable $e) {
+                // Abaikan jika tidak valid
+            }
+        }
 
+        // Tentukan target fallback user (dari Auth session atau dari state rahasia)
+        $targetUser = Auth::user() ?? ($intendedUserId ? User::find($intendedUserId) : null);
+
+        if (!$targetUser) {
+            return redirect()->route('login')->withErrors([
+                'google' => 'Sesi Anda telah berakhir dan data state tidak valid. Silakan login ulang.'
+            ]);
+        }
+
+        // 2. Coba tukarkan Authorization Code dengan Google token
         try {
             $googleUser = Socialite::driver('google')
                 ->redirectUrl($callbackUrl)
                 ->stateless()
                 ->user();
         } catch (\Throwable $e) {
-            $serverTime = now()->format('Y-m-d H:i:s P');
+            // DETEKSI DOUBLE REQUEST:
+            // Jika token exchange gagal (biasanya karena invalid_grant)
+            // KITA CEK apakah akun user ternyata BARUSAJA berhasil di-link dalam 2 menit terakhir!
+            // Jika iya, artinya proses pertama (Antivirus) berhasil, dan ini adalah proses kedua (Browser).
+            if (
+                str_contains($e->getMessage(), 'invalid_grant') && 
+                $targetUser->google_id !== null && 
+                $targetUser->updated_at->diffInSeconds(now()) < 120
+            ) {
+                return redirect()->route('wali-santri.profile')->with('google-success', 'Akun Google berhasil dihubungkan! (Diselamatkan dari interupsi keamanan browser)');
+            }
+
+            // Jika error lain atau belum terlink sama sekali, tampilkan error aslinya
             Log::error('[Google Link] Callback failed', [
                 'error'        => $e->getMessage(),
                 'callback_url' => $callbackUrl,
-                'server_time'  => $serverTime,
-                'request_code' => $request->code ? 'present' : 'missing',
+                'target_user'  => $targetUser->id
             ]);
-            return redirect()->route('wali-santri.profile')->with('google-error', "Gagal menghubungkan akun Google: {$e->getMessage()}. (Info Debug: Pastikan jam server VPS akurat. Jam server saat ini: {$serverTime}. URL: {$callbackUrl})");
+            return redirect()->route('wali-santri.profile')->with('google-error', 'Gagal menghubungkan akun Google. Pastikan Client Secret di .env server sudah sesuai dengan Google Cloud. (Error: ' . $e->getMessage() . ')');
         }
 
-        $user = Auth::user();
-
-        if (!$user) {
-            return redirect()->route('login')->withErrors([
-                'google' => 'Sesi Anda telah berakhir. Silakan login ulang lalu hubungkan Google.'
-            ]);
-        }
-
+        // 3. Proses linking normal (Token berhasil ditukar)
         // Cek apakah google_id sudah dipakai akun lain
-        $existing = User::where('google_id', $googleUser->getId())->where('id', '!=', $user->id)->first();
+        $existing = User::where('google_id', $googleUser->getId())->where('id', '!=', $targetUser->id)->first();
         if ($existing) {
             return redirect()->route('wali-santri.profile')->with('google-error', 'Akun Google ini sudah terhubung ke akun lain.');
         }
 
-        $user->update([
+        $targetUser->update([
             'google_id'    => $googleUser->getId(),
             'google_token' => $googleUser->token,
-            'email'        => $user->email ?? $googleUser->getEmail(),
+            'email'        => $targetUser->email ?? $googleUser->getEmail(),
         ]);
 
-        Log::info('[Google Link] Success', ['user_id' => $user->id, 'google_id' => $googleUser->getId()]);
+        Log::info('[Google Link] Success', ['user_id' => $targetUser->id, 'google_id' => $googleUser->getId()]);
 
+        // Jika ini adalah request background dari antivirus (Auth::user() null), kita ga perlu pusing soal redirect
+        // Karena browser aslinya nanti akan menyusul dan memicu catch blok di atas.
         return redirect()->route('wali-santri.profile')->with('google-success', 'Akun Google berhasil dihubungkan! Sekarang Anda bisa login dengan Google.');
     }
 
