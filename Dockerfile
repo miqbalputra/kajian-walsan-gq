@@ -63,6 +63,9 @@ RUN composer dump-autoload --optimize
 # Copy nginx config
 COPY docker/nginx.conf /etc/nginx/nginx.conf
 
+# Copy custom PHP ini (upload limits, temp dir, memory)
+COPY docker/php.ini /usr/local/etc/php/conf.d/zzz-custom.ini
+
 # Copy supervisor config
 COPY docker/supervisord.conf /etc/supervisor/conf.d/supervisord.conf
 

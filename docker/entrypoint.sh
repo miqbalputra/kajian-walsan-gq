@@ -24,10 +24,15 @@ php artisan route:cache
 php artisan view:cache
 
 # Pastikan direktori upload ada (Livewire temp + public subfolders)
+# Livewire v3 dengan disk=local menyimpan di storage/app/private/livewire-tmp
 mkdir -p /var/www/html/storage/app/livewire-tmp
+mkdir -p /var/www/html/storage/app/private/livewire-tmp
 mkdir -p /var/www/html/storage/app/public/attendance-proofs
 mkdir -p /var/www/html/storage/app/public/izin-documents
 mkdir -p /var/www/html/storage/app/public/reupload-proofs
+
+# Pastikan /tmp writable untuk PHP upload_tmp_dir
+chmod 1777 /tmp 2>/dev/null || true
 
 # Pastikan storage link ada
 php artisan storage:link --force 2>/dev/null || true
