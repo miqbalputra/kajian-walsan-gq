@@ -94,5 +94,5 @@ Semua akses jalur belakang, API pemulihan akun dari N8N, token Google OAuth, dan
 
 <br>
 <p align="center">
-  <i>Dikembangkan dengan sepenuh hati ❤️ untuk Griya Qur'an Tunas Ilmu</i>
+  <i>Dikembangkan dengan sepenuh hati ❤️ untuk dedikasi tinggi</i>
 </p>
