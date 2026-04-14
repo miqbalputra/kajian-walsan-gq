@@ -196,7 +196,14 @@
             font-family: 'Outfit', sans-serif !important;
             border-radius: 20px !important;
             box-shadow: 0 20px 50px rgba(15, 23, 42, 0.15) !important;
-            width: 350px !important; /* Set lebar yang pas */
+            width: calc(100vw - 40px) !important;
+            max-width: 380px !important;
+            height: calc(100vh - 120px) !important;
+            max-height: 600px !important;
+            bottom: 90px !important; /* Angkat jendela di atas icon */
+            right: 20px !important;
+            left: auto !important;
+            margin: 0 !important;
             z-index: 9999 !important;
         }
     </style>
