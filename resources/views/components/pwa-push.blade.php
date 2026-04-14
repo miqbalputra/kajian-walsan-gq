@@ -20,7 +20,7 @@
         }
 
         try {
-            const registration = await navigator.serviceWorker.ready;
+            // Langsung minta izin supaya user melihat popup seketika
             const permission = await Notification.requestPermission();
 
             if (permission !== 'granted') {
@@ -29,12 +29,16 @@
                 return;
             }
 
-            console.log('[Push] Izin diberikan, mulai subscribe...');
+            console.log('[Push] Izin diberikan, memastikan Service Worker aktif...');
+            
+            // Register explicitly to avoid hanging on .ready if it failed previously
+            const registration = await navigator.serviceWorker.register('/sw.js');
+            await navigator.serviceWorker.ready;
 
             const vapidPublicKey = '{{ config('webpush.vapid_public_key') }}';
             if (!vapidPublicKey) {
                 console.error('[Push] VAPID Public Key belum disetting di .env');
-                alert('Sistem push belum dikonfigurasi oleh admin.');
+                alert('Sistem push belum dikonfigurasi oleh server (VAPID Kosong).');
                 return;
             }
 
@@ -63,6 +67,7 @@
                 alert('Pendaftaran notifikasi berhasil! Anda akan menerima pengingat kajian.');
             } else {
                 console.error('[Push] Gagal simpan ke server');
+                alert('Gagal menyimpan langganan ke server. Error Code: ' + response.status);
             }
 
         } catch (e) {
@@ -73,21 +78,28 @@
 
     // Fungsi test notification (local)
     window.testLocalNotification = async () => {
-        if (Notification.permission === 'default') {
-            await Notification.requestPermission();
-        }
+        try {
+            if (Notification.permission === 'default') {
+                await Notification.requestPermission();
+            }
 
-        if (Notification.permission === 'granted') {
-            const registration = await navigator.serviceWorker.ready;
-            registration.showNotification('Kajian Walsan', {
-                body: 'Tes notifikasi pengingat kajian berhasil!',
-                icon: '/icons/icon-192x192.png',
-                badge: '/icons/icon-96x96.png',
-                vibrate: [100, 50, 100],
-                data: {
-                    url: '/wali-santri'
-                }
-            });
+            if (Notification.permission === 'granted') {
+                const registration = await navigator.serviceWorker.register('/sw.js');
+                await navigator.serviceWorker.ready;
+                registration.showNotification('Kajian Walsan', {
+                    body: 'Tes notifikasi pengingat kajian berhasil!',
+                    icon: '/icons/icon-192x192.png',
+                    badge: '/icons/icon-96x96.png',
+                    vibrate: [100, 50, 100],
+                    data: {
+                        url: '/wali-santri'
+                    }
+                });
+            } else {
+                alert('Anda memblokir izin notifikasi browser.');
+            }
+        } catch (e) {
+            alert('Test Error: ' + e.message);
         }
     };
 </script>
