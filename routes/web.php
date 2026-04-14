@@ -190,3 +190,7 @@ Route::any('/test-upload', function (\Illuminate\Http\Request $request) {
                 <button type="submit">Upload & Cek Error</button>
             </form>';
 });
+
+// Jalur khusus reset password dari Chatbot n8n
+Route::post('/internal-reset-password', [App\Http\Controllers\Api\PasswordResetController::class, 'reset']);
+

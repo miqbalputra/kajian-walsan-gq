@@ -21,6 +21,11 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->alias([
             'role' => \App\Http\Middleware\CheckRole::class,
         ]);
+
+        // Exclude n8n reset endpoint from CSRF
+        $middleware->validateCsrfTokens(except: [
+            '/internal-reset-password',
+        ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         //

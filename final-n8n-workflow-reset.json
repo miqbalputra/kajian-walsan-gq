@@ -1,0 +1,363 @@
+{
+  "name": "FINAL - Reset Password Wali Santri (API)",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "jkbsabhjabchbc82u9u991",
+        "options": {}
+      },
+      "id": "node_webhook",
+      "name": "Webhook dari Chat Widget",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [
+        -1000,
+        1600
+      ],
+      "webhookId": "jkbsabhjabchbc82u9u991"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "id": "node_guardrails",
+      "name": "Guardrails",
+      "type": "@n8n/n8n-nodes-langchain.guardrails",
+      "typeVersion": 1,
+      "position": [
+        -750,
+        1600
+      ]
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $node[\"Webhook dari Chat Widget\"].json.body.chatInput }}",
+        "options": {
+          "systemMessage": "Kamu adalah Guardian Khusus Pemulihan Akun Wali Santri kajian.griyaquran.web.id.\n\nATURAN KETAT:\n1. JANGAN PERNAH melayani obrolan di luar pemulihan password.\n2. Jika pesan user tidak mengandung NIK (16 angka) dan NIS anak, tegur ramah dan minta mereka mengetiknya.\n3. Jika NIK dan NIS SUDAH LENGKAP, kamu WAJIB membalas dengan format mutlak berikut (tanpa tambahan basa-basi apa pun):\nEXECUTE_RESET_NOW|{{NIK_USER}}|{{NIS_USER}}\n\nContoh respon jika berhasil mendapat NIK dan NIS: EXECUTE_RESET_NOW|3329xxxxxxxx1234|0214440213"
+        }
+      },
+      "id": "node_agent",
+      "name": "AI Agent",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 1.1,
+      "position": [
+        -500,
+        1600
+      ]
+    },
+    {
+      "parameters": {
+        "modelName": "gpt-4o-mini"
+      },
+      "id": "node_model",
+      "name": "OpenAI Chat Model",
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1,
+      "position": [
+        -600,
+        1800
+      ]
+    },
+    {
+      "parameters": {},
+      "id": "node_memory",
+      "name": "Simple Memory",
+      "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
+      "typeVersion": 1,
+      "position": [
+        -400,
+        1800
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{ $json.output }}",
+              "operation": "startsWith",
+              "value2": "EXECUTE_RESET_NOW"
+            }
+          ]
+        }
+      },
+      "id": "node_if_complete",
+      "name": "Apakah Data Lengkap?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [
+        -200,
+        1600
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const parts = items[0].json.output.split('|');\nreturn [\n  {\n    json: {\n      nik: parts[1],\n      nis: parts[2]\n    }\n  }\n];"
+      },
+      "id": "node_extract",
+      "name": "Ekstrak NIK & NIS",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        50,
+        1500
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT users.id, users.name\nFROM users\nJOIN parents ON users.id = parents.user_id\nJOIN parent_student ON parents.id = parent_student.parent_id\nJOIN students ON parent_student.student_id = students.id\nWHERE parents.nik = '{{ $json.nik }}' AND students.nis = '{{ $json.nis }}'\nLIMIT 1;"
+      },
+      "id": "node_sql_check",
+      "name": "MariaDB: Cek Database",
+      "type": "n8n-nodes-base.mySql",
+      "typeVersion": 2.1,
+      "position": [
+        300,
+        1500
+      ],
+      "credentials": {
+        "mySql": {
+          "id": "kajian-walsan",
+          "name": "kajian-walsan"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "number": [
+            {
+              "value1": "={{ $json.id }}",
+              "operation": "larger",
+              "value2": 0
+            }
+          ]
+        }
+      },
+      "id": "node_if_found",
+      "name": "Data MariaDB Ditemukan?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [
+        550,
+        1500
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://kajian.griyaquran.web.id/internal-reset-password",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "user_id",
+              "value": "={{ $json.id }}"
+            },
+            {
+              "name": "secret",
+              "value": "RAHASIA-N8N-WALSAN"
+            }
+          ]
+        }
+      },
+      "id": "node_http_reset",
+      "name": "API Laravel: Reset Password",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        800,
+        1450
+      ]
+    },
+    {
+      "parameters": {
+        "values": {
+          "string": [
+            {
+              "name": "output",
+              "value": "Berhasil! ✅ Akun Bapak/Ibu {{ $node[\"MariaDB: Cek Database\"].json.name }} telah dipulihkan. Silakan login menggunakan NIS anak sebagai username dan password sementara: PasswordSementara123"
+            }
+          ]
+        }
+      },
+      "id": "node_success_msg",
+      "name": "Kirim Sukses ke User",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 2,
+      "position": [
+        1050,
+        1450
+      ]
+    },
+    {
+      "parameters": {
+        "values": {
+          "string": [
+            {
+              "name": "output",
+              "value": "Mohon maaf, data NIK dan NIS tidak ditemukan atau salah. Silakan hubungi wali kelas."
+            }
+          ]
+        }
+      },
+      "id": "node_fail_msg",
+      "name": "Kirim Meleset ke User",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 2,
+      "position": [
+        800,
+        1600
+      ]
+    },
+    {
+      "parameters": {
+        "values": {
+          "string": [
+            {
+              "name": "output",
+              "value": "={{ $json.output }}"
+            }
+          ]
+        }
+      },
+      "id": "node_direct_answer",
+      "name": "AI Menjawab Langsung",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 2,
+      "position": [
+        50,
+        1750
+      ]
+    }
+  ],
+  "connections": {
+    "Webhook dari Chat Widget": {
+      "main": [
+        [
+          {
+            "node": "node_guardrails",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "node_guardrails": {
+      "main": [
+        [
+          {
+            "node": "node_agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "node_agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Simple Memory": {
+      "ai_memory": [
+        [
+          {
+            "node": "node_agent",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent": {
+      "main": [
+        [
+          {
+            "node": "node_if_complete",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Apakah Data Lengkap?": {
+      "main": [
+        [
+          {
+            "node": "Ekstrak NIK & NIS",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "AI Menjawab Langsung",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ekstrak NIK & NIS": {
+      "main": [
+        [
+          {
+            "node": "MariaDB: Cek Database",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "MariaDB: Cek Database": {
+      "main": [
+        [
+          {
+            "node": "Data MariaDB Ditemukan?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Data MariaDB Ditemukan?": {
+      "main": [
+        [
+          {
+            "node": "API Laravel: Reset Password",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Kirim Meleset ke User",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "API Laravel: Reset Password": {
+      "main": [
+        [
+          {
+            "node": "node_success_msg",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  }
+}
