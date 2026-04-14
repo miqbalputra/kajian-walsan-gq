@@ -175,4 +175,40 @@
             </div>
         </div>
     </div>
+
+    @push('scripts')
+    <!-- n8n Web Chatbot Integration -->
+    <link href="https://cdn.jsdelivr.net/npm/@n8n/chat/dist/style.css" rel="stylesheet" />
+    <script type="module">
+        import { createChat } from 'https://cdn.jsdelivr.net/npm/@n8n/chat/dist/chat.bundle.es.js';
+
+        createChat({
+            webhookUrl: 'https://automation.tunasilmu.com/webhook/kajian-walsan-gq',
+            showWelcomeScreen: true,
+            initialMessages: [
+                'Assalamu\'alaikum! 👋',
+                'Saya asisten otomatis. Jika Bapak/Ibu lupa password, silakan ketik NIK Wali dan NIS Santri secara berurutan. Saya akan bantu memulihkan akun Anda.'
+            ],
+            i18n: {
+                en: {
+                    title: 'Asisten Wali Santri',
+                    subtitle: 'Layanan Pemulihan Akun',
+                    footer: '',
+                    getStarted: 'Chat Sekarang',
+                    inputPlaceholder: 'Ketik pesan Anda di sini...',
+                },
+            },
+        });
+    </script>
+    <style>
+        /* Modern integration for Kajian Walsan theme */
+        :root {
+            --chat--color-primary: #10B981; /* Primary Emerald */
+            --chat--color-primary-shade-50: #059669;
+            --chat--color-primary-shade-100: #047857;
+            --chat--color-secondary: #0ea5e9;
+            --chat--color-secondary-shade-50: #0284c7;
+        }
+    </style>
+    @endpush
 </x-layouts.app>
