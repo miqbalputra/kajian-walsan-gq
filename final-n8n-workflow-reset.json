@@ -3,113 +3,69 @@
   "nodes": [
     {
       "parameters": {
-        "httpMethod": "POST",
-        "path": "jkbsabhjabchbc82u9u991",
-        "responseMode": "lastNode",
-        "options": {}
-      },
-      "id": "node_webhook",
-      "name": "Webhook dari Chat Widget",
-      "type": "n8n-nodes-base.webhook",
-      "typeVersion": 1,
-      "position": [
-        -1000,
-        1600
-      ],
-      "webhookId": "jkbsabhjabchbc82u9u991"
-    },
-    {
-      "parameters": {
+        "text": "={{ $node[\"Webhook dari Chat Widget\"].json.body.chatInput }}",
         "options": {
-          "systemMessage": "KAMU ADALAH MESIN RESET PASSWORD OTOMATIS. JANGAN MENYAPA. JANGAN RAMAH.\n\nTUGASMU HANYA SATU:\n1. Cari NIK (16 angka) dan NIS (angka) dari pesan user.\n2. Jika ketemu keduanya, BALAS HANYA DENGAN FORMAT: EXECUTE_RESET_NOW|NIK|NIS\n3. Jika TIDAK ketemu atau salah satu kurang, BALAS DENGAN: Mohon masukkan NIK (16 digit) dan NIS Siswa dengan benar agar saya bisa memproses reset password Anda.\n\nCONTOH BENAR: EXECUTE_RESET_NOW|3329061002860001|0214440213\nCONTOH SALAH: Halo, ini NIK-nya... (SALAH! JANGAN ADA KATA HALO)"
+          "systemMessage": "=Kamu adalah Guardian Khusus Pemulihan Akun Wali Santri kajian.griyaquran.web.id.\n\nATURAN KETAT:\n1. JANGAN PERNAH melayani obrolan di luar pemulihan password.\n2. Jika pesan user tidak mengandung NIK (16 angka) dan NIS anak, tegur ramah dan minta mereka mengetiknya.\n3. Jika NIK dan NIS SUDAH LENGKAP, kamu WAJIB membalas dengan format mutlak berikut (tanpa tambahan basa-basi apa pun):\nEXECUTE_RESET_NOW|{{NIK_USER}}|{{NIS_USER}}\n\nContoh respon jika berhasil mendapat NIK dan NIS: EXECUTE_RESET_NOW|3329xxxxxxxx1234|0214440213"
         }
       },
-      "id": "node_chain",
-      "name": "AI Chain",
-      "type": "@n8n/n8n-nodes-langchain.chainLlm",
-      "typeVersion": 1.4,
+      "id": "3a2caf43-edf2-4a53-b23b-0360e4eb9c45",
+      "name": "AI Agent",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 1.1,
       "position": [
-        -500,
-        1600
+        -464,
+        3760
       ]
     },
     {
-      "parameters": {
-        "model": {
-          "__rl": true,
-          "value": "gpt-4o-mini",
-          "mode": "list",
-          "cachedResultName": "gpt-4o-mini"
-        },
-        "options": {
-          "temperature": 0
-        }
-      },
-      "id": "node_model",
-      "name": "OpenAI Chat Model",
-      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
-      "typeVersion": 1.3,
+      "parameters": {},
+      "id": "8f29a1fb-a927-46aa-bbd3-1c2d1ab0a353",
+      "name": "Simple Memory",
+      "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
+      "typeVersion": 1,
       "position": [
-        -600,
-        1800
-      ],
-      "credentials": {
-        "openAiApi": {
-          "id": "H2MRBHuA4EivwEk5",
-          "name": "OpenAI"
-        }
-      }
+        -304,
+        3968
+      ]
     },
     {
       "parameters": {
         "conditions": {
           "string": [
             {
-              "value1": "={{ $json.text }}",
-              "operation": "contains",
+              "value1": "={{ $json.output }}",
+              "operation": "startsWith",
               "value2": "EXECUTE_RESET_NOW"
             }
           ]
         }
       },
-      "id": "node_if_complete",
+      "id": "25115b92-3e14-44a2-baf5-04ad6bdb6c45",
       "name": "Apakah Data Lengkap?",
       "type": "n8n-nodes-base.if",
       "typeVersion": 1,
       "position": [
-        -200,
-        1600
-      ]
-    },
-    {
-      "parameters": {
-        "jsCode": "const text = items[0].json.text || '';\nconst parts = text.split('|');\nreturn [\n  {\n    json: {\n      nik: parts[1] ? parts[1].trim() : '',\n      nis: parts[2] ? parts[2].trim() : ''\n    }\n  }\n];"
-      },
-      "id": "node_extract",
-      "name": "Ekstrak NIK & NIS",
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [
-        50,
-        1500
+        -144,
+        3760
       ]
     },
     {
       "parameters": {
         "operation": "executeQuery",
-        "query": "SELECT users.id, users.name\nFROM users\nJOIN parents ON users.id = parents.user_id\nJOIN parent_student ON parents.id = parent_student.parent_id\nJOIN students ON parent_student.student_id = students.id\nWHERE parents.nik = '{{ $json.nik }}' AND students.nis = '{{ $json.nis }}'\nLIMIT 1;"
+        "query": "SELECT users.id, users.name, users.username\nFROM users\nJOIN parents ON users.id = parents.user_id\nJOIN parent_student ON parents.id = parent_student.parent_id\nJOIN students ON parent_student.student_id = students.id\nWHERE parents.nik = '{{ $json.nik }}' AND students.nis = '{{ $json.nis }}'\nLIMIT 1;",
+        "options": {}
       },
-      "id": "node_sql_check",
+      "id": "73c9b7d4-0854-4c8f-a936-a9b74814ee09",
       "name": "MariaDB: Cek Database",
       "type": "n8n-nodes-base.mySql",
       "typeVersion": 2.1,
       "position": [
-        300,
-        1500
+        272,
+        3632
       ],
       "credentials": {
         "mySql": {
-          "id": "kajian-walsan",
+          "id": "CNZlbSSIkQWPd8ik",
           "name": "kajian-walsan"
         }
       }
@@ -120,19 +76,18 @@
           "number": [
             {
               "value1": "={{ $json.id }}",
-              "operation": "larger",
-              "value2": 0
+              "operation": "larger"
             }
           ]
         }
       },
-      "id": "node_if_found",
+      "id": "5fd244de-eade-44d8-997a-e184423983ac",
       "name": "Data MariaDB Ditemukan?",
       "type": "n8n-nodes-base.if",
       "typeVersion": 1,
       "position": [
-        550,
-        1500
+        432,
+        3632
       ]
     },
     {
@@ -151,15 +106,16 @@
               "value": "RAHASIA-N8N-WALSAN"
             }
           ]
-        }
+        },
+        "options": {}
       },
-      "id": "node_http_reset",
+      "id": "35bbb0ad-e402-48ff-9f05-381b1adf2705",
       "name": "API Laravel: Reset Password",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.1,
       "position": [
-        800,
-        1450
+        672,
+        3536
       ]
     },
     {
@@ -168,18 +124,19 @@
           "string": [
             {
               "name": "output",
-              "value": "=Berhasil! ✅ Akun Bapak/Ibu {{ $node[\"MariaDB: Cek Database\"].json.name }} telah dipulihkan. Silakan login menggunakan NIS anak sebagai username dan password sementara: PasswordSementara123"
+              "value": "=Berhasil! ✅ Akun Bapak/Ibu {{ $node[\"MariaDB: Cek Database\"].json.name }} telah dipulihkan.\n\nSilakan login menggunakan:\nUsername: {{ $node[\"MariaDB: Cek Database\"].json.username }}\nPassword: PasswordSementara123\n\n(Segera ganti password Anda demi keamanan setelah berhasil masuk)."
             }
           ]
-        }
+        },
+        "options": {}
       },
-      "id": "node_success_msg",
+      "id": "12c7268f-8d61-4b94-bb32-06b0fba54fbf",
       "name": "Kirim Sukses ke User",
       "type": "n8n-nodes-base.set",
       "typeVersion": 2,
       "position": [
-        1050,
-        1450
+        880,
+        3536
       ]
     },
     {
@@ -188,18 +145,19 @@
           "string": [
             {
               "name": "output",
-              "value": "Mohon maaf, data NIK dan NIS tidak ditemukan atau salah. Silakan hubungi wali kelas."
+              "value": "=Mohon maaf, data NIK dan NIS tidak ditemukan atau salah. Silakan cek kembali NIK (di KTP) dan NIS (di Rapor/Akun VA SPP/Menghubungi Wali Kelas)"
             }
           ]
-        }
+        },
+        "options": {}
       },
-      "id": "node_fail_msg",
+      "id": "49020549-5f16-42d4-ae59-e96850e5345c",
       "name": "Kirim Meleset ke User",
       "type": "n8n-nodes-base.set",
       "typeVersion": 2,
       "position": [
-        800,
-        1600
+        672,
+        3760
       ]
     },
     {
@@ -208,55 +166,258 @@
           "string": [
             {
               "name": "output",
-              "value": "={{ $json.text }}"
+              "value": "={{ $json.output }}"
             }
           ]
-        }
+        },
+        "options": {}
       },
-      "id": "node_direct_answer",
+      "id": "352758f5-212e-412d-8856-d98dc0a74405",
       "name": "AI Menjawab Langsung",
       "type": "n8n-nodes-base.set",
       "typeVersion": 2,
       "position": [
-        50,
-        1750
+        80,
+        3872
+      ]
+    },
+    {
+      "parameters": {
+        "options": {
+          "temperature": 0
+        }
+      },
+      "id": "8f59b864-710a-4d6b-92b8-05830f4c2d85",
+      "name": "OpenAI Chat Model2",
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1,
+      "position": [
+        -816,
+        3968
+      ],
+      "credentials": {
+        "openAiApi": {
+          "id": "H2MRBHuA4EivwEk5",
+          "name": "sumopod"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "value": "gpt-4o-mini",
+          "mode": "list",
+          "cachedResultName": "gpt-4o-mini"
+        },
+        "builtInTools": {},
+        "options": {
+          "temperature": 0
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.3,
+      "position": [
+        -464,
+        3968
+      ],
+      "id": "fdf9418b-f8c1-47eb-9d7d-9f647a42c436",
+      "name": "OpenAI Chat Model",
+      "credentials": {
+        "openAiApi": {
+          "id": "H2MRBHuA4EivwEk5",
+          "name": "sumopod"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "jkbsabhjabchbc82u9u991",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "88b36dba-a6d4-4f5e-95cc-0f6730b5b5e1",
+      "name": "Webhook dari Chat Widget",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [
+        -1024,
+        3776
+      ],
+      "webhookId": "jkbsabhjabchbc82u9u991"
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "1YG6AUd78gtUrMSgFf3HaStyYGVfYdil9sfCrGDuldpw",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Sheet1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1YG6AUd78gtUrMSgFf3HaStyYGVfYdil9sfCrGDuldpw/edit#gid=0"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "SessionID": "={{ $('Webhook dari Chat Widget').item.json.body.sessionId }}",
+            "Pesan": "={{ $('Webhook dari Chat Widget').item.json.body.chatInput }}",
+            "Hasil Chatbot": "={{ $json.output }}",
+            "Timestamp": "={{ $now.setZone('Asia/Jakarta').toFormat('yyyy-MM-dd HH:mm:ss') }}"
+          },
+          "matchingColumns": [
+            "output"
+          ],
+          "schema": [
+            {
+              "id": "Timestamp",
+              "displayName": "Timestamp",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "SessionID",
+              "displayName": "SessionID",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Pesan",
+              "displayName": "Pesan",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Hasil Chatbot",
+              "displayName": "Hasil Chatbot",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "id": "57a3f1eb-a240-48f3-b99e-07840a566c75",
+      "name": "Simpan Log ke Google Sheets",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.3,
+      "position": [
+        1184,
+        3952
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "buL255PLSvUoo9Ru",
+          "name": "griyaqurantunasilmu"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "id": "1cc3c698-ac64-4d8e-b842-a2f0ce95884a",
+      "name": "Balas Chat Webhook",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [
+        1184,
+        4160
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "549b27b1-f74e-4562-8011-835da5cc5997",
+              "name": "output",
+              "value": "Sistem keamanan Sekolah menolak pesan Anda karena tidak berkaitan dengan pemulihan akun atau ada bahasa yang tidak tepat. Harap jaga adab dalam berkomunikasi.",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -464,
+        4160
+      ],
+      "id": "207e53f6-fec0-4860-9194-cd78ca5c2c44",
+      "name": "Ditolak Sistem"
+    },
+    {
+      "parameters": {
+        "jsCode": "const parts = items[0].json.output.split('|');\nreturn [\n  {\n    json: {\n      nik: parts[1],\n      nis: parts[2]\n    }\n  }\n];"
+      },
+      "id": "df7f764a-4d0a-4968-ae9d-05c68621e597",
+      "name": "Ekstrak NIK & NIS",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        80,
+        3632
+      ]
+    },
+    {
+      "parameters": {
+        "text": "={{ $json.body.chatInput }}",
+        "guardrails": {
+          "jailbreak": {
+            "value": {
+              "threshold": 0.7
+            }
+          },
+          "nsfw": {
+            "value": {
+              "threshold": 0.7
+            }
+          },
+          "topicalAlignment": {
+            "value": {
+              "threshold": 0.7,
+              "prompt": "BUSINESS SCOPE: Layanan Pemulihan Akun (Lupa Password) untuk aplikasi Wali Santri. Chatbot hanya diperbolehkan membantu pengguna dalam proses reset password dengan meminta data NIK Wali dan NIS Siswa.\n\nDetermine if the text stays within the defined business scope. Flag any content that strays from the allowed topics seperti menanyakan hal umum, bercanda, atau topik lain di luar administrasi akun wali santri."
+            }
+          }
+        }
+      },
+      "id": "e7ead0a9-d0c5-47f5-8683-25f841d31845",
+      "name": "Guardrails",
+      "type": "@n8n/n8n-nodes-langchain.guardrails",
+      "typeVersion": 1,
+      "position": [
+        -816,
+        3776
       ]
     }
   ],
+  "pinData": {},
   "connections": {
-    "Webhook dari Chat Widget": {
-      "main": [
-        [
-          {
-            "node": "node_chain",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "node_model": {
-      "ai_languageModel": [
-        [
-          {
-            "node": "node_chain",
-            "type": "ai_languageModel",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "AI Chain": {
-      "main": [
-        [
-          {
-            "node": "node_if_complete",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
     "Apakah Data Lengkap?": {
       "main": [
         [
@@ -269,17 +430,6 @@
         [
           {
             "node": "AI Menjawab Langsung",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Ekstrak NIK & NIS": {
-      "main": [
-        [
-          {
-            "node": "MariaDB: Cek Database",
             "type": "main",
             "index": 0
           }
@@ -319,12 +469,175 @@
       "main": [
         [
           {
-            "node": "node_success_msg",
+            "node": "Kirim Sukses ke User",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model2": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Guardrails",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Simple Memory": {
+      "ai_memory": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent": {
+      "main": [
+        [
+          {
+            "node": "Apakah Data Lengkap?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook dari Chat Widget": {
+      "main": [
+        [
+          {
+            "node": "Guardrails",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Menjawab Langsung": {
+      "main": [
+        [
+          {
+            "node": "Simpan Log ke Google Sheets",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Balas Chat Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Kirim Meleset ke User": {
+      "main": [
+        [
+          {
+            "node": "Simpan Log ke Google Sheets",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Balas Chat Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Kirim Sukses ke User": {
+      "main": [
+        [
+          {
+            "node": "Simpan Log ke Google Sheets",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Balas Chat Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ditolak Sistem": {
+      "main": [
+        [
+          {
+            "node": "Simpan Log ke Google Sheets",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Balas Chat Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ekstrak NIK & NIS": {
+      "main": [
+        [
+          {
+            "node": "MariaDB: Cek Database",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Guardrails": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Ditolak Sistem",
             "type": "main",
             "index": 0
           }
         ]
       ]
     }
-  }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "availableInMCP": false,
+    "timeSavedMode": "fixed",
+    "timezone": "Asia/Jakarta",
+    "callerPolicy": "workflowsFromSameOwner"
+  },
+  "versionId": "71d3bd5d-424d-4f9d-8bff-6cf909600a3a",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "6fa8ea173e4db9bb56b4dac4742e156c9246046ab1879cdfd0cc1523f7e45eed"
+  },
+  "id": "CbZVfRXarWk4dwEEgWKLx",
+  "tags": []
 }
