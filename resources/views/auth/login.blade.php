@@ -185,7 +185,7 @@
             position: fixed !important;
             bottom: 20px !important;
             right: 20px !important;
-            z-index: 9999 !important;
+            z-index: 9990 !important; /* Posisi di BAWAH jendela chat */
         }
 
         .n8n-chat-button svg, .chat-window-toggle svg, #n8n-chat-button svg {
@@ -198,13 +198,13 @@
             box-shadow: 0 20px 50px rgba(15, 23, 42, 0.15) !important;
             width: calc(100vw - 40px) !important;
             max-width: 380px !important;
-            height: calc(100vh - 120px) !important;
+            height: calc(100vh - 40px) !important; /* Beri sedikit jarak atas/bawah */
             max-height: 600px !important;
-            bottom: 90px !important; /* Angkat jendela di atas icon */
+            bottom: 20px !important; /* Sama dengan tombol agar menutupi penuh */
             right: 20px !important;
             left: auto !important;
             margin: 0 !important;
-            z-index: 9999 !important;
+            z-index: 9999 !important; /* Harus LEBIH BESAR dari z-index tombol */
         }
     </style>
 
