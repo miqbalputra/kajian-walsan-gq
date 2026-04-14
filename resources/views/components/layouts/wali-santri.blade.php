@@ -47,7 +47,7 @@
     @stack('scripts')
 
     <!-- Global Password Warning Modal -->
-    @if(auth()->check() && auth()->user()->hasRole('wali_santri') && \Illuminate\Support\Facades\Hash::check(auth()->user()->username, auth()->user()->password) && !request()->routeIs('wali-santri.profile'))
+    @if(auth()->check() && auth()->user()->hasRole('wali_santri') && (\Illuminate\Support\Facades\Hash::check(auth()->user()->username, auth()->user()->password) || \Illuminate\Support\Facades\Hash::check('PasswordSementara123', auth()->user()->password)) && !request()->routeIs('wali-santri.profile'))
         <div x-data="{ showWarning: true }" 
              x-show="showWarning" 
              style="display: none;"
