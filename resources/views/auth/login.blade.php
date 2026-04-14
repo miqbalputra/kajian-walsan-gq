@@ -184,7 +184,7 @@
         }
 
         .n8n-chat-button {
-            background-image: url('/img/chatbot.png') !important;
+            background-image: url('/img/chatbotv2.png') !important;
             background-size: 70% !important;
             background-position: center !important;
             background-repeat: no-repeat !important;
