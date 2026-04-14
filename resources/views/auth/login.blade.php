@@ -183,7 +183,7 @@
             --chat-accent: #3b82f6;  /* Blue 500 */
         }
 
-        .n8n-chat-button {
+        .n8n-chat-button, .chat-window-toggle, #n8n-chat-button {
             background-image: url('/img/chatbotv2.png') !important;
             background-size: 70% !important;
             background-position: center !important;
@@ -196,6 +196,10 @@
             position: fixed !important;
             bottom: 20px !important;
             right: 20px !important;
+        }
+
+        .n8n-chat-button svg, .chat-window-toggle svg, #n8n-chat-button svg {
+            display: none !important;
         }
 
         .n8n-chat-window {
