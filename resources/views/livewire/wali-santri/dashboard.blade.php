@@ -798,7 +798,7 @@
 
     <!-- Password Warning Modal -->
     @if($isUsingDefaultPassword)
-        <div x-data="{ showWarning: !sessionStorage.getItem('dismissPasswordWarning') }" 
+        <div x-data="{ showWarning: true }" 
              x-show="showWarning" 
              style="display: none;"
              class="fixed inset-0 z-[80] overflow-y-auto" aria-modal="true">
@@ -828,7 +828,7 @@
                             <span class="material-symbols-rounded">key</span>
                             Ganti Password Sekarang
                         </a>
-                        <button @click="showWarning = false; sessionStorage.setItem('dismissPasswordWarning', 'true')"
+                        <button @click="showWarning = false"
                            class="w-full py-3.5 border-2 border-slate-100 dark:border-slate-800 text-slate-400 dark:text-gray-500 rounded-2xl font-bold hover:bg-slate-50 dark:hover:bg-slate-800 transition-all mt-1">
                             Nanti Saja
                         </button>
