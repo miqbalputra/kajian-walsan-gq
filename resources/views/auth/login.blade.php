@@ -185,6 +185,7 @@
             position: fixed !important;
             bottom: 20px !important;
             right: 20px !important;
+            z-index: 9999 !important;
         }
 
         .n8n-chat-button svg, .chat-window-toggle svg, #n8n-chat-button svg {
@@ -194,10 +195,9 @@
         .n8n-chat-window {
             font-family: 'Outfit', sans-serif !important;
             border-radius: 20px !important;
-            overflow: hidden !important;
             box-shadow: 0 20px 50px rgba(15, 23, 42, 0.15) !important;
             width: 350px !important; /* Set lebar yang pas */
-            max-height: 500px !important; /* Set tinggi agar tidak kepanjangan */
+            z-index: 9999 !important;
         }
     </style>
 
@@ -223,7 +223,9 @@
                 en: {
                     title: 'Bantuan Login',
                     subtitle: 'Aktif 24 Jam',
-                    placeholder: 'Ketik NIK & NIS di sini...',
+                    getStarted: 'Tulis pesan Anda...',
+                    inputPlaceholder: 'Tulis pesan Anda...',
+                    chatInputPlaceholder: 'Tulis pesan Anda...',
                 }
             },
             style: {
