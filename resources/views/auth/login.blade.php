@@ -99,15 +99,10 @@
                                     class="text-sm text-gray-600 font-medium group-hover:text-gray-900 transition-colors">Ingat
                                     saya</span>
                             </label>
-                            @php
-                                $waNumber = \App\Models\Setting::get('admin_whatsapp', config('kajian.admin_whatsapp', '6281234567890'));
-                                $waMessage = urlencode("Assalamu'alaikum Admin,\n\nSaya lupa password akun saya.\n\nNama: \nUsername: \nNama Santri: \n\nMohon bantuannya untuk reset password. Terima kasih.");
-                            @endphp
-                            <a href="https://wa.me/{{ $waNumber }}?text={{ $waMessage }}" target="_blank"
-                                class="text-sm text-primary-600 hover:text-primary-700 font-bold inline-flex items-center gap-1">
-                                <span class="material-symbols-rounded text-base">support_agent</span>
-                                Lupa password?
-                            </a>
+                            <p class="text-sm text-gray-600 font-medium inline-flex items-center gap-1">
+                                <span class="material-symbols-rounded text-base text-primary-500">support_agent</span>
+                                Lupa password? <span class="text-primary-600 font-bold">Chat asisten di pojok kanan bawah 👇</span>
+                            </p>
                         </div>
 
                         <!-- Submit Button -->
@@ -187,7 +182,8 @@
             showWelcomeScreen: true,
             initialMessages: [
                 'Assalamu\'alaikum! 👋',
-                'Saya asisten otomatis. Jika Bapak/Ibu lupa password, silakan ketik NIK Wali dan NIS Santri secara berurutan. Saya akan bantu memulihkan akun Anda.'
+                'Saya asisten otomatis. Jika Bapak/Ibu lupa password, silakan ketik NIK Wali dan NIS Santri secara berurutan. Saya akan bantu memulihkan akun Anda.',
+                'Berikut contoh penulisannya agar mudah diproses otomatis:\nNIK: 3301xxxxxxxx1234\nNIS: 12345'
             ],
             i18n: {
                 en: {
