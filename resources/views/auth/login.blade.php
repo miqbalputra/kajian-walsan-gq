@@ -184,28 +184,27 @@
         }
 
         .n8n-chat-button {
-            background-image: url('/img/chatbot.png') !important; /* Menggunakan icon custom */
-            background-size: 80% !important;
+            background-image: url('/img/chatbot.png') !important;
+            background-size: 70% !important;
             background-position: center !important;
             background-repeat: no-repeat !important;
-            background-color: var(--chat-primary) !important;
+            background-color: #0f172a !important;
             box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.4) !important;
             border: 2px solid rgba(255, 255, 255, 0.1) !important;
-            width: 65px !important;
-            height: 65px !important;
-        }
-
-        /* Hilangkan icon default bawaan n8n */
-        .n8n-chat-button svg {
-            display: none !important;
+            width: 55px !important; /* Perkecil sedikit agar tidak mengganggu */
+            height: 55px !important;
+            position: fixed !important;
+            bottom: 20px !important;
+            right: 20px !important;
         }
 
         .n8n-chat-window {
             font-family: 'Outfit', sans-serif !important;
-            border-radius: 24px !important;
+            border-radius: 20px !important;
             overflow: hidden !important;
             box-shadow: 0 20px 50px rgba(15, 23, 42, 0.15) !important;
-            border: 1px solid rgba(15, 23, 42, 0.05) !important;
+            width: 350px !important; /* Set lebar yang pas */
+            max-height: 500px !important; /* Set tinggi agar tidak kepanjangan */
         }
     </style>
 
@@ -213,33 +212,29 @@
         import { createChat } from 'https://cdn.jsdelivr.net/npm/@n8n/chat/dist/chat.bundle.es.js';
 
         createChat({
-            webhookUrl: 'https://n8n.griyaquran.web.id/webhook/jkbsabhjabchbc82u9u991',
+            webhookUrl: 'https://automation.tunasilmu.com/webhook/jkbsabhjabchbc82u9u991',
             webhookConfig: {
                 method: 'POST'
             },
-            showWelcomeScreen: true,
+            showWelcomeScreen: false, /* Matikan welcome screen agar langsung ke chat */
             title: 'Asisten Wali Santri',
-            description: 'AI Pemulihan Akun Otomatis',
-            welcomeMessages: [
-                'Halo Bapak/Ibu! 👋',
-                'Saya asisten AI yang akan membantu Anda memulihkan akses akun secara instan.',
-                'Ada yang bisa saya bantu?'
+            description: 'Pemulihan Akun Otomatis',
+            initialMessages: [
+                'Assalamu\'alaikum Bapak/Ibu! 👋',
+                'Saya asisten otomatis. Untuk meriset password, silakan ketikkan **NIK** dan **NIS** anak Anda.'
             ],
             i18n: {
                 en: {
-                    chatButtonAlternativeText: 'Butuh bantuan login?',
-                    chatWindowTitle: 'Pusat Bantuan AI',
-                    chatWindowSubtitle: 'Siap Melayani 24 Jam',
+                    title: 'Bantuan Login',
+                    subtitle: 'Aktif 24 Jam',
                     placeholder: 'Ketik NIK & NIS di sini...',
-                    getStartedPrimaryMessage: 'Mulai Pemulihan Pasword',
-                    getStartedSecondaryMessage: 'Proses otomatis via AI.',
-                    noResponseMessage: 'Sedang mengecek database...',
-                    error: 'Sistem sedang sibuk. Mohon coba beberapa saat lagi.'
+                    getStartedPrimaryMessage: 'Mulai Chat',
+                    noResponseMessage: 'Sedang mengecek data...',
                 }
             },
             style: {
-                primaryColor: '#0f172a', /* Slate Dark */
-                userMessageColor: '#3b82f6', /* Modern Blue */
+                primaryColor: '#0f172a',
+                userMessageColor: '#3b82f6',
                 backgroundColor: '#ffffff',
             }
         });
