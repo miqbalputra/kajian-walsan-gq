@@ -178,7 +178,7 @@
         import { createChat } from 'https://cdn.jsdelivr.net/npm/@n8n/chat/dist/chat.bundle.es.js';
 
         createChat({
-            webhookUrl: 'https://automation.tunasilmu.com/webhook/kajian-walsan-gq',
+            webhookUrl: 'https://automation.tunasilmu.com/webhook-test/kajian-walsan-gq',
             showWelcomeScreen: true,
             initialMessages: [
                 'Assalamu\'alaikum! 👋',
