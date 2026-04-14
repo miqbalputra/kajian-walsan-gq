@@ -239,7 +239,7 @@
                                     placeholder="{{ $editMode ? '••••••••' : '' }}">
                                 @error('password') <span class="text-red-500 text-sm">{{ $message }}</span> @enderror
                             </div>
-                            <div class="grid grid-cols-2 gap-4">
+                            <div class="grid grid-cols-2 lg:grid-cols-3 gap-4">
                                 <div>
                                     <label class="block text-sm font-medium text-gray-700 mb-1">No. Telepon</label>
                                     <input type="text" wire:model="phone"
@@ -247,6 +247,13 @@
                                         placeholder="08xxxxxxxxxx">
                                 </div>
                                 <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">NIK Wali</label>
+                                    <input type="text" wire:model="nik"
+                                        class="w-full px-4 py-2.5 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                                        placeholder="16 Digit NIK">
+                                    @error('nik') <span class="text-red-500 text-sm">{{ $message }}</span> @enderror
+                                </div>
+                                <div class="col-span-2 lg:col-span-1">
                                     <label class="block text-sm font-medium text-gray-700 mb-1">Tipe <span
                                             class="text-red-500">*</span></label>
                                     <select wire:model="type"

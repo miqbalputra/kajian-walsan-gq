@@ -44,6 +44,7 @@ class ParentIndex extends Component
     public $email = '';
     public $password = '';
     public $phone = '';
+    public $nik = '';
     public $type = 'father';
     public $occupation = '';
     public $address = '';
@@ -68,6 +69,7 @@ class ParentIndex extends Component
             'name' => 'required|string|max:100',
             'username' => 'required|string|max:50',
             'email' => 'required|email|max:255',
+            'nik' => 'nullable|string|max:20',
             // Phone validation: Indonesian format (optional +62/62/0 prefix, 8-13 digits)
             'phone' => ['nullable', 'string', 'max:20', 'regex:/^(\+62|62|0)?[0-9]{8,13}$/'],
             'type' => 'required|in:father,mother',
@@ -90,7 +92,7 @@ class ParentIndex extends Component
 
     public function openCreateModal()
     {
-        $this->reset(['name', 'email', 'password', 'phone', 'type', 'occupation', 'address', 'is_single_parent', 'selectedChildren', 'editMode', 'parentId']);
+        $this->reset(['name', 'email', 'password', 'phone', 'nik', 'type', 'occupation', 'address', 'is_single_parent', 'selectedChildren', 'editMode', 'parentId']);
         $this->type = 'father';
         $this->showModal = true;
     }
@@ -103,6 +105,7 @@ class ParentIndex extends Component
         $this->username = $parent->user->username;
         $this->email = $parent->user->email;
         $this->phone = $parent->user->phone;
+        $this->nik = $parent->nik;
         $this->type = $parent->type;
         $this->occupation = $parent->occupation;
         $this->address = $parent->address;
@@ -155,6 +158,7 @@ class ParentIndex extends Component
             }
 
             $parent->update([
+                'nik' => $this->nik,
                 'type' => $this->type,
                 'occupation' => $this->occupation,
                 'address' => $this->address,
@@ -181,6 +185,7 @@ class ParentIndex extends Component
 
             $parent = ParentModel::create([
                 'user_id' => $user->id,
+                'nik' => $this->nik,
                 'type' => $this->type,
                 'occupation' => $this->occupation,
                 'address' => $this->address,
@@ -199,7 +204,7 @@ class ParentIndex extends Component
         }
 
         $this->showModal = false;
-        $this->reset(['name', 'username', 'email', 'password', 'phone', 'type', 'occupation', 'address', 'is_single_parent', 'selectedChildren', 'editMode', 'parentId']);
+        $this->reset(['name', 'username', 'email', 'password', 'phone', 'nik', 'type', 'occupation', 'address', 'is_single_parent', 'selectedChildren', 'editMode', 'parentId']);
     }
 
     public function confirmDelete($id)
