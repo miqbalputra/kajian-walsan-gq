@@ -359,25 +359,7 @@
         </div>
     </main>
 
-    <!-- PWA Notification Promo -->
-    <div class="px-4 mt-8 mb-6">
-        <div class="bg-white rounded-3xl border border-dashed border-gray-300 p-6 text-center">
-            <div class="w-16 h-16 bg-blue-50 text-blue-500 rounded-full flex items-center justify-center mx-auto mb-4">
-                <span class="material-symbols-rounded text-3xl">notifications_active</span>
-            </div>
-            <h4 class="font-bold text-gray-900">Aktifkan Pengingat</h4>
-            <p class="text-xs text-gray-500 mt-1 mb-4">Dapatkan notifikasi langsung di HP Anda agar tidak melewatkan info kajian penting.</p>
-            
-            <button onclick="initPushNotification()" 
-                class="inline-flex items-center gap-2 px-6 py-2.5 bg-gray-900 text-white rounded-xl font-bold text-sm hover:bg-gray-800 transition-all active:scale-95 shadow-lg shadow-gray-200">
-                <span class="material-symbols-rounded text-lg">touch_app</span>
-                Minta Izin Notifikasi
-            </button>
-            <button onclick="testLocalNotification()" class="block w-full mt-4 text-[10px] font-bold text-gray-400 uppercase tracking-widest hover:text-primary-600 transition-colors">
-                Kirim Tes Notifikasi
-            </button>
-        </div>
-    </div>
+
 
     <!-- QR Code Modal -->
     @if($showQrModal)
