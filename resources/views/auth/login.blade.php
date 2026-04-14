@@ -182,29 +182,16 @@
             border: 2px solid rgba(255, 255, 255, 0.1) !important;
             width: 55px !important; /* Perkecil sedikit agar tidak mengganggu */
             height: 55px !important;
+            /* Let N8N CSS handle position! */
             position: fixed !important;
             bottom: 20px !important;
             right: 20px !important;
-            z-index: 9990 !important; /* Posisi di BAWAH jendela chat */
+            z-index: 9990 !important;
+            transition: opacity 0.3s ease !important;
         }
 
         .n8n-chat-button svg, .chat-window-toggle svg, #n8n-chat-button svg {
             display: none !important;
-        }
-
-        .n8n-chat-window {
-            font-family: 'Outfit', sans-serif !important;
-            border-radius: 20px !important;
-            box-shadow: 0 20px 50px rgba(15, 23, 42, 0.15) !important;
-            width: calc(100vw - 40px) !important;
-            max-width: 380px !important;
-            height: calc(100vh - 40px) !important; /* Beri sedikit jarak atas/bawah */
-            max-height: 600px !important;
-            bottom: 20px !important; /* Sama dengan tombol agar menutupi penuh */
-            right: 20px !important;
-            left: auto !important;
-            margin: 0 !important;
-            z-index: 9999 !important; /* Harus LEBIH BESAR dari z-index tombol */
         }
     </style>
 
@@ -240,6 +227,57 @@
                 userMessageColor: '#3b82f6',
                 backgroundColor: '#ffffff',
             }
+        });
+    </script>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            // Kita tunggu sampai n8n widget ter-render
+            const checkExist = setInterval(() => {
+                const toggleBtn = document.querySelector('.chat-window-toggle');
+                const chatWindow = document.querySelector('.chat-window');
+                
+                if (toggleBtn && chatWindow) {
+                    clearInterval(checkExist);
+                    
+                    // N8n chat uses a class "chat-window--open" typically, we can just use mutation observer
+                    const observer = new MutationObserver(() => {
+                        const isOpen = chatWindow.classList.contains('chat-window--open') || window.getComputedStyle(chatWindow).display !== 'none';
+                        // Sembunyikan icon bulat kalau chat terbuka agar tidak menutupi input
+                        if (chatWindow.offsetParent !== null) {
+                            toggleBtn.style.setProperty('opacity', '0', 'important');
+                            toggleBtn.style.setProperty('pointer-events', 'none', 'important');
+                            
+                            // Tambah tombol X (minimize) di header jika belum ada
+                            const header = document.querySelector('.chat-header');
+                            if (header && !document.getElementById('btn-tutup-chat')) {
+                                header.style.position = 'relative';
+                                const closeBtn = document.createElement('button');
+                                closeBtn.id = 'btn-tutup-chat';
+                                closeBtn.innerHTML = '✖';
+                                closeBtn.style.cssText = 'position:absolute; right:15px; top:50%; transform:translateY(-50%); background:transparent; border:none; color:white; font-size:16px; cursor:pointer; z-index:100; font-weight:bold;';
+                                closeBtn.onclick = (e) => {
+                                    e.stopPropagation();
+                                    toggleBtn.click();
+                                };
+                                header.appendChild(closeBtn);
+                            }
+                        } else {
+                            toggleBtn.style.setProperty('opacity', '1', 'important');
+                            toggleBtn.style.setProperty('pointer-events', 'auto', 'important');
+                        }
+                    });
+                    
+                    observer.observe(document.body, { childList: true, subtree: true, attributes: true });
+
+                    // Fitur pencet layar di luar chatbot untuk menutup
+                    document.addEventListener('click', (e) => {
+                        // Jika chat terbuka (offsetParent ada) dan klik terjadi DILUAR chat window dan DILUAR toggle button
+                        if (chatWindow.offsetParent !== null && !chatWindow.contains(e.target) && !toggleBtn.contains(e.target)) {
+                            toggleBtn.click();
+                        }
+                    });
+                }
+            }, 500);
         });
     </script>
     <style>
