@@ -216,9 +216,11 @@
             webhookConfig: {
                 method: 'POST'
             },
-            showWelcomeScreen: false, /* Matikan welcome screen agar langsung ke chat */
+            showWelcomeScreen: false,
             title: 'Asisten Wali Santri',
             description: 'Pemulihan Akun Otomatis',
+            // Gunakan logo dan avatar resmi n8n
+            logo: 'https://kajian.griyaquran.web.id/img/chatbotv2.png',
             initialMessages: [
                 'Assalamu\'alaikum Bapak/Ibu! 👋',
                 'Saya asisten otomatis. Untuk meriset password, silakan ketikkan **NIK** dan **NIS** anak Anda.'
@@ -228,8 +230,6 @@
                     title: 'Bantuan Login',
                     subtitle: 'Aktif 24 Jam',
                     placeholder: 'Ketik NIK & NIS di sini...',
-                    getStartedPrimaryMessage: 'Mulai Chat',
-                    noResponseMessage: 'Sedang mengecek data...',
                 }
             },
             style: {
