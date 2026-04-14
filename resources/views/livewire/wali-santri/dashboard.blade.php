@@ -28,8 +28,8 @@
             </div>
         </div>
         <p class="text-white/80 text-sm">Assalamu'alaikum,</p>
-        <h1 class="text-2xl font-black">{{ $this->parent?->type === 'father' ? 'Abu' : 'Ummu' }}
-            {{ auth()->user()->name }}
+        <h1 class="text-2xl font-black">
+            {{ ucwords(strtolower(auth()->user()->name)) }}
         </h1>
 
         @if($this->parent?->students->count() > 0)
@@ -424,7 +424,7 @@
                     <p class="text-xs text-gray-400 font-mono">{{ $this->parent?->qr_code_string }}</p>
 
                     <div class="mt-4 p-3 bg-gray-50 rounded-xl">
-                        <p class="font-semibold text-gray-900">{{ auth()->user()->name }}</p>
+                        <p class="font-semibold text-gray-900">{{ ucwords(strtolower(auth()->user()->name)) }}</p>
                         <p class="text-sm text-gray-500">{{ $this->parent?->type_display }}</p>
                     </div>
                 </div>
