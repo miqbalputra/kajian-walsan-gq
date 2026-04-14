@@ -23,6 +23,15 @@ class Dashboard extends Component
     public $showIzinModal = false;
     public $showReuploadModal = false;
     public $showFeedbackModal = false;
+    public $isUsingDefaultPassword = false;
+
+    public function mount()
+    {
+        $user = auth()->user();
+        if (\Illuminate\Support\Facades\Hash::check($user->username, $user->password)) {
+            $this->isUsingDefaultPassword = true;
+        }
+    }
 
     public $feedbackEventId = null;
     public $ratingMateri = 0;
