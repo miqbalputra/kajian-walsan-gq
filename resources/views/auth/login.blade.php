@@ -172,28 +172,76 @@
     </div>
 
     @push('scripts')
-    <!-- n8n Web Chatbot Integration -->
+    <!-- Custom Premium Typography -->
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600&display=swap" rel="stylesheet">
+
     <link href="https://cdn.jsdelivr.net/npm/@n8n/chat/dist/style.css" rel="stylesheet" />
+    <style>
+        /* Modern & Premium Chat Styling */
+        :root {
+            --chat-primary: #0f172a; /* Slate 900 */
+            --chat-accent: #3b82f6;  /* Blue 500 */
+        }
+
+        .n8n-chat-button {
+            background-image: url('/img/chatbot.png') !important; /* Menggunakan icon custom */
+            background-size: 80% !important;
+            background-position: center !important;
+            background-repeat: no-repeat !important;
+            background-color: var(--chat-primary) !important;
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.4) !important;
+            border: 2px solid rgba(255, 255, 255, 0.1) !important;
+            width: 65px !important;
+            height: 65px !important;
+        }
+
+        /* Hilangkan icon default bawaan n8n */
+        .n8n-chat-button svg {
+            display: none !important;
+        }
+
+        .n8n-chat-window {
+            font-family: 'Outfit', sans-serif !important;
+            border-radius: 24px !important;
+            overflow: hidden !important;
+            box-shadow: 0 20px 50px rgba(15, 23, 42, 0.15) !important;
+            border: 1px solid rgba(15, 23, 42, 0.05) !important;
+        }
+    </style>
+
     <script type="module">
         import { createChat } from 'https://cdn.jsdelivr.net/npm/@n8n/chat/dist/chat.bundle.es.js';
 
         createChat({
-            webhookUrl: 'https://automation.tunasilmu.com/webhook/jkbsabhjabchbc82u9u991',
+            webhookUrl: 'https://n8n.griyaquran.web.id/webhook/jkbsabhjabchbc82u9u991',
+            webhookConfig: {
+                method: 'POST'
+            },
             showWelcomeScreen: true,
-            initialMessages: [
-                'Assalamu\'alaikum! 👋',
-                'Saya asisten otomatis. Jika Bapak/Ibu lupa password, silakan ketik NIK Wali dan NIS Santri secara berurutan. Saya akan bantu memulihkan akun Anda.',
-                'Berikut contoh penulisannya agar mudah diproses otomatis:\nNIK: 3301xxxxxxxx1234\nNIS: 12345'
+            title: 'Asisten Wali Santri',
+            description: 'AI Pemulihan Akun Otomatis',
+            welcomeMessages: [
+                'Halo Bapak/Ibu! 👋',
+                'Saya asisten AI yang akan membantu Anda memulihkan akses akun secara instan.',
+                'Ada yang bisa saya bantu?'
             ],
             i18n: {
                 en: {
-                    title: 'Asisten Wali Santri',
-                    subtitle: 'Layanan Pemulihan Akun',
-                    footer: '',
-                    getStarted: 'Chat Sekarang',
-                    inputPlaceholder: 'Ketik pesan Anda di sini...',
-                },
+                    chatButtonAlternativeText: 'Butuh bantuan login?',
+                    chatWindowTitle: 'Pusat Bantuan AI',
+                    chatWindowSubtitle: 'Siap Melayani 24 Jam',
+                    placeholder: 'Ketik NIK & NIS di sini...',
+                    getStartedPrimaryMessage: 'Mulai Pemulihan Pasword',
+                    getStartedSecondaryMessage: 'Proses otomatis via AI.',
+                    noResponseMessage: 'Sedang mengecek database...',
+                    error: 'Sistem sedang sibuk. Mohon coba beberapa saat lagi.'
+                }
             },
+            style: {
+                primaryColor: '#0f172a', /* Slate Dark */
+                userMessageColor: '#3b82f6', /* Modern Blue */
+                backgroundColor: '#ffffff',
+            }
         });
     </script>
     <style>

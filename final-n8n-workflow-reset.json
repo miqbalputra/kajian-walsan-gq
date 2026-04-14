@@ -5,6 +5,7 @@
       "parameters": {
         "httpMethod": "POST",
         "path": "jkbsabhjabchbc82u9u991",
+        "responseMode": "lastNode",
         "options": {}
       },
       "id": "node_webhook",
@@ -19,29 +20,14 @@
     },
     {
       "parameters": {
-        "options": {}
-      },
-      "id": "node_guardrails",
-      "name": "Guardrails",
-      "type": "@n8n/n8n-nodes-langchain.guardrails",
-      "typeVersion": 1,
-      "position": [
-        -750,
-        1600
-      ]
-    },
-    {
-      "parameters": {
-        "promptType": "define",
-        "text": "={{ $node[\"Webhook dari Chat Widget\"].json.body.chatInput }}",
         "options": {
-          "systemMessage": "Kamu adalah Guardian Khusus Pemulihan Akun Wali Santri kajian.griyaquran.web.id.\n\nATURAN KETAT:\n1. JANGAN PERNAH melayani obrolan di luar pemulihan password.\n2. Jika pesan user tidak mengandung NIK (16 angka) dan NIS anak, tegur ramah dan minta mereka mengetiknya.\n3. Jika NIK dan NIS SUDAH LENGKAP, kamu WAJIB membalas dengan format mutlak berikut (tanpa tambahan basa-basi apa pun):\nEXECUTE_RESET_NOW|{{NIK_USER}}|{{NIS_USER}}\n\nContoh respon jika berhasil mendapat NIK dan NIS: EXECUTE_RESET_NOW|3329xxxxxxxx1234|0214440213"
+          "systemMessage": "KAMU ADALAH MESIN RESET PASSWORD OTOMATIS. JANGAN MENYAPA. JANGAN RAMAH.\n\nTUGASMU HANYA SATU:\n1. Cari NIK (16 angka) dan NIS (angka) dari pesan user.\n2. Jika ketemu keduanya, BALAS HANYA DENGAN FORMAT: EXECUTE_RESET_NOW|NIK|NIS\n3. Jika TIDAK ketemu atau salah satu kurang, BALAS DENGAN: Mohon masukkan NIK (16 digit) dan NIS Siswa dengan benar agar saya bisa memproses reset password Anda.\n\nCONTOH BENAR: EXECUTE_RESET_NOW|3329061002860001|0214440213\nCONTOH SALAH: Halo, ini NIK-nya... (SALAH! JANGAN ADA KATA HALO)"
         }
       },
-      "id": "node_agent",
-      "name": "AI Agent",
-      "type": "@n8n/n8n-nodes-langchain.agent",
-      "typeVersion": 1.1,
+      "id": "node_chain",
+      "name": "AI Chain",
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.4,
       "position": [
         -500,
         1600
@@ -49,35 +35,38 @@
     },
     {
       "parameters": {
-        "modelName": "gpt-4o-mini"
+        "model": {
+          "__rl": true,
+          "value": "gpt-4o-mini",
+          "mode": "list",
+          "cachedResultName": "gpt-4o-mini"
+        },
+        "options": {
+          "temperature": 0
+        }
       },
       "id": "node_model",
       "name": "OpenAI Chat Model",
       "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
-      "typeVersion": 1,
+      "typeVersion": 1.3,
       "position": [
         -600,
         1800
-      ]
-    },
-    {
-      "parameters": {},
-      "id": "node_memory",
-      "name": "Simple Memory",
-      "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
-      "typeVersion": 1,
-      "position": [
-        -400,
-        1800
-      ]
+      ],
+      "credentials": {
+        "openAiApi": {
+          "id": "H2MRBHuA4EivwEk5",
+          "name": "OpenAI"
+        }
+      }
     },
     {
       "parameters": {
         "conditions": {
           "string": [
             {
-              "value1": "={{ $json.output }}",
-              "operation": "startsWith",
+              "value1": "={{ $json.text }}",
+              "operation": "contains",
               "value2": "EXECUTE_RESET_NOW"
             }
           ]
@@ -94,7 +83,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const parts = items[0].json.output.split('|');\nreturn [\n  {\n    json: {\n      nik: parts[1],\n      nis: parts[2]\n    }\n  }\n];"
+        "jsCode": "const text = items[0].json.text || '';\nconst parts = text.split('|');\nreturn [\n  {\n    json: {\n      nik: parts[1] ? parts[1].trim() : '',\n      nis: parts[2] ? parts[2].trim() : ''\n    }\n  }\n];"
       },
       "id": "node_extract",
       "name": "Ekstrak NIK & NIS",
@@ -179,7 +168,7 @@
           "string": [
             {
               "name": "output",
-              "value": "Berhasil! ✅ Akun Bapak/Ibu {{ $node[\"MariaDB: Cek Database\"].json.name }} telah dipulihkan. Silakan login menggunakan NIS anak sebagai username dan password sementara: PasswordSementara123"
+              "value": "=Berhasil! ✅ Akun Bapak/Ibu {{ $node[\"MariaDB: Cek Database\"].json.name }} telah dipulihkan. Silakan login menggunakan NIS anak sebagai username dan password sementara: PasswordSementara123"
             }
           ]
         }
@@ -219,7 +208,7 @@
           "string": [
             {
               "name": "output",
-              "value": "={{ $json.output }}"
+              "value": "={{ $json.text }}"
             }
           ]
         }
@@ -239,47 +228,25 @@
       "main": [
         [
           {
-            "node": "node_guardrails",
+            "node": "node_chain",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "node_guardrails": {
-      "main": [
-        [
-          {
-            "node": "node_agent",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "OpenAI Chat Model": {
+    "node_model": {
       "ai_languageModel": [
         [
           {
-            "node": "node_agent",
+            "node": "node_chain",
             "type": "ai_languageModel",
             "index": 0
           }
         ]
       ]
     },
-    "Simple Memory": {
-      "ai_memory": [
-        [
-          {
-            "node": "node_agent",
-            "type": "ai_memory",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "AI Agent": {
+    "AI Chain": {
       "main": [
         [
           {
