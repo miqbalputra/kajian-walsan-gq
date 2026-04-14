@@ -86,20 +86,9 @@
                             @enderror
                         </div>
 
-                        <!-- Remember Me & Forgot Password -->
-                        <div class="flex items-center justify-between mb-8">
-                            <label class="flex items-center gap-2 cursor-pointer group">
-                                <div class="relative flex items-center">
-                                    <input type="checkbox" name="remember"
-                                        class="peer h-5 w-5 cursor-pointer appearance-none rounded-md border border-gray-300 checked:bg-primary-500 checked:border-primary-500 transition-all">
-                                    <span
-                                        class="material-symbols-rounded absolute text-white opacity-0 peer-checked:opacity-100 top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-sm pointer-events-none">check</span>
-                                </div>
-                                <span
-                                    class="text-sm text-gray-600 font-medium group-hover:text-gray-900 transition-colors">Ingat
-                                    saya</span>
-                            </label>
-                            <p class="text-sm text-gray-600 font-medium inline-flex items-center gap-1">
+                        <!-- Forgot Password Assistant -->
+                        <div class="flex items-center justify-center mb-8">
+                            <p class="text-sm text-gray-600 font-medium inline-flex items-center gap-2">
                                 <span class="material-symbols-rounded text-base text-primary-500">support_agent</span>
                                 <span class="text-primary-600 font-bold">Chat asisten di bawah jika lupa password</span>
                             </p>
