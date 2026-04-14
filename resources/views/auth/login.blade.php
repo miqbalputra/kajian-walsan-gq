@@ -101,7 +101,7 @@
                             </label>
                             <p class="text-sm text-gray-600 font-medium inline-flex items-center gap-1">
                                 <span class="material-symbols-rounded text-base text-primary-500">support_agent</span>
-                                Lupa password? <span class="text-primary-600 font-bold">Chat asisten di pojok kanan bawah 👇</span>
+                                <span class="text-primary-600 font-bold">Chat asisten di bawah jika lupa password</span>
                             </p>
                         </div>
 
