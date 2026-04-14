@@ -227,7 +227,8 @@
             logo: 'https://kajian.griyaquran.web.id/img/chatbotv2.png',
             initialMessages: [
                 'Assalamu\'alaikum Bapak/Ibu! 👋',
-                'Saya asisten otomatis. Untuk meriset password, silakan ketikkan **NIK** dan **NIS** anak Anda.'
+                'Saya asisten otomatis. Untuk meriset password, silakan ketikkan **16 digit NIK Anda (Bapak/Ibu)** dan **10 digit NIS anak Anda**.',
+                'Contoh:\nNIK: 3303XXXXXXXXXXXX NIS: 0123456789'
             ],
             i18n: {
                 en: {
