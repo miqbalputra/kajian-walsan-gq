@@ -9,6 +9,7 @@ use BaconQrCode\Renderer\ImageRenderer;
 use BaconQrCode\Renderer\RendererStyle\RendererStyle;
 use BaconQrCode\Writer;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Http;
 use Livewire\Component;
 
 class Profile extends Component
@@ -95,6 +96,18 @@ class Profile extends Component
         $user->update([
             'password' => Hash::make($this->new_password),
         ]);
+
+        // Kirim Notifikasi ke n8n (WhatsApp)
+        try {
+            Http::post('https://automation.tunasilmu.com/webhook/jkbsabhjabchbc82u9u991', [
+                'type' => 'password_changed_notification',
+                'name' => $user->name,
+                'phone' => $user->phone,
+                'time' => now()->format('d M Y H:i')
+            ]);
+        } catch (\Exception $e) {
+            // Abaikan jika webhook gagal agar tidak menghambat user
+        }
 
         $this->reset(['current_password', 'new_password', 'new_password_confirmation']);
         session()->flash('password-message', 'Password berhasil diperbarui!');
