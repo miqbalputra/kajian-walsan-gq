@@ -102,7 +102,7 @@ class Profile extends Component
             Http::post('https://automation.tunasilmu.com/webhook-test/jgduiwg8729782uhebdihb27', [
                 'type' => 'password_changed_notification',
                 'name' => $user->name,
-                'phone' => $user->phone,
+                'phone' => preg_replace('/^0/', '62', $user->phone),
                 'time' => now()->format('d M Y H:i')
             ]);
         } catch (\Exception $e) {
