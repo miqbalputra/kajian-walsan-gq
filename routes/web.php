@@ -87,32 +87,26 @@ Route::middleware('auth')->group(function () {
         Route::get('/schedule', \App\Livewire\WaliSantri\KajianSchedule::class)->name('schedule');
         Route::get('/profile', \App\Livewire\WaliSantri\Profile::class)->name('profile');
 
-        // Download Kartu Identitas as PDF (server-side via DomPDF)
+        // Kartu Identitas - Print/Download Page (same approach as admin, proven to work)
         Route::get('/kartu/download', function () {
             $user = auth()->user();
             $parent = \App\Models\ParentModel::with('user', 'students')
                 ->where('user_id', $user->id)
                 ->firstOrFail();
 
-            // Generate QR Code as SVG data URL (no Imagick needed)
+            // Generate QR SVG (same as admin approach)
             $renderer = new \BaconQrCode\Renderer\ImageRenderer(
-                new \BaconQrCode\Renderer\RendererStyle\RendererStyle(200),
+                new \BaconQrCode\Renderer\RendererStyle\RendererStyle(300),
                 new \BaconQrCode\Renderer\Image\SvgImageBackEnd()
             );
             $writer = new \BaconQrCode\Writer($renderer);
-            $qrSvgData = $writer->writeString($parent->qr_code_string);
-            $qrDataUrl = 'data:image/svg+xml;base64,' . base64_encode($qrSvgData);
+            $qrSvg = $writer->writeString($parent->qr_code_string);
 
-            $isMother = $parent->type === 'mother';
-
-            $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('pdf.kartu-identitas', [
-                'parent'    => $parent,
-                'qrDataUrl' => $qrDataUrl,
-                'isMother'  => $isMother,
-            ])->setPaper([0, 0, 242.64, 153.07], 'landscape'); // 85.6mm x 53.98mm in points
-
-            $filename = 'kartu-identitas-' . \Illuminate\Support\Str::slug($parent->user->name) . '.pdf';
-            return $pdf->download($filename);
+            return view('pdf.kartu-identitas', [
+                'parent'   => $parent,
+                'qrSvg'    => $qrSvg,
+                'isMother' => $parent->type === 'mother',
+            ]);
         })->name('kartu.download');
     });
 
