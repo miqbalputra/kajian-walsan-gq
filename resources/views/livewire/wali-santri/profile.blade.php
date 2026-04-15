@@ -390,25 +390,9 @@
 
     @endif
 
-    {{-- PDF Download Scripts - Outside @if so Livewire executes them properly --}}
-    @script
+    {{-- PDF Download - defined in global window scope, executed via @once (not @script IIFE) --}}
+    @once
     <script>
-        // Dynamic script loader - loads a CDN script only once
-        function _wsLoadScript(src) {
-            return new Promise((resolve, reject) => {
-                if (document.querySelector('script[data-ws-src="' + src + '"]')) {
-                    resolve();
-                    return;
-                }
-                const s = document.createElement('script');
-                s.setAttribute('data-ws-src', src);
-                s.src = src;
-                s.onload = resolve;
-                s.onerror = reject;
-                document.head.appendChild(s);
-            });
-        }
-
         window.downloadWaliSantriCard = async function() {
             const cardElement = document.getElementById('id-card-element-ws');
             if (!cardElement) {
@@ -424,16 +408,30 @@
             if (btnIcon) btnIcon.style.animation = 'spin-ws 1s linear infinite';
             if (btnText) btnText.textContent = 'Memproses...';
 
-            try {
-                // Load libraries dynamically if not yet loaded
-                if (!window.html2canvas) {
-                    await _wsLoadScript('https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js');
-                }
-                if (!window.jspdf) {
-                    await _wsLoadScript('https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js');
-                }
+            // Inline script loader — no external function dependency
+            const loadLib = (src, check) => new Promise((res, rej) => {
+                if (check()) { res(); return; }
+                const existing = document.querySelector('script[data-wslib="' + src + '"]');
+                if (existing) { res(); return; }
+                const s = document.createElement('script');
+                s.setAttribute('data-wslib', src);
+                s.src = src;
+                s.onload = res;
+                s.onerror = rej;
+                document.head.appendChild(s);
+            });
 
-                // Render card to canvas at 4x for high resolution
+            try {
+                await loadLib(
+                    'https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js',
+                    () => !!window.html2canvas
+                );
+                await loadLib(
+                    'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js',
+                    () => !!window.jspdf
+                );
+
+                // Render card to canvas at 4x scale (high-res)
                 const canvas = await window.html2canvas(cardElement, {
                     scale: 4,
                     useCORS: true,
@@ -442,10 +440,9 @@
                     logging: false,
                     width: cardElement.offsetWidth,
                     height: cardElement.offsetHeight,
-                    ignoreElements: (el) => el.tagName === 'SCRIPT' || el.tagName === 'STYLE',
                 });
 
-                // Create PDF at KTP size: 85.6mm x 53.98mm (landscape)
+                // KTP standard size: 85.6mm x 53.98mm landscape
                 const { jsPDF } = window.jspdf;
                 const pdf = new jsPDF({
                     orientation: 'landscape',
@@ -457,7 +454,7 @@
                 const imgData = canvas.toDataURL('image/jpeg', 0.98);
                 pdf.addImage(imgData, 'JPEG', 0, 0, 85.6, 53.98);
 
-                // Build filename from name element
+                // Filename from card name element
                 const nameEl = document.getElementById('card-ws-name');
                 const rawName = nameEl ? nameEl.textContent.trim() : 'wali-santri';
                 const safeName = rawName.replace(/[^a-zA-Z0-9\s]/g, '').replace(/\s+/g, '-').toLowerCase();
@@ -473,7 +470,7 @@
             }
         };
 
-        // Inject spin keyframe
+        // Inject spin keyframe once
         if (!document.getElementById('spin-ws-style')) {
             const st = document.createElement('style');
             st.id = 'spin-ws-style';
@@ -481,7 +478,7 @@
             document.head.appendChild(st);
         }
     </script>
-    @endscript
+    @endonce
 
     {{-- Bottom Navigation --}}
     <nav
