@@ -26,18 +26,10 @@
                 class="bg-white/95 backdrop-blur-2xl rounded-[2.5rem] p-8 shadow-[0_20px_50px_rgba(0,0,0,0.15)] border border-white/50">
                 <!-- Tab Buttons -->
                 <div class="flex mb-8 bg-gray-100/80 p-1.5 rounded-2xl shadow-inner">
-                    <button @click="showQrLogin = false"
-                        :class="!showQrLogin ? 'bg-white shadow-md text-primary-600' : 'text-gray-500 hover:text-gray-700'"
-                        class="flex-1 py-3 px-4 rounded-xl font-bold text-sm transition-all duration-300 flex items-center justify-center gap-2">
+                    <div class="flex-1 py-3 px-4 bg-white shadow-md text-primary-600 rounded-xl font-bold text-sm flex items-center justify-center gap-2">
                         <span class="material-symbols-rounded text-lg">login</span>
-                        Akun
-                    </button>
-                    <button @click="showQrLogin = true"
-                        :class="showQrLogin ? 'bg-white shadow-md text-primary-600' : 'text-gray-500 hover:text-gray-700'"
-                        class="flex-1 py-3 px-4 rounded-xl font-bold text-sm transition-all duration-300 flex items-center justify-center gap-2">
-                        <span class="material-symbols-rounded text-lg">qr_code_scanner</span>
-                        QR Code
-                    </button>
+                        Masuk Akun
+                    </div>
                 </div>
 
                 <!-- Email/Password Login Form -->
@@ -116,33 +108,6 @@
 
 
                     </form>
-                </div>
-
-                <!-- QR Code Login Section -->
-                <div x-show="showQrLogin" style="display:none" x-transition:enter="transition ease-out duration-300"
-                    x-transition:enter-start="opacity-0 translate-y-4"
-                    x-transition:enter-end="opacity-100 translate-y-0" class="text-center">
-                    <div class="py-6">
-                        <div class="relative inline-flex mb-6">
-                            <div
-                                class="absolute inset-0 bg-secondary-400 rounded-3xl blur-2xl opacity-20 animate-pulse">
-                            </div>
-                            <div
-                                class="relative inline-flex items-center justify-center w-36 h-36 bg-gray-50 border-2 border-dashed border-gray-200 rounded-[2rem] text-gray-400">
-                                <span class="material-symbols-rounded text-6xl">qr_code_scanner</span>
-                            </div>
-                        </div>
-                        <h3 class="text-xl font-bold text-gray-900 mb-2">Scan QR Code Anda</h3>
-                        <p class="text-gray-500 text-sm mb-8 px-4 leading-relaxed font-medium">
-                            Gunakan Kartu Wali Santri atau QR Code digital Anda untuk masuk secara instan.
-                        </p>
-                        <a href="{{ route('qr.login') }}"
-                            class="inline-flex items-center justify-center gap-3 bg-secondary-600 text-white py-4 px-10 rounded-2xl font-bold text-lg
-                                  hover:bg-secondary-700 active:scale-[0.98] transition-all shadow-xl shadow-secondary-600/20">
-                            <span class="material-symbols-rounded">photo_camera</span>
-                            Buka Kamera
-                        </a>
-                    </div>
                 </div>
             </div>
 

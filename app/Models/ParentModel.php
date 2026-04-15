@@ -38,18 +38,29 @@ class ParentModel extends Model
         // Auto-generate QR code string on creation
         static::creating(function ($parent) {
             if (empty($parent->qr_code_string)) {
-                $parent->qr_code_string = static::generateUniqueQrCode();
+                $parent->qr_code_string = static::generateForParent($parent);
             }
         });
     }
 
     /**
-     * Generate a unique QR code string.
+     * Generate a QR code string based on parent type and child NIS.
+     * Fallback to random if no child is linked yet.
      */
-    public static function generateUniqueQrCode(): string
+    public static function generateForParent($parent): string
     {
+        // Jika dipanggil saat creating, relasi mungkin belum ada.
+        // Kita butuh murid pertama.
+        $student = $parent->students()->first();
+
+        if ($student && !empty($student->nis)) {
+            $prefix = ($parent->type === 'father') ? 'A' : 'B';
+            return $prefix . $student->nis;
+        }
+
+        // Fallback jika belum ada murid terhubung
         do {
-            $code = 'WS-' . strtoupper(Str::random(8)) . '-' . now()->format('Y');
+            $code = 'TMP-' . strtoupper(Str::random(8));
         } while (static::where('qr_code_string', $code)->exists());
 
         return $code;
@@ -150,13 +161,29 @@ class ParentModel extends Model
     }
 
     /**
-     * Regenerate QR code string for security purposes.
-     * Can be called manually by admin or periodically.
+     * Regenerate QR code string based on child NIS.
      */
     public function regenerateQrCode(): bool
     {
-        $this->qr_code_string = static::generateUniqueQrCode();
+        $this->qr_code_string = static::generateForParent($this);
         return $this->save();
+    }
+
+    /**
+     * Sync QR code string with linked student NIS.
+     * Useful when a student is newly linked or NIS is updated.
+     */
+    public function syncQrCode(): bool
+    {
+        $newCode = static::generateForParent($this);
+        
+        // Hanya update jika formatnya berubah (misal dari TMP ke NIS)
+        if ($this->qr_code_string !== $newCode) {
+            $this->qr_code_string = $newCode;
+            return $this->save();
+        }
+
+        return false;
     }
 
     /**
