@@ -52,13 +52,8 @@ class AppServiceProvider extends ServiceProvider
         // ===================================================
         // Livewire Blaze: Optimasi rendering Blade components
         // ===================================================
-        $blaze = Blaze::optimize()
+        Blaze::optimize()
             ->in(resource_path('views/components'))
             ->in(resource_path('views/components/layouts'), compile: false);
-
-        // Jangan biarkan Blaze mengganggu komponen Pulse di vendor
-        if (is_dir(base_path('vendor/laravel/pulse/resources/views'))) {
-            $blaze->exclude(base_path('vendor/laravel/pulse/resources/views'));
-        }
     }
 }
