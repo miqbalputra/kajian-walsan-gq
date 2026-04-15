@@ -38,7 +38,7 @@ class AppServiceProvider extends ServiceProvider
         // Hanya admin yang bisa mengakses dashboard /pulse
         // ===================================================
         Gate::define('viewPulse', function (User $user) {
-            return $user->isAdmin();
+            return config('pulse.enabled') && $user->isAdmin();
         });
 
         // Konfigurasi tampilan user di Pulse dashboard
