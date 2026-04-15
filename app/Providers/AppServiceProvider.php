@@ -41,13 +41,11 @@ class AppServiceProvider extends ServiceProvider
         });
 
         // Konfigurasi tampilan user di Pulse dashboard
-        if ($this->app->bound(Pulse::class)) {
-            Pulse::user(fn ($user) => [
-                'name'   => $user->name,
-                'extra'  => $user->role?->display_name ?? 'User',
-                'avatar' => $user->avatar ?? null,
-            ]);
-        }
+        Pulse::user(fn ($user) => [
+            'name'   => $user->name,
+            'extra'  => $user->email,
+            'avatar' => null,
+        ]);
 
         // ===================================================
         // Livewire Blaze: Optimasi rendering Blade components

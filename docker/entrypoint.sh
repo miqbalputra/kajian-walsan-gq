@@ -9,19 +9,11 @@ fi
 # Masuk ke direktori app
 cd /var/www/html
 
-# Generate key jika belum ada
-php artisan key:generate --no-interaction --force
-
-# Jalankan migrations
+# Publish & Migrate Pulse
+php artisan vendor:publish --tag=pulse-config --tag=pulse-dashboard --tag=pulse-migrations --force -n
 php artisan migrate --force --no-interaction
 
-# Publish Pulse config & dashboard (jika belum ada)
-php artisan vendor:publish --provider="Laravel\Pulse\PulseServiceProvider" --no-interaction 2>/dev/null || true
-
-# Hapus compiled views agar Blaze bisa compile ulang dengan optimasi
-php artisan view:clear
-
-# Cache config untuk production
+# Cache for performance
 php artisan config:cache
 php artisan route:cache
 php artisan view:cache
