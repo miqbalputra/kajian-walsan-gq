@@ -369,10 +369,10 @@
                             class="flex-1 px-4 py-3 border border-gray-200 dark:border-slate-700 rounded-xl font-semibold text-gray-700 dark:text-slate-300 hover:bg-gray-50 dark:hover:bg-slate-800 transition-colors">
                             Tutup
                         </button>
-                        <button onclick="printWaliSantriCard()"
-                            class="flex-1 px-4 py-3 bg-gradient-to-r {{ $isMother ? 'from-rose-500 to-pink-600' : 'from-emerald-600 to-teal-600' }} text-white rounded-xl font-semibold hover:opacity-90 transition-all inline-flex items-center justify-center gap-2 shadow-lg {{ $isMother ? 'shadow-rose-500/25' : 'shadow-emerald-500/25' }}">
-                            <span class="material-symbols-rounded text-xl">print</span>
-                            Cetak Kartu
+                        <button onclick="downloadWaliSantriCard()"
+                            class="flex-1 px-4 py-3 bg-gradient-to-r {{ $isMother ? 'from-rose-500 to-pink-600' : 'from-emerald-600 to-teal-600' }} text-white rounded-xl font-semibold hover:opacity-90 transition-all inline-flex items-center justify-center gap-2 shadow-lg {{ $isMother ? 'shadow-rose-500/25' : 'shadow-emerald-500/25' }}" id="btn-download-kartu">
+                            <span class="material-symbols-rounded text-xl" id="btn-download-icon">download</span>
+                            <span id="btn-download-text">Download Kartu</span>
                         </button>
                     </div>
                 </div>
@@ -387,36 +387,67 @@
             }
         </style>
 
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
         <script>
-            function printWaliSantriCard() {
+            async function downloadWaliSantriCard() {
                 const cardElement = document.getElementById('id-card-element-ws');
                 if (!cardElement) return;
 
-                const printWindow = window.open('', '_blank', 'width=600,height=500');
-                printWindow.document.write(`
-                    <!DOCTYPE html>
-                    <html>
-                    <head>
-                        <title>Kartu Identitas Wali Santri</title>
-                        <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap">
-                        <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" />
-                        <style>
-                            * { margin: 0; padding: 0; box-sizing: border-box; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
-                            body { display: flex; align-items: center; justify-content: center; min-height: 100vh; background: white; font-family: 'Inter', sans-serif; }
-                            @page { size: 85.6mm 53.98mm; margin: 0; }
-                        </style>
-                    </head>
-                    <body>
-                        ${cardElement.outerHTML}
-                    </body>
-                    </html>
-                `);
-                printWindow.document.close();
-                setTimeout(() => {
-                    printWindow.focus();
-                    printWindow.print();
-                    printWindow.close();
-                }, 800);
+                const btn = document.getElementById('btn-download-kartu');
+                const btnIcon = document.getElementById('btn-download-icon');
+                const btnText = document.getElementById('btn-download-text');
+
+                // Show loading state
+                btn.disabled = true;
+                btnIcon.style.animation = 'spin 1s linear infinite';
+                btnText.textContent = 'Memproses...';
+
+                try {
+                    // Capture card at 4x scale for high resolution
+                    const canvas = await html2canvas(cardElement, {
+                        scale: 4,
+                        useCORS: true,
+                        allowTaint: true,
+                        backgroundColor: '#ffffff',
+                        logging: false,
+                        width: cardElement.offsetWidth,
+                        height: cardElement.offsetHeight,
+                    });
+
+                    // KTP size in mm: 85.6 x 53.98
+                    const { jsPDF } = window.jspdf;
+                    const pdf = new jsPDF({
+                        orientation: 'landscape',
+                        unit: 'mm',
+                        format: [85.6, 53.98],
+                    });
+
+                    const imgData = canvas.toDataURL('image/jpeg', 1.0);
+                    pdf.addImage(imgData, 'JPEG', 0, 0, 85.6, 53.98);
+
+                    // Generate filename from name on card
+                    const name = cardElement.querySelector('.text-\\[10px\\]')?.textContent?.trim() || 'kartu-identitas';
+                    const safeName = name.replace(/[^a-zA-Z0-9\s]/g, '').replace(/\s+/g, '-').toLowerCase();
+                    pdf.save('kartu-identitas-' + safeName + '.pdf');
+
+                } catch (err) {
+                    console.error('Download error:', err);
+                    alert('Gagal membuat PDF. Silakan coba lagi.');
+                } finally {
+                    // Restore button
+                    btn.disabled = false;
+                    btnIcon.style.animation = '';
+                    btnText.textContent = 'Download Kartu';
+                }
+            }
+
+            // Inject spin keyframe if not present
+            if (!document.getElementById('spin-style-ws')) {
+                const style = document.createElement('style');
+                style.id = 'spin-style-ws';
+                style.textContent = '@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }';
+                document.head.appendChild(style);
             }
         </script>
     @endif
