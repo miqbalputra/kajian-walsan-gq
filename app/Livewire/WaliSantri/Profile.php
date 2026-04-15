@@ -2,7 +2,12 @@
 
 namespace App\Livewire\WaliSantri;
 
+use App\Models\ParentModel;
 use App\Models\User;
+use BaconQrCode\Renderer\Image\SvgImageBackEnd;
+use BaconQrCode\Renderer\ImageRenderer;
+use BaconQrCode\Renderer\RendererStyle\RendererStyle;
+use BaconQrCode\Writer;
 use Illuminate\Support\Facades\Hash;
 use Livewire\Component;
 
@@ -13,6 +18,10 @@ class Profile extends Component
     public $email;
     public $phone;
     public $avatar; // Ini akan menyimpan string seperti "icon:mosque|bg-indigo-500"
+
+    // Card modal state
+    public $showCardModal = false;
+    public $qrCodeSvg = '';
 
     public $current_password;
     public $new_password;
@@ -91,9 +100,35 @@ class Profile extends Component
         session()->flash('password-message', 'Password berhasil diperbarui!');
     }
 
+    public function showCard()
+    {
+        $user = auth()->user();
+        $parent = ParentModel::with('user', 'students.classRoom')
+            ->where('user_id', $user->id)
+            ->first();
+
+        if (!$parent) {
+            return;
+        }
+
+        $renderer = new ImageRenderer(
+            new RendererStyle(400),
+            new SvgImageBackEnd()
+        );
+        $writer = new Writer($renderer);
+        $this->qrCodeSvg = $writer->writeString($parent->qr_code_string);
+        $this->showCardModal = true;
+    }
+
     public function render()
     {
-        return view('livewire.wali-santri.profile')
-            ->layout('components.layouts.wali-santri', ['title' => 'Profil Saya']);
+        $user = auth()->user();
+        $parentData = ParentModel::with('user', 'students.classRoom')
+            ->where('user_id', $user->id)
+            ->first();
+
+        return view('livewire.wali-santri.profile', [
+            'parentData' => $parentData,
+        ])->layout('components.layouts.wali-santri', ['title' => 'Profil Saya']);
     }
 }

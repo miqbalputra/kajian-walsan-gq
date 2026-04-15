@@ -197,7 +197,31 @@
 
 
 
-        <!-- Logout Card -->
+        @if($parentData)
+        {{-- Kartu Identitas Card --}}
+        <div
+            class="bg-white dark:bg-slate-900 rounded-[2.5rem] shadow-xl shadow-slate-200/60 dark:shadow-none p-8 border border-slate-100 dark:border-slate-800 transition-all">
+            <h3 class="text-lg font-black text-slate-900 dark:text-white mb-4 flex items-center gap-3">
+                <span
+                    class="w-8 h-8 bg-teal-50 dark:bg-teal-950/30 text-teal-600 dark:text-teal-400 rounded-xl flex items-center justify-center">
+                    <span class="material-symbols-rounded text-lg">badge</span>
+                </span>
+                Kartu Identitas
+            </h3>
+            <p class="text-xs text-slate-400 dark:text-slate-500 mb-6 font-medium">Kartu identitas Anda sebagai Wali Santri dengan QR Code unik.</p>
+
+            <button wire:click="showCard"
+                class="w-full py-4 bg-gradient-to-r from-teal-500 to-emerald-600 text-white rounded-2xl font-black shadow-xl shadow-teal-500/20 hover:opacity-90 transition-all active:scale-[0.98] flex items-center justify-center gap-3">
+                <span wire:loading wire:target="showCard"
+                    class="material-symbols-rounded animate-spin">progress_activity</span>
+                <span wire:loading.remove wire:target="showCard" class="material-symbols-rounded">qr_code_2</span>
+                <span wire:loading.remove wire:target="showCard">Lihat &amp; Cetak Kartu</span>
+                <span wire:loading wire:target="showCard">Memuat Kartu...</span>
+            </button>
+        </div>
+        @endif
+
+        {{-- Logout Card --}}
         <div
             class="bg-red-50 dark:bg-red-950/10 rounded-[2.5rem] p-8 border border-red-100 dark:border-red-900/30 mb-6 transition-colors">
             <h3 class="text-lg font-black text-red-900 dark:text-red-400 mb-2 flex items-center gap-3">
@@ -222,7 +246,182 @@
         </form>
     </div>
 
-    <!-- Bottom Navigation -->
+    {{-- ID Card Modal --}}
+    @if($showCardModal && $parentData)
+        @php
+            $isMother = $parentData->type === 'mother';
+            $bgHeader = $isMother ? 'from-rose-500 to-pink-500' : 'from-emerald-600 to-teal-500';
+            $textColor = $isMother ? 'text-rose-600' : 'text-teal-600';
+            $borderColor = $isMother ? 'border-rose-100' : 'border-teal-100';
+            $accentBar = $isMother ? 'from-rose-500 via-pink-400 to-rose-500' : 'from-emerald-600 via-teal-400 to-emerald-600';
+            $badgeBg = $isMother ? 'bg-rose-50 border-rose-100' : 'bg-emerald-50 border-emerald-100';
+            $badgeText = $isMother ? 'text-rose-700' : 'text-emerald-700';
+        @endphp
+        <div class="fixed inset-0 z-[70] overflow-y-auto" aria-modal="true">
+            <div class="flex items-center justify-center min-h-screen px-4 py-8">
+                <div class="fixed inset-0 bg-black/60 backdrop-blur-sm transition-opacity"
+                    wire:click="$set('showCardModal', false)"></div>
+
+                <div class="relative bg-white dark:bg-slate-900 rounded-3xl shadow-2xl max-w-lg w-full p-8 z-10">
+                    <div class="flex items-center justify-between mb-6">
+                        <div>
+                            <h3 class="text-2xl font-black text-gray-900 dark:text-white">Kartu Identitas</h3>
+                            <p class="text-sm text-gray-500 dark:text-slate-400">Ukuran standar KTP Indonesia</p>
+                        </div>
+                        <button wire:click="$set('showCardModal', false)"
+                            class="p-2 hover:bg-gray-100 dark:hover:bg-slate-800 rounded-xl transition-colors">
+                            <span class="material-symbols-rounded text-2xl text-gray-700 dark:text-slate-300">close</span>
+                        </button>
+                    </div>
+
+                    {{-- ID Card - KTP Size: 85.6mm x 53.98mm --}}
+                    <div id="id-card-ws"
+                        class="relative p-6 flex items-center justify-center bg-gray-50 dark:bg-slate-950 rounded-2xl border-2 border-dashed border-gray-200 dark:border-slate-700 overflow-hidden">
+                        <div id="id-card-element-ws"
+                            class="relative overflow-hidden rounded-xl shadow-2xl bg-white border border-gray-200"
+                            style="width: 323.4px; height: 204px; min-width: 323.4px; min-height: 204px; font-family: 'Inter', sans-serif;">
+
+                            {{-- Header Bar --}}
+                            <div class="h-8 bg-gradient-to-r {{ $bgHeader }} flex items-center px-4 justify-between">
+                                <div class="flex items-center gap-1.5">
+                                    <span class="material-symbols-rounded text-white text-base">mosque</span>
+                                    <p class="text-white font-black text-[9px] tracking-tight uppercase">Kajian Walsan</p>
+                                </div>
+                                <p class="text-white/80 font-bold text-[7px] uppercase tracking-tighter">ID Wali Santri</p>
+                            </div>
+
+                            {{-- Background Pattern --}}
+                            <div class="absolute inset-0 top-8 pointer-events-none opacity-[0.03]"
+                                style="background-image: url('data:image/svg+xml,%3Csvg width=\'20\' height=\'20\' viewBox=\'0 0 20 20\' xmlns=\'http://www.w3.org/2000/svg\'%3E%3Cpath d=\'M10 0 L20 10 L10 20 L0 10 Z\' fill=\'none\' stroke=\'black\' stroke-width=\'0.5\'/%3E%3C/svg%3E');">
+                            </div>
+
+                            {{-- Card Body --}}
+                            <div class="p-4 flex gap-4 h-[calc(100%-32px)]">
+                                {{-- Left: Data Info --}}
+                                <div class="flex-1 flex flex-col justify-between py-1 min-w-0">
+                                    <div class="space-y-0.5">
+                                        <p class="text-[6px] font-bold {{ $textColor }} uppercase tracking-widest leading-none">
+                                            Nama Lengkap</p>
+                                        <p class="text-[10px] font-black text-slate-800 leading-tight uppercase truncate">
+                                            {{ $parentData->user?->name }}
+                                        </p>
+                                    </div>
+
+                                    <div class="flex gap-4">
+                                        <div>
+                                            <p class="text-[6px] font-bold {{ $textColor }} uppercase tracking-widest leading-none">
+                                                Peran</p>
+                                            <p class="text-[8px] font-bold text-slate-700 leading-none">
+                                                {{ strtoupper($parentData->type_display) }}
+                                            </p>
+                                        </div>
+                                    </div>
+
+                                    <div class="space-y-0.5 min-h-0 overflow-hidden">
+                                        <p class="text-[6px] font-bold {{ $textColor }} uppercase tracking-widest leading-none">
+                                            Wali Dari / NIS</p>
+                                        <div class="space-y-0.5">
+                                            @foreach($parentData->students->take(3) as $student)
+                                                <p class="text-[8px] font-medium text-slate-700 truncate leading-none mt-0.5">•
+                                                    {{ $student->name }} <span
+                                                        class="text-slate-400 text-[6px]">({{ $student->nis }})</span>
+                                                </p>
+                                            @endforeach
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {{-- Right: QR Code --}}
+                                <div class="flex-shrink-0 flex flex-col items-center justify-center">
+                                    <div
+                                        class="w-20 h-20 bg-white border {{ $borderColor }} rounded-lg p-1 shadow-sm flex items-center justify-center overflow-hidden qrcode-svg-container-ws">
+                                        {!! $qrCodeSvg !!}
+                                    </div>
+                                    <p class="text-[5px] font-mono text-slate-400 mt-1.5 tracking-tighter">
+                                        {{ $parentData->qr_code_string }}
+                                    </p>
+
+                                    <div
+                                        class="mt-2 flex items-center gap-1 px-1.5 py-0.5 {{ $badgeBg }} rounded-full border">
+                                        <span
+                                            class="material-symbols-rounded {{ $isMother ? 'text-rose-600' : 'text-emerald-600' }} text-[8px]">verified</span>
+                                        <span class="text-[5px] font-bold {{ $badgeText }} uppercase">Valid</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {{-- Footer Text --}}
+                            <div class="absolute bottom-1.5 left-0 right-4 text-right">
+                                <p class="text-[5px] font-bold text-slate-400 opacity-60 uppercase tracking-tighter">
+                                    Kelompok Tahfidz Griya Qur'an "Tunas Ilmu"
+                                </p>
+                            </div>
+
+                            {{-- Footer Accent --}}
+                            <div
+                                class="absolute bottom-0 left-0 right-0 h-1 bg-gradient-to-r {{ $accentBar }}">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mt-6 flex gap-3">
+                        <button wire:click="$set('showCardModal', false)"
+                            class="flex-1 px-4 py-3 border border-gray-200 dark:border-slate-700 rounded-xl font-semibold text-gray-700 dark:text-slate-300 hover:bg-gray-50 dark:hover:bg-slate-800 transition-colors">
+                            Tutup
+                        </button>
+                        <button onclick="printWaliSantriCard()"
+                            class="flex-1 px-4 py-3 bg-gradient-to-r {{ $isMother ? 'from-rose-500 to-pink-600' : 'from-emerald-600 to-teal-600' }} text-white rounded-xl font-semibold hover:opacity-90 transition-all inline-flex items-center justify-center gap-2 shadow-lg {{ $isMother ? 'shadow-rose-500/25' : 'shadow-emerald-500/25' }}">
+                            <span class="material-symbols-rounded text-xl">print</span>
+                            Cetak Kartu
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <style>
+            .qrcode-svg-container-ws svg {
+                width: 100% !important;
+                height: 100% !important;
+                display: block;
+            }
+        </style>
+
+        <script>
+            function printWaliSantriCard() {
+                const cardElement = document.getElementById('id-card-element-ws');
+                if (!cardElement) return;
+
+                const printWindow = window.open('', '_blank', 'width=600,height=500');
+                printWindow.document.write(`
+                    <!DOCTYPE html>
+                    <html>
+                    <head>
+                        <title>Kartu Identitas Wali Santri</title>
+                        <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap">
+                        <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" />
+                        <style>
+                            * { margin: 0; padding: 0; box-sizing: border-box; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+                            body { display: flex; align-items: center; justify-content: center; min-height: 100vh; background: white; font-family: 'Inter', sans-serif; }
+                            @page { size: 85.6mm 53.98mm; margin: 0; }
+                        </style>
+                    </head>
+                    <body>
+                        ${cardElement.outerHTML}
+                    </body>
+                    </html>
+                `);
+                printWindow.document.close();
+                setTimeout(() => {
+                    printWindow.focus();
+                    printWindow.print();
+                    printWindow.close();
+                }, 800);
+            }
+        </script>
+    @endif
+
+    {{-- Bottom Navigation --}}
     <nav
         class="fixed bottom-0 inset-x-0 bg-white/80 dark:bg-slate-900/80 backdrop-blur-lg border-t border-slate-100 dark:border-slate-800 px-6 py-3 flex items-center justify-around z-[60] transition-colors">
         <a href="{{ route('wali-santri.dashboard') }}"
