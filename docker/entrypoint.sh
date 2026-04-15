@@ -15,6 +15,9 @@ php artisan key:generate --no-interaction --force
 # Jalankan migrations
 php artisan migrate --force --no-interaction
 
+# Publish Pulse config & dashboard (jika belum ada)
+php artisan vendor:publish --provider="Laravel\Pulse\PulseServiceProvider" --no-interaction 2>/dev/null || true
+
 # Hapus compiled views agar Blaze bisa compile ulang dengan optimasi
 php artisan view:clear
 

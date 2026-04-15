@@ -116,6 +116,11 @@
                     <span class="material-symbols-rounded">manage_accounts</span>
                     Manajemen User
                 </a>
+                <a href="{{ url('/pulse') }}" target="_blank"
+                    class="flex items-center gap-3 px-4 py-3 rounded-xl font-medium transition-colors text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-slate-800">
+                    <span class="material-symbols-rounded">monitor_heart</span>
+                    Sistem Pulse
+                </a>
                 <a href="{{ route('admin.settings') }}"
                     class="flex items-center gap-3 px-4 py-3 rounded-xl font-medium transition-colors {{ request()->routeIs('admin.settings') ? 'bg-primary-50 dark:bg-primary-900/20 text-primary-600 dark:text-primary-400' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-slate-800' }}">
                     <span class="material-symbols-rounded">settings</span>
