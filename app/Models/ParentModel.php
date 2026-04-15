@@ -41,6 +41,13 @@ class ParentModel extends Model
                 $parent->qr_code_string = static::generateForParent($parent);
             }
         });
+
+        // Paksa perbaikan kode jika masih menggunakan format lama (WS-) saat di-update
+        static::saving(function ($parent) {
+            if (str_starts_with($parent->qr_code_string, 'WS-')) {
+                $parent->qr_code_string = static::generateForParent($parent);
+            }
+        });
     }
 
     /**
