@@ -302,7 +302,7 @@
                                     <div class="space-y-0.5">
                                         <p class="text-[6px] font-bold {{ $textColor }} uppercase tracking-widest leading-none">
                                             Nama Lengkap</p>
-                                        <p class="text-[10px] font-black text-slate-800 leading-tight uppercase truncate">
+                                        <p class="text-[10px] font-black text-slate-800 leading-tight uppercase truncate" id="card-ws-name">
                                             {{ $parentData->user?->name }}
                                         </p>
                                     </div>
@@ -387,70 +387,101 @@
             }
         </style>
 
-        <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
-        <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-        <script>
-            async function downloadWaliSantriCard() {
-                const cardElement = document.getElementById('id-card-element-ws');
-                if (!cardElement) return;
 
-                const btn = document.getElementById('btn-download-kartu');
-                const btnIcon = document.getElementById('btn-download-icon');
-                const btnText = document.getElementById('btn-download-text');
-
-                // Show loading state
-                btn.disabled = true;
-                btnIcon.style.animation = 'spin 1s linear infinite';
-                btnText.textContent = 'Memproses...';
-
-                try {
-                    // Capture card at 4x scale for high resolution
-                    const canvas = await html2canvas(cardElement, {
-                        scale: 4,
-                        useCORS: true,
-                        allowTaint: true,
-                        backgroundColor: '#ffffff',
-                        logging: false,
-                        width: cardElement.offsetWidth,
-                        height: cardElement.offsetHeight,
-                    });
-
-                    // KTP size in mm: 85.6 x 53.98
-                    const { jsPDF } = window.jspdf;
-                    const pdf = new jsPDF({
-                        orientation: 'landscape',
-                        unit: 'mm',
-                        format: [85.6, 53.98],
-                    });
-
-                    const imgData = canvas.toDataURL('image/jpeg', 1.0);
-                    pdf.addImage(imgData, 'JPEG', 0, 0, 85.6, 53.98);
-
-                    // Generate filename from name on card
-                    const name = cardElement.querySelector('.text-\\[10px\\]')?.textContent?.trim() || 'kartu-identitas';
-                    const safeName = name.replace(/[^a-zA-Z0-9\s]/g, '').replace(/\s+/g, '-').toLowerCase();
-                    pdf.save('kartu-identitas-' + safeName + '.pdf');
-
-                } catch (err) {
-                    console.error('Download error:', err);
-                    alert('Gagal membuat PDF. Silakan coba lagi.');
-                } finally {
-                    // Restore button
-                    btn.disabled = false;
-                    btnIcon.style.animation = '';
-                    btnText.textContent = 'Download Kartu';
-                }
-            }
-
-            // Inject spin keyframe if not present
-            if (!document.getElementById('spin-style-ws')) {
-                const style = document.createElement('style');
-                style.id = 'spin-style-ws';
-                style.textContent = '@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }';
-                document.head.appendChild(style);
-            }
-        </script>
     @endif
+
+    {{-- PDF Download Scripts - Outside @if so Livewire executes them properly --}}
+    @script
+    <script>
+        // Dynamic script loader - loads a CDN script only once
+        function _wsLoadScript(src) {
+            return new Promise((resolve, reject) => {
+                if (document.querySelector('script[data-ws-src="' + src + '"]')) {
+                    resolve();
+                    return;
+                }
+                const s = document.createElement('script');
+                s.setAttribute('data-ws-src', src);
+                s.src = src;
+                s.onload = resolve;
+                s.onerror = reject;
+                document.head.appendChild(s);
+            });
+        }
+
+        window.downloadWaliSantriCard = async function() {
+            const cardElement = document.getElementById('id-card-element-ws');
+            if (!cardElement) {
+                alert('Kartu tidak ditemukan. Silakan buka modal kartu terlebih dahulu.');
+                return;
+            }
+
+            const btn = document.getElementById('btn-download-kartu');
+            const btnIcon = document.getElementById('btn-download-icon');
+            const btnText = document.getElementById('btn-download-text');
+
+            if (btn) btn.disabled = true;
+            if (btnIcon) btnIcon.style.animation = 'spin-ws 1s linear infinite';
+            if (btnText) btnText.textContent = 'Memproses...';
+
+            try {
+                // Load libraries dynamically if not yet loaded
+                if (!window.html2canvas) {
+                    await _wsLoadScript('https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js');
+                }
+                if (!window.jspdf) {
+                    await _wsLoadScript('https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js');
+                }
+
+                // Render card to canvas at 4x for high resolution
+                const canvas = await window.html2canvas(cardElement, {
+                    scale: 4,
+                    useCORS: true,
+                    allowTaint: true,
+                    backgroundColor: '#ffffff',
+                    logging: false,
+                    width: cardElement.offsetWidth,
+                    height: cardElement.offsetHeight,
+                    ignoreElements: (el) => el.tagName === 'SCRIPT' || el.tagName === 'STYLE',
+                });
+
+                // Create PDF at KTP size: 85.6mm x 53.98mm (landscape)
+                const { jsPDF } = window.jspdf;
+                const pdf = new jsPDF({
+                    orientation: 'landscape',
+                    unit: 'mm',
+                    format: [85.6, 53.98],
+                    compress: true,
+                });
+
+                const imgData = canvas.toDataURL('image/jpeg', 0.98);
+                pdf.addImage(imgData, 'JPEG', 0, 0, 85.6, 53.98);
+
+                // Build filename from name element
+                const nameEl = document.getElementById('card-ws-name');
+                const rawName = nameEl ? nameEl.textContent.trim() : 'wali-santri';
+                const safeName = rawName.replace(/[^a-zA-Z0-9\s]/g, '').replace(/\s+/g, '-').toLowerCase();
+                pdf.save('kartu-identitas-' + safeName + '.pdf');
+
+            } catch (err) {
+                console.error('PDF download error:', err);
+                alert('Gagal membuat PDF: ' + err.message);
+            } finally {
+                if (btn) btn.disabled = false;
+                if (btnIcon) btnIcon.style.animation = '';
+                if (btnText) btnText.textContent = 'Download Kartu';
+            }
+        };
+
+        // Inject spin keyframe
+        if (!document.getElementById('spin-ws-style')) {
+            const st = document.createElement('style');
+            st.id = 'spin-ws-style';
+            st.textContent = '@keyframes spin-ws { 0%{transform:rotate(0deg)} 100%{transform:rotate(360deg)} }';
+            document.head.appendChild(st);
+        }
+    </script>
+    @endscript
 
     {{-- Bottom Navigation --}}
     <nav
