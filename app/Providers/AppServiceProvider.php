@@ -2,13 +2,12 @@
 
 namespace App\Providers;
 
-use App\Models\User;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Support\Facades\Gate;
-use Illuminate\Support\Facades\Schema;
+use App\Models\User;
+use App\Models\ParentModel;
 use Laravel\Pulse\Facades\Pulse;
 use Livewire\Blaze\Blaze;
-use Illuminate\Support\Facades\URL;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -25,31 +24,18 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-        if (config('app.env') === 'production') {
-            URL::forceScheme('https');
-        }
-
-        Schema::defaultStringLength(191);
-        \Carbon\Carbon::setLocale('id');
-        setlocale(LC_ALL, 'id_ID.utf8', 'id_ID', 'id');
-
-        // ===================================================
-        // Laravel Pulse: Monitoring & Application Insights
-        // ===================================================
+        // Pulse Authorization
         Gate::define('viewPulse', function (User $user) {
             return config('pulse.enabled') && $user->isAdmin();
         });
 
-        // Konfigurasi tampilan user di Pulse dashboard (Menampilkan Nama, Role, dan Username)
+        // Simple Pulse User Config
         Pulse::user(fn ($user) => [
-            'name'   => $user->name,
-            'extra'  => ($user->role_display ?? 'User') . ' (@' . ($user->username ?? 'No User') . ')',
-            'avatar' => $user->avatar ? asset('storage/' . $user->avatar) : null,
+            'name' => $user->name,
+            'extra' => $user->email,
         ]);
 
-        // ===================================================
-        // Livewire Blaze: Optimasi rendering Blade components
-        // ===================================================
+        // Livewire Blaze Optimization
         Blaze::optimize()
             ->in(resource_path('views/components'))
             ->in(resource_path('views/components/layouts'), compile: false);
