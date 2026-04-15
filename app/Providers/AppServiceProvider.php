@@ -35,29 +35,30 @@ class AppServiceProvider extends ServiceProvider
 
         // ===================================================
         // Laravel Pulse: Monitoring & Application Insights
-        // Hanya admin yang bisa mengakses dashboard /pulse
         // ===================================================
         Gate::define('viewPulse', function (User $user) {
             return config('pulse.enabled') && $user->isAdmin();
         });
 
         // Konfigurasi tampilan user di Pulse dashboard
-        Pulse::user(fn ($user) => [
-            'name'   => $user->name,
-            'extra'  => $user->role?->display_name ?? 'Unknown Role',
-            'avatar' => $user->avatar ?? null,
-        ]);
+        if ($this->app->bound(Pulse::class)) {
+            Pulse::user(fn ($user) => [
+                'name'   => $user->name,
+                'extra'  => $user->role?->display_name ?? 'User',
+                'avatar' => $user->avatar ?? null,
+            ]);
+        }
 
         // ===================================================
         // Livewire Blaze: Optimasi rendering Blade components
-        // Menggunakan Function Compiler (default) untuk semua
-        // anonymous components di folder views/components.
-        // Layout (class-based) otomatis tidak terpengaruh.
-        // pwa-push & pwa-install TIDAK pakai fold karena
-        // menggunakan csrf_token() & config() (global state).
         // ===================================================
-        Blaze::optimize()
+        $blaze = Blaze::optimize()
             ->in(resource_path('views/components'))
             ->in(resource_path('views/components/layouts'), compile: false);
+
+        // Jangan biarkan Blaze mengganggu komponen Pulse di vendor
+        if (is_dir(base_path('vendor/laravel/pulse/resources/views'))) {
+            $blaze->exclude(base_path('vendor/laravel/pulse/resources/views'));
+        }
     }
 }
