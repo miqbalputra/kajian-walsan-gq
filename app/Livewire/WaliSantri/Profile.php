@@ -97,9 +97,9 @@ class Profile extends Component
             'password' => Hash::make($this->new_password),
         ]);
 
-        // Kirim Notifikasi ke n8n (WhatsApp) - Mode Test
+        // Kirim Notifikasi ke n8n (WhatsApp) - Production Mode
         try {
-            Http::post('https://automation.tunasilmu.com/webhook-test/jgduiwg8729782uhebdihb27', [
+            Http::post('https://automation.tunasilmu.com/webhook/jgduiwg8729782uhebdihb27', [
                 'type' => 'password_changed_notification',
                 'name' => $user->name,
                 'phone' => preg_replace('/^0/', '62', $user->phone),
