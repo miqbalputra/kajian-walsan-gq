@@ -40,11 +40,11 @@ class AppServiceProvider extends ServiceProvider
             return config('pulse.enabled') && $user->isAdmin();
         });
 
-        // Konfigurasi tampilan user di Pulse dashboard
+        // Konfigurasi tampilan user di Pulse dashboard (Menampilkan Nama, Role, dan Username)
         Pulse::user(fn ($user) => [
             'name'   => $user->name,
-            'extra'  => $user->email,
-            'avatar' => null,
+            'extra'  => ($user->role_display ?? 'User') . ' (@' . ($user->username ?? 'No User') . ')',
+            'avatar' => $user->avatar ? asset('storage/' . $user->avatar) : null,
         ]);
 
         // ===================================================
