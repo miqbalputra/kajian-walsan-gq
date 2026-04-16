@@ -533,92 +533,61 @@
                 }));
             });
         </script>
-        <script>
-            function copySocializationText() {
-                const text = `*PANDUAN PRESENSI KAJIAN WALI SANTRI*
-
-Assalamu'alaikum Warahmatullahi Wabarakatuh, Ayah/Bunda Wali Santri sekalian. Berikut alur presensi kajian kita:
-
-1️⃣ *HADIR LANGSUNG (FISIK)*
-   - Tunjukkan QR Code di aplikasi atau Kartu Identitas cetak ke petugas.
-   - Tanpa HP/Kartu? Cukup sebutkan Nama Ortu & Nama Ananda ke petugas.
-
-2️⃣ *HADIR ONLINE (STREAMING)*
-   - Klik "Hadir Online" di dashboard aplikasi.
-   - Upload Foto Catatan Kajian tulisan tangan (Bapak dan Ibu mengumpulkan catatan masing-masing).
-
-3️⃣ *IZIN (TIDAK HADIR TOTAL)*
-   - Klik "Izin" di dashboard aplikasi.
-   - Upload surat pernyataan/keterangan berhalangan.
-
-Mohon diperhatikan agar absensi Ananda tetap terjaga. Syukran Jazakumullah Khairan.`;
-                
-                navigator.clipboard.writeText(text).then(() => {
-                    alert('Teks sosialisasi berhasil disalin! Silakan tempel di WhatsApp.');
-                });
-            }
-        </script>
-
         <!-- Attendance Guide Modal -->
         <div x-cloak x-show="showGuide" x-transition:enter="transition-opacity ease-out duration-300"
             x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100"
             x-transition:leave="transition-opacity ease-in duration-200" x-transition:leave-start="opacity-100"
-            x-transition:leave-end="opacity-0" class="fixed inset-0 z-[110] overflow-y-auto bg-slate-950/90 backdrop-blur-md"
+            x-transition:leave-end="opacity-0" class="fixed inset-0 z-[110] overflow-y-auto bg-primary-950/60 backdrop-blur-md"
             @click.self="showGuide = false">
 
-            <div class="flex min-h-screen items-center justify-center p-4 sm:p-6 lg:p-8">
+            <div class="flex min-h-screen items-center justify-center p-0 sm:p-6 lg:p-8">
                 <div x-cloak x-show="showGuide" x-transition:enter="transition ease-out duration-500"
                     x-transition:enter-start="opacity-0 translate-y-12 scale-95" x-transition:enter-end="opacity-100 translate-y-0 scale-100"
                     x-transition:leave="transition ease-in duration-300"
                     x-transition:leave-start="opacity-100 translate-y-0 scale-100" x-transition:leave-end="opacity-0 translate-y-12 scale-95"
-                    class="bg-white dark:bg-slate-900 rounded-[3rem] shadow-2xl w-full max-w-2xl overflow-hidden relative border border-white/20 dark:border-slate-800"
+                    class="bg-white dark:bg-slate-900 rounded-t-[3rem] sm:rounded-[3rem] shadow-2xl w-full max-w-lg mb-0 sm:mb-8 overflow-hidden relative border border-white/20 dark:border-slate-800"
                     @click.stop>
 
                     <!-- Close Button -->
                     <button @click="showGuide = false" 
-                        class="fixed sm:absolute top-6 right-6 w-12 h-12 bg-white/10 hover:bg-white/20 backdrop-blur-xl rounded-full flex items-center justify-center text-white transition-all z-20 border border-white/20 group">
+                        class="absolute top-6 right-6 w-12 h-12 bg-black/10 hover:bg-black/20 dark:bg-white/10 dark:hover:bg-white/20 backdrop-blur-xl rounded-full flex items-center justify-center text-slate-800 dark:text-white transition-all z-20 border border-black/5 dark:border-white/20 group">
                         <span class="material-symbols-rounded group-hover:rotate-90 transition-transform duration-300">close</span>
                     </button>
 
                     <!-- Header Section -->
-                    <div class="relative h-64 sm:h-72 bg-slate-900 border-b border-slate-100 dark:border-slate-800 overflow-hidden">
+                    <div class="relative h-56 sm:h-64 bg-slate-100 dark:bg-slate-900 border-b border-slate-100 dark:border-slate-800 overflow-hidden">
                         <!-- Decorative Shapes -->
-                        <div class="absolute -top-24 -right-24 w-64 h-64 bg-primary-500/20 rounded-full blur-[80px]"></div>
-                        <div class="absolute -bottom-24 -left-24 w-64 h-64 bg-secondary-500/20 rounded-full blur-[80px]"></div>
+                        <div class="absolute -top-24 -right-24 w-64 h-64 bg-primary-500/10 rounded-full blur-[80px]"></div>
                         
                         <img src="/api/files/C:/Users/LENOVO/.gemini/antigravity/brain/82638b85-fafd-433c-97f2-a5759e773c4a/attendance_flow_guide_1776301777931.png" 
-                            class="w-full h-full object-cover opacity-50 contrast-125 brightness-75 scale-110" alt="Attendance Flow">
+                            class="w-full h-full object-cover opacity-40 mix-blend-multiply dark:mix-blend-overlay contrast-125 brightness-110 dark:brightness-75 scale-110" alt="Attendance Flow">
                         
-                        <div class="absolute inset-0 bg-gradient-to-t from-white dark:from-slate-900 via-white/20 dark:via-slate-900/40 to-transparent"></div>
+                        <div class="absolute inset-0 bg-gradient-to-t from-white dark:from-slate-900 via-white/50 dark:via-slate-900/40 to-transparent"></div>
                         
                         <div class="absolute bottom-10 left-10 right-10">
-                            <span class="inline-block px-3 py-1 bg-primary-500/10 dark:bg-primary-500/20 text-primary-600 dark:text-primary-400 text-[10px] font-black uppercase tracking-[0.3em] rounded-full border border-primary-500/20 mb-4">Official Guide</span>
-                            <h3 class="text-4xl sm:text-5xl font-black text-slate-900 dark:text-white tracking-tight leading-none">Alur Presensi</h3>
-                            <p class="text-slate-600 dark:text-slate-400 text-base font-medium mt-3">Panduan lengkap kehadiran bagi Wali Santri</p>
+                            <span class="inline-block px-3 py-1 bg-primary-500/10 text-primary-600 dark:text-primary-400 text-[10px] font-black uppercase tracking-[0.3em] rounded-full border border-primary-500/20 mb-3">Official Guide</span>
+                            <h3 class="text-3xl sm:text-4xl font-black text-slate-900 dark:text-white tracking-tight leading-none">Alur Presensi</h3>
+                            <p class="text-slate-500 dark:text-slate-400 text-sm font-medium mt-2">Panduan kehadiran Wali Santri</p>
                         </div>
                     </div>
 
-                    <div class="px-8 sm:px-10 py-10 space-y-6 max-h-[60vh] overflow-y-auto overscroll-contain">
+                    <div class="px-6 sm:px-10 py-8 space-y-4 max-h-[60vh] sm:max-h-[50vh] overflow-y-auto overscroll-contain custom-scrollbar">
                         <!-- Step 1: Hadir Langsung -->
-                        <div class="group bg-slate-50 dark:bg-slate-800/50 rounded-3xl p-6 sm:p-8 border border-slate-100 dark:border-slate-800 hover:border-primary-500/30 dark:hover:border-primary-500/30 transition-all duration-500">
-                            <div class="flex flex-col sm:flex-row gap-6">
-                                <div class="w-16 h-16 bg-white dark:bg-slate-800 text-primary-600 dark:text-primary-400 rounded-2xl flex-shrink-0 flex items-center justify-center border border-slate-100 dark:border-slate-700 shadow-sm group-hover:scale-110 group-hover:rotate-3 transition-all duration-500">
-                                    <span class="material-symbols-rounded text-3xl font-bold fill-1">qr_code_scanner</span>
+                        <div class="group bg-slate-50 dark:bg-slate-800/50 rounded-2xl p-5 border border-slate-100 dark:border-slate-800 hover:border-primary-500/30 transition-all duration-300">
+                            <div class="flex items-start gap-5">
+                                <div class="w-12 h-12 bg-white dark:bg-slate-800 text-primary-600 dark:text-primary-400 rounded-xl flex-shrink-0 flex items-center justify-center border border-slate-100 dark:border-slate-700 shadow-sm transition-all duration-300">
+                                    <span class="material-symbols-rounded text-2xl font-bold fill-1">qr_code_scanner</span>
                                 </div>
                                 <div class="flex-1">
-                                    <div class="flex items-center gap-3 mb-4">
-                                        <span class="text-xs font-black text-primary-500/60 uppercase tracking-widest leading-none">Bagian Satu</span>
-                                        <div class="h-px flex-1 bg-primary-500/10"></div>
-                                    </div>
-                                    <h4 class="text-xl font-bold text-slate-900 dark:text-white mb-4">Hadir Langsung (Fisik)</h4>
-                                    <ul class="space-y-4">
-                                        <li class="flex items-start gap-4 text-slate-600 dark:text-slate-400 text-sm leading-relaxed">
-                                            <div class="w-1.5 h-1.5 rounded-full bg-primary-500 mt-2 shrink-0"></div>
-                                            <span>Tunjukkan <strong class="text-slate-900 dark:text-white">QR Code</strong> di aplikasi ini ke petugas atau gunakan <strong class="text-slate-900 dark:text-white">Kartu Identitas</strong> fisik.</span>
+                                    <h4 class="text-base font-bold text-slate-900 dark:text-white mb-2">Hadir Langsung (Fisik)</h4>
+                                    <ul class="space-y-2">
+                                        <li class="flex items-start gap-3 text-slate-500 dark:text-slate-400 text-xs leading-relaxed">
+                                            <div class="w-1 h-1 rounded-full bg-primary-500 mt-1.5 shrink-0"></div>
+                                            <span>Scan <strong class="text-slate-800 dark:text-white">QR Code</strong> di aplikasi atau bawa <strong class="text-slate-800 dark:text-white">Kartu Identitas</strong> fisik.</span>
                                         </li>
-                                        <li class="flex items-start gap-4 text-slate-600 dark:text-slate-400 text-sm leading-relaxed">
-                                            <div class="w-1.5 h-1.5 rounded-full bg-primary-500 mt-2 shrink-0"></div>
-                                            <span>Jika lupa membawa HP/Kartu, sebutkan <strong class="text-slate-900 dark:text-white">Nama Ortu & Nama Ananda</strong> kepada petugas di lokasi.</span>
+                                        <li class="flex items-start gap-3 text-slate-500 dark:text-slate-400 text-xs leading-relaxed">
+                                            <div class="w-1 h-1 rounded-full bg-primary-500 mt-1.5 shrink-0"></div>
+                                            <span>Bisa juga sebutkan <strong class="text-slate-800 dark:text-white">Nama Ortu & Ananda</strong> ke petugas.</span>
                                         </li>
                                     </ul>
                                 </div>
@@ -626,25 +595,21 @@ Mohon diperhatikan agar absensi Ananda tetap terjaga. Syukran Jazakumullah Khair
                         </div>
 
                         <!-- Step 2: Hadir Online -->
-                        <div class="group bg-slate-50 dark:bg-slate-800/50 rounded-3xl p-6 sm:p-8 border border-slate-100 dark:border-slate-800 hover:border-secondary-500/30 dark:hover:border-secondary-500/30 transition-all duration-500">
-                            <div class="flex flex-col sm:flex-row gap-6">
-                                <div class="w-16 h-16 bg-white dark:bg-slate-800 text-secondary-600 dark:text-secondary-400 rounded-2xl flex-shrink-0 flex items-center justify-center border border-slate-100 dark:border-slate-700 shadow-sm group-hover:scale-110 group-hover:-rotate-3 transition-all duration-500">
-                                    <span class="material-symbols-rounded text-3xl font-bold fill-1">videocam</span>
+                        <div class="group bg-slate-50 dark:bg-slate-800/50 rounded-2xl p-5 border border-slate-100 dark:border-slate-800 hover:border-secondary-500/30 transition-all duration-300">
+                            <div class="flex items-start gap-5">
+                                <div class="w-12 h-12 bg-white dark:bg-slate-800 text-secondary-600 dark:text-secondary-400 rounded-xl flex-shrink-0 flex items-center justify-center border border-slate-100 dark:border-slate-700 shadow-sm transition-all duration-300">
+                                    <span class="material-symbols-rounded text-2xl font-bold fill-1">videocam</span>
                                 </div>
                                 <div class="flex-1">
-                                    <div class="flex items-center gap-3 mb-4">
-                                        <span class="text-xs font-black text-secondary-500/60 uppercase tracking-widest leading-none">Bagian Dua</span>
-                                        <div class="h-px flex-1 bg-secondary-500/10"></div>
-                                    </div>
-                                    <h4 class="text-xl font-bold text-slate-900 dark:text-white mb-4">Hadir Online (Streaming)</h4>
-                                    <ul class="space-y-4">
-                                        <li class="flex items-start gap-4 text-slate-600 dark:text-slate-400 text-sm leading-relaxed">
-                                            <div class="w-1.5 h-1.5 rounded-full bg-secondary-500 mt-2 shrink-0"></div>
-                                            <span>Klik tombol <strong class="text-slate-900 dark:text-white">"Hadir Online"</strong> di dashboard saat kajian sedang berlangsung.</span>
+                                    <h4 class="text-base font-bold text-slate-900 dark:text-white mb-2">Hadir Online (Streaming)</h4>
+                                    <ul class="space-y-2">
+                                        <li class="flex items-start gap-3 text-slate-500 dark:text-slate-400 text-xs leading-relaxed">
+                                            <div class="w-1 h-1 rounded-full bg-secondary-500 mt-1.5 shrink-0"></div>
+                                            <span>Klik tombol <strong class="text-slate-800 dark:text-white">"Hadir Online"</strong> di dashboard Anda.</span>
                                         </li>
-                                        <li class="flex items-start gap-4 text-slate-600 dark:text-slate-400 text-sm leading-relaxed">
-                                            <div class="w-1.5 h-1.5 rounded-full bg-secondary-500 mt-2 shrink-0"></div>
-                                            <span>Upload <strong class="text-slate-900 dark:text-white">Foto Catatan Kajian</strong> hasil tulisan tangan sendiri (Bapak & Ibu masing-masing).</span>
+                                        <li class="flex items-start gap-3 text-slate-500 dark:text-slate-400 text-xs leading-relaxed">
+                                            <div class="w-1 h-1 rounded-full bg-secondary-500 mt-1.5 shrink-0"></div>
+                                            <span>Upload <strong class="text-slate-800 dark:text-white">Foto Catatan Kajian</strong> tulisan tangan sendiri.</span>
                                         </li>
                                     </ul>
                                 </div>
@@ -652,50 +617,35 @@ Mohon diperhatikan agar absensi Ananda tetap terjaga. Syukran Jazakumullah Khair
                         </div>
 
                         <!-- Step 3: Izin -->
-                        <div class="group bg-slate-50 dark:bg-slate-800/50 rounded-3xl p-6 sm:p-8 border border-slate-100 dark:border-slate-800 hover:border-amber-500/30 dark:hover:border-amber-500/30 transition-all duration-500">
-                            <div class="flex flex-col sm:flex-row gap-6">
-                                <div class="w-16 h-16 bg-white dark:bg-slate-800 text-amber-600 dark:text-amber-400 rounded-2xl flex-shrink-0 flex items-center justify-center border border-slate-100 dark:border-slate-700 shadow-sm group-hover:scale-110 group-hover:rotate-3 transition-all duration-500">
-                                    <span class="material-symbols-rounded text-3xl font-bold fill-1">event_busy</span>
+                        <div class="group bg-slate-50 dark:bg-slate-800/50 rounded-2xl p-5 border border-slate-100 dark:border-slate-800 hover:border-amber-500/30 transition-all duration-300">
+                            <div class="flex items-start gap-5">
+                                <div class="w-12 h-12 bg-white dark:bg-slate-800 text-amber-600 dark:text-amber-400 rounded-xl flex-shrink-0 flex items-center justify-center border border-slate-100 dark:border-slate-700 shadow-sm transition-all duration-300">
+                                    <span class="material-symbols-rounded text-2xl font-bold fill-1">event_busy</span>
                                 </div>
                                 <div class="flex-1">
-                                    <div class="flex items-center gap-3 mb-4">
-                                        <span class="text-xs font-black text-amber-500/60 uppercase tracking-widest leading-none">Bagian Tiga</span>
-                                        <div class="h-px flex-1 bg-amber-500/10"></div>
-                                    </div>
-                                    <h4 class="text-xl font-bold text-slate-900 dark:text-white mb-4">Izin (Berhalangan)</h4>
-                                    <ul class="space-y-4">
-                                        <li class="flex items-start gap-4 text-slate-600 dark:text-slate-400 text-sm leading-relaxed">
-                                            <div class="w-1.5 h-1.5 rounded-full bg-amber-500 mt-2 shrink-0"></div>
-                                            <span>Klik tombol <strong class="text-slate-900 dark:text-white">"Izin"</strong> jika sama sekali tidak bisa hadir fisik maupun online.</span>
+                                    <h4 class="text-base font-bold text-slate-900 dark:text-white mb-2">Izin (Berhalangan)</h4>
+                                    <ul class="space-y-2">
+                                        <li class="flex items-start gap-3 text-slate-500 dark:text-slate-400 text-xs leading-relaxed">
+                                            <div class="w-1 h-1 rounded-full bg-amber-500 mt-1.5 shrink-0"></div>
+                                            <span>Klik tombol <strong class="text-slate-800 dark:text-white">"Izin"</strong> jika tidak bisa hadir sama sekali.</span>
                                         </li>
-                                        <li class="flex items-start gap-4 text-slate-600 dark:text-slate-400 text-sm leading-relaxed">
-                                            <div class="w-1.5 h-1.5 rounded-full bg-amber-500 mt-2 shrink-0"></div>
-                                            <span>Upload <strong class="text-slate-900 dark:text-white">Surat Pernyataan</strong> atau dokumen pendukung keterangan berhalangan.</span>
+                                        <li class="flex items-start gap-3 text-slate-500 dark:text-slate-400 text-xs leading-relaxed">
+                                            <div class="w-1 h-1 rounded-full bg-amber-500 mt-1.5 shrink-0"></div>
+                                            <span>Upload <strong class="text-slate-800 dark:text-white">Dokumen Keterangan</strong> alasan berhalangan.</span>
                                         </li>
                                     </ul>
                                 </div>
                             </div>
                         </div>
-
-                        <!-- WhatsApp Action Section -->
-                        <div class="relative rounded-[2.5rem] p-8 sm:p-10 bg-emerald-50 dark:bg-emerald-950/20 border border-emerald-100 dark:border-emerald-900/50 text-center overflow-hidden">
-                            <div class="absolute -top-12 -right-12 w-32 h-32 bg-emerald-100 dark:bg-emerald-900/30 rounded-full blur-3xl"></div>
-                            
-                            <p class="relative z-10 text-[10px] font-black text-emerald-600 dark:text-emerald-400 uppercase tracking-[0.4em] mb-6">Sosialisasi Grup WhatsApp</p>
-                            <h5 class="relative z-10 text-lg font-bold text-emerald-900 dark:text-emerald-100 mb-8 px-4 sm:px-8">Bantu Wali Santri lain memahami alur presensi dengan menyalin teks berikut</h5>
-                            
-                            <button onclick="copySocializationText()" 
-                                class="relative z-10 w-full py-5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-2xl font-black flex items-center justify-center gap-4 transition-all active:scale-95 shadow-2xl shadow-emerald-500/30 group">
-                                <span class="material-symbols-rounded group-hover:animate-bounce">content_copy</span>
-                                <span>SALIN TEKS SOSIALISASI</span>
-                            </button>
-                            
-                            <p class="relative z-10 text-emerald-600/60 dark:text-emerald-400/40 text-[10px] mt-6 font-bold uppercase tracking-widest">Klik tombol di atas untuk menyalin otomatis</p>
-                        </div>
                     </div>
                     
-                    <!-- Bottom Gradient Fade (Mobile Safety) -->
-                    <div class="absolute bottom-0 inset-x-0 h-10 bg-gradient-to-t from-white dark:from-slate-900 pointer-events-none"></div>
+                    <!-- Bottom CTA/Safety -->
+                    <div class="p-6 bg-slate-50 dark:bg-slate-800/50 border-t border-slate-100 dark:border-slate-800">
+                        <button @click="showGuide = false" 
+                            class="w-full py-4 bg-primary-600 hover:bg-primary-700 text-white rounded-2xl font-black text-sm transition-all active:scale-95 shadow-lg shadow-primary-500/20">
+                            SAYA MENGERTI
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>
