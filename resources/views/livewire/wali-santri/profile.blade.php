@@ -441,14 +441,16 @@
                     <h3 class="text-2xl font-black text-slate-900 dark:text-white mb-4 leading-tight">Password Berhasil Diubah!</h3>
                     
                     <div class="space-y-4 px-2">
-                        <p class="text-sm text-slate-600 dark:text-slate-400 font-medium leading-relaxed">
-                            Mohon perhatikan layar atas/bawah HP Anda, jika muncul pilihan <span class="font-black text-emerald-600">"Update Password"</span> atau <span class="font-black text-emerald-600">"Simpan Sandi"</span> silakan diklik terlebih dulu.
+                        <p class="text-xs font-black text-amber-600 dark:text-amber-500 uppercase tracking-[0.2em] animate-pulse">Penting!</p>
+                        
+                        <p class="text-sm text-slate-600 dark:text-slate-400 font-bold leading-relaxed">
+                            Silakan <span class="text-slate-900 dark:text-white underline decoration-emerald-500 decoration-2 underline-offset-4">KLIK TERLEBIH DAHULU</span> tombol <span class="text-emerald-600">"Update password"</span> atau <span class="text-emerald-600">"Simpan"</span> pada kotak Google/Browser yang muncul di layar Anda sekarang.
                         </p>
                         
                         <div class="h-px w-12 bg-slate-100 dark:bg-slate-800 mx-auto"></div>
                         
-                        <p class="text-xs text-slate-500 dark:text-slate-500 font-bold uppercase tracking-wider italic">
-                            Setelah itu silakan Login Ulang dengan password baru Anda.
+                        <p class="text-[11px] text-slate-500 dark:text-slate-500 font-medium leading-relaxed italic">
+                            Ini agar sandi baru tersimpan otomatis di HP Anda. Jika sudah, silakan klik tombol di bawah untuk Login Ulang.
                         </p>
                     </div>
 
