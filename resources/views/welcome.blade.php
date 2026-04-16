@@ -560,7 +560,7 @@
                         <div class="absolute -top-24 -right-24 w-64 h-64 bg-primary-500/10 rounded-full blur-[80px]"></div>
                         
                         <img src="/api/files/C:/Users/LENOVO/.gemini/antigravity/brain/82638b85-fafd-433c-97f2-a5759e773c4a/attendance_flow_guide_1776301777931.png" 
-                            class="w-full h-full object-cover opacity-40 mix-blend-multiply dark:mix-blend-overlay contrast-125 brightness-110 dark:brightness-75 scale-110" alt="Attendance Flow">
+                            class="w-full h-full object-cover opacity-40 mix-blend-multiply dark:mix-blend-overlay contrast-125 brightness-110 dark:brightness-75 scale-110 select-none pointer-events-none" alt="">
                         
                         <div class="absolute inset-0 bg-gradient-to-t from-white dark:from-slate-900 via-white/50 dark:via-slate-900/40 to-transparent"></div>
                         
