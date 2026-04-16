@@ -1,6 +1,6 @@
 <x-layouts.app title="Selamat Datang" :force-light="true">
     <div class="relative min-h-screen overflow-hidden bg-slate-50 font-sans selection:bg-primary-500 selection:text-white"
-        x-data="{ showInfo: false }">
+        x-data="{ showInfo: false, showGuide: false }">
 
         <!-- Animated Background (Matching login page) -->
         <div class="fixed inset-0 w-full h-full bg-gradient-to-br from-primary-600 via-primary-700 to-secondary-700">
@@ -231,6 +231,23 @@
                     </div>
                 </div>
             @endif
+
+            <!-- Attendance Guide Prompt -->
+            <button @click="showGuide = true"
+                class="w-full mb-8 group relative overflow-hidden bg-gradient-to-r from-primary-600 to-secondary-600 p-1 rounded-3xl shadow-xl transition-all duration-300 hover:shadow-primary-500/20 hover:-translate-y-1">
+                <div class="bg-white dark:bg-slate-900 group-hover:bg-transparent rounded-[1.35rem] p-5 flex items-center justify-between transition-colors duration-300">
+                    <div class="flex items-center gap-4">
+                        <div class="w-12 h-12 rounded-2xl bg-primary-50 text-primary-600 flex items-center justify-center group-hover:bg-white/20 group-hover:text-white transition-all">
+                            <span class="material-symbols-rounded text-2xl font-bold">menu_book</span>
+                        </div>
+                        <div class="text-left">
+                            <h3 class="font-black text-gray-900 group-hover:text-white text-base leading-tight">Panduan Alur Presensi</h3>
+                            <p class="text-gray-500 group-hover:text-white/80 text-[10px] uppercase font-bold tracking-widest mt-0.5">Wajib dibaca Wali Santri</p>
+                        </div>
+                    </div>
+                    <span class="material-symbols-rounded text-primary-300 group-hover:text-white transition-colors">arrow_forward_ios</span>
+                </div>
+            </button>
 
             <!-- Action Buttons Grid -->
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 w-full mb-8">
@@ -516,4 +533,145 @@
                 }));
             });
         </script>
+        <script>
+            function copySocializationText() {
+                const text = `*PANDUAN PRESENSI KAJIAN WALI SANTRI*
+
+Assalamu'alaikum Warahmatullahi Wabarakatuh, Ayah/Bunda Wali Santri sekalian. Berikut alur presensi kajian kita:
+
+1️⃣ *HADIR LANGSUNG (FISIK)*
+   - Tunjukkan QR Code di aplikasi atau Kartu Identitas cetak ke petugas.
+   - Tanpa HP/Kartu? Cukup sebutkan Nama Ortu & Nama Ananda ke petugas.
+
+2️⃣ *HADIR ONLINE (STREAMING)*
+   - Klik "Hadir Online" di dashboard aplikasi.
+   - Upload Foto Catatan Kajian tulisan tangan (Bapak dan Ibu mengumpulkan catatan masing-masing).
+
+3️⃣ *IZIN (TIDAK HADIR TOTAL)*
+   - Klik "Izin" di dashboard aplikasi.
+   - Upload surat pernyataan/keterangan berhalangan.
+
+Mohon diperhatikan agar absensi Ananda tetap terjaga. Syukran Jazakumullah Khairan.`;
+                
+                navigator.clipboard.writeText(text).then(() => {
+                    alert('Teks sosialisasi berhasil disalin! Silakan tempel di WhatsApp.');
+                });
+            }
+        </script>
+
+        <!-- Attendance Guide Modal -->
+        <div x-cloak x-show="showGuide" x-transition:enter="transition-opacity ease-out duration-200"
+            x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100"
+            x-transition:leave="transition-opacity ease-in duration-150" x-transition:leave-start="opacity-100"
+            x-transition:leave-end="opacity-0" class="fixed inset-0 z-[110] overflow-y-auto bg-slate-900/80 backdrop-blur-sm"
+            @click.self="showGuide = false">
+
+            <div class="flex min-h-full items-center justify-center p-4">
+                <div x-cloak x-show="showGuide" x-transition:enter="transition ease-out duration-300"
+                    x-transition:enter-start="opacity-0 translate-y-8 scale-95" x-transition:enter-end="opacity-100 translate-y-0 scale-100"
+                    x-transition:leave="transition ease-in duration-200"
+                    x-transition:leave-start="opacity-100 translate-y-0 scale-100" x-transition:leave-end="opacity-0 translate-y-8 scale-95"
+                    class="bg-white dark:bg-slate-900 rounded-[2.5rem] shadow-2xl w-full max-w-xl overflow-hidden relative border border-white/10"
+                    @click.stop>
+
+                    <!-- Image Header -->
+                    <div class="relative h-56 bg-gradient-to-br from-primary-600 to-secondary-600 overflow-hidden">
+                        <img src="/api/files/C:/Users/LENOVO/.gemini/antigravity/brain/82638b85-fafd-433c-97f2-a5759e773c4a/attendance_flow_guide_1776301777931.png" 
+                            class="w-full h-full object-cover opacity-60 mix-blend-overlay" alt="Attendance Flow">
+                        <div class="absolute inset-0 bg-gradient-to-t from-white dark:from-slate-900 via-transparent to-transparent"></div>
+                        <div class="absolute bottom-6 left-8 right-8">
+                            <h3 class="text-3xl font-black text-slate-900 dark:text-white tracking-tight">Alur Presensi</h3>
+                            <p class="text-slate-600 dark:text-slate-400 text-sm font-medium uppercase tracking-widest mt-1">Panduan kehadiran Wali Santri</p>
+                        </div>
+                        <button @click="showGuide = false" 
+                            class="absolute top-6 right-6 w-10 h-10 bg-black/20 hover:bg-black/30 backdrop-blur-md rounded-full flex items-center justify-center text-white transition-all">
+                            <span class="material-symbols-rounded">close</span>
+                        </button>
+                    </div>
+
+                    <div class="px-8 pb-10 pt-2 space-y-8">
+                        <!-- Step 1: Hadir Langsung -->
+                        <div class="flex gap-5">
+                            <div class="w-14 h-14 bg-primary-100 dark:bg-primary-900/30 text-primary-600 dark:text-primary-400 rounded-2xl flex-shrink-0 flex items-center justify-center border border-primary-200/50 dark:border-primary-800/50 shadow-sm">
+                                <span class="material-symbols-rounded text-3xl font-bold">qr_code_scanner</span>
+                            </div>
+                            <div>
+                                <h4 class="font-black text-slate-900 dark:text-white uppercase tracking-wider text-xs mb-1.5">1. Hadir Langsung (Fisik)</h4>
+                                <ul class="text-sm text-slate-600 dark:text-slate-400 space-y-2 leading-relaxed font-medium">
+                                    <li class="flex items-start gap-2">
+                                        <span class="text-primary-500 mt-1">•</span>
+                                        Tunjukkan <strong>QR Code</strong> di aplikasi ini ke petugas.
+                                    </li>
+                                    <li class="flex items-start gap-2">
+                                        <span class="text-primary-500 mt-1">•</span>
+                                        Atau gunakan <strong>Kartu Identitas</strong> yang sudah dicetak.
+                                    </li>
+                                    <li class="flex items-start gap-2">
+                                        <span class="text-primary-500 mt-1">•</span>
+                                        Jika tidak bawa HP/Kartu, sebutkan <strong>Nama Ortu & Nama Ananda</strong> ke petugas.
+                                    </li>
+                                </ul>
+                            </div>
+                        </div>
+
+                        <!-- Step 2: Hadir Online -->
+                        <div class="flex gap-5">
+                            <div class="w-14 h-14 bg-secondary-100 dark:bg-secondary-900/30 text-secondary-600 dark:text-secondary-400 rounded-2xl flex-shrink-0 flex items-center justify-center border border-secondary-200/50 dark:border-secondary-800/50 shadow-sm">
+                                <span class="material-symbols-rounded text-3xl font-bold">edit_note</span>
+                            </div>
+                            <div>
+                                <h4 class="font-black text-slate-900 dark:text-white uppercase tracking-wider text-xs mb-1.5">2. Hadir Online (Streaming)</h4>
+                                <ul class="text-sm text-slate-600 dark:text-slate-400 space-y-2 leading-relaxed font-medium">
+                                    <li class="flex items-start gap-2">
+                                        <span class="text-secondary-500 mt-1">•</span>
+                                        Klik tombol <strong>"Hadir Online"</strong> di dashboard saat kajian berlangsung.
+                                    </li>
+                                    <li class="flex items-start gap-2">
+                                        <span class="text-secondary-500 mt-1">•</span>
+                                        Upload <strong>Foto Catatan Kajian</strong> hasil tulisan tangan sendiri.
+                                    </li>
+                                    <li class="flex items-start gap-2">
+                                        <span class="text-secondary-500 mt-1">•</span>
+                                        Bapak & Ibu memiliki catatan sendiri sebagai bukti hadir masing-masing.
+                                    </li>
+                                </ul>
+                            </div>
+                        </div>
+
+                        <!-- Step 3: Izin -->
+                        <div class="flex gap-5">
+                            <div class="w-14 h-14 bg-amber-100 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400 rounded-2xl flex-shrink-0 flex items-center justify-center border border-amber-200/50 dark:border-amber-800/50 shadow-sm">
+                                <span class="material-symbols-rounded text-3xl font-bold">assignment_late</span>
+                            </div>
+                            <div>
+                                <h4 class="font-black text-slate-900 dark:text-white uppercase tracking-wider text-xs mb-1.5">3. Izin (Berhalangan)</h4>
+                                <ul class="text-sm text-slate-600 dark:text-slate-400 space-y-2 leading-relaxed font-medium">
+                                    <li class="flex items-start gap-2">
+                                        <span class="text-amber-500 mt-1">•</span>
+                                        Klik tombol <strong>"Izin"</strong> jika tidak bisa hadir fisik maupun online.
+                                    </li>
+                                    <li class="flex items-start gap-2">
+                                        <span class="text-amber-500 mt-1">•</span>
+                                        Upload <strong>Surat Pernyataan</strong> atau dokumen keterangan berhalangan.
+                                    </li>
+                                </ul>
+                            </div>
+                        </div>
+
+                        <!-- Socialization Content Action -->
+                        <div class="mt-10 pt-8 border-t border-slate-100 dark:border-slate-800">
+                            <div class="bg-primary-50 dark:bg-slate-800/50 rounded-[2rem] p-6 border border-primary-100 dark:border-slate-800 text-center">
+                                <p class="text-[10px] font-black text-primary-400 uppercase tracking-[0.3em] mb-4">Sosialisasi WhatsApp</p>
+                                <button onclick="copySocializationText()" 
+                                    class="w-full py-4 bg-primary-600 hover:bg-primary-700 text-white rounded-2xl font-bold flex items-center justify-center gap-3 transition-all active:scale-95 shadow-xl shadow-primary-500/20">
+                                    <span class="material-symbols-rounded">content_copy</span>
+                                    <span>Salin Teks Sosialisasi</span>
+                                </button>
+                                <p class="text-slate-400 text-[10px] mt-3 font-medium">Klik untuk menyalin format pesan informasi bagi Wali Santri lain</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
 </x-layouts.app>

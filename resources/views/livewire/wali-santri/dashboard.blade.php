@@ -39,6 +39,14 @@
                 @endforeach
             </div>
         @endif
+
+        <!-- Guide Button -->
+        <button wire:click="$set('showGuideModal', true)" 
+            class="mt-6 w-full py-3 bg-white/10 hover:bg-white/20 backdrop-blur-md border border-white/20 rounded-2xl flex items-center justify-center gap-2 transition-all group overflow-hidden relative">
+            <div class="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000"></div>
+            <span class="material-symbols-rounded text-lg">info</span>
+            <span class="text-xs font-black uppercase tracking-widest">Cara Presensi (WAJIB BACA)</span>
+        </button>
     </header>
 
     <!-- Flash Messages -->
@@ -779,4 +787,135 @@
     @endif
 
 
+    @if($showGuideModal)
+        <div class="fixed inset-0 z-[80] overflow-y-auto" aria-modal="true">
+            <div class="flex items-center justify-center min-h-screen px-4 pt-4 pb-20 text-center sm:block sm:p-0">
+                <div class="fixed inset-0 bg-slate-900/80 backdrop-blur-md transition-opacity" wire:click="$set('showGuideModal', false)"></div>
+
+                <div class="inline-block align-bottom bg-white dark:bg-slate-900 rounded-[2.5rem] text-left overflow-hidden shadow-2xl transform transition-all sm:my-8 sm:align-middle sm:max-w-xl sm:w-full border border-white/10">
+                    <!-- Image Header -->
+                    <div class="relative h-48 bg-gradient-to-br from-primary-600 to-secondary-600 overflow-hidden">
+                        <img src="/api/files/C:/Users/LENOVO/.gemini/antigravity/brain/82638b85-fafd-433c-97f2-a5759e773c4a/attendance_flow_guide_1776301777931.png" 
+                            class="w-full h-full object-cover opacity-60 mix-blend-overlay" alt="Attendance Flow">
+                        <div class="absolute inset-0 bg-gradient-to-t from-white dark:from-slate-900 via-transparent to-transparent"></div>
+                        <div class="absolute bottom-6 left-8 right-8">
+                            <h3 class="text-2xl font-black text-slate-900 dark:text-white">Alur Presensi</h3>
+                            <p class="text-slate-600 dark:text-slate-400 text-sm font-medium">Panduan kehadiran Kajian Wali Santri</p>
+                        </div>
+                        <button wire:click="$set('showGuideModal', false)" 
+                            class="absolute top-6 right-6 w-10 h-10 bg-white/10 backdrop-blur-md border border-white/20 rounded-full flex items-center justify-center text-white hover:bg-white/20 transition-all">
+                            <span class="material-symbols-rounded">close</span>
+                        </button>
+                    </div>
+
+                    <div class="px-8 pb-8 pt-2 space-y-6">
+                        <!-- Step 1: Hadir Langsung -->
+                        <div class="flex gap-4">
+                            <div class="w-12 h-12 bg-primary-100 dark:bg-primary-900/30 text-primary-600 dark:text-primary-400 rounded-2xl flex-shrink-0 flex items-center justify-center border border-primary-200/50 dark:border-primary-800/50">
+                                <span class="material-symbols-rounded font-bold">qr_code_scanner</span>
+                            </div>
+                            <div>
+                                <h4 class="font-black text-slate-900 dark:text-white uppercase tracking-wider text-xs mb-1">1. Hadir Langsung (Fisik)</h4>
+                                <ul class="text-sm text-slate-600 dark:text-slate-400 space-y-1.5 leading-relaxed">
+                                    <li class="flex items-start gap-2">
+                                        <span class="text-primary-500 mt-1">•</span>
+                                        Tunjukkan <strong>QR Code</strong> di aplikasi ini ke petugas.
+                                    </li>
+                                    <li class="flex items-start gap-2">
+                                        <span class="text-primary-500 mt-1">•</span>
+                                        Atau gunakan <strong>Kartu Identitas</strong> yang sudah dicetak.
+                                    </li>
+                                    <li class="flex items-start gap-2">
+                                        <span class="text-primary-500 mt-1">•</span>
+                                        Jika tidak bawa HP/Kartu, cukup sebutkan <strong>Nama Bapak/Ibu & Nama Anak</strong> ke petugas.
+                                    </li>
+                                </ul>
+                            </div>
+                        </div>
+
+                        <!-- Step 2: Hadir Online -->
+                        <div class="flex gap-4">
+                            <div class="w-12 h-12 bg-secondary-100 dark:bg-secondary-900/30 text-secondary-600 dark:text-secondary-400 rounded-2xl flex-shrink-0 flex items-center justify-center border border-secondary-200/50 dark:border-secondary-800/50">
+                                <span class="material-symbols-rounded font-bold">edit_note</span>
+                            </div>
+                            <div>
+                                <h4 class="font-black text-slate-900 dark:text-white uppercase tracking-wider text-xs mb-1">2. Hadir Online (Streaming)</h4>
+                                <ul class="text-sm text-slate-600 dark:text-slate-400 space-y-1.5 leading-relaxed">
+                                    <li class="flex items-start gap-2">
+                                        <span class="text-secondary-500 mt-1">•</span>
+                                        Klik tombol <strong>"Hadir Online"</strong> di dashboard saat kajian berlangsung.
+                                    </li>
+                                    <li class="flex items-start gap-2">
+                                        <span class="text-secondary-500 mt-1">•</span>
+                                        Upload <strong>Foto Catatan Kajian</strong> hasil tulisan tangan sendiri.
+                                    </li>
+                                    <li class="flex items-start gap-2">
+                                        <span class="text-secondary-500 mt-1">•</span>
+                                        Catatan Bapak & Ibu dikumpulkan secara mandiri.
+                                    </li>
+                                </ul>
+                            </div>
+                        </div>
+
+                        <!-- Step 3: Izin -->
+                        <div class="flex gap-4">
+                            <div class="w-12 h-12 bg-amber-100 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400 rounded-2xl flex-shrink-0 flex items-center justify-center border border-amber-200/50 dark:border-amber-800/50">
+                                <span class="material-symbols-rounded font-bold">assignment_late</span>
+                            </div>
+                            <div>
+                                <h4 class="font-black text-slate-900 dark:text-white uppercase tracking-wider text-xs mb-1">3. Izin (Berhalangan)</h4>
+                                <ul class="text-sm text-slate-600 dark:text-slate-400 space-y-1.5 leading-relaxed">
+                                    <li class="flex items-start gap-2">
+                                        <span class="text-amber-500 mt-1">•</span>
+                                        Klik tombol <strong>"Izin"</strong> jika tidak bisa hadir fisik maupun online.
+                                    </li>
+                                    <li class="flex items-start gap-2">
+                                        <span class="text-amber-500 mt-1">•</span>
+                                        Upload <strong>Surat Pernyataan</strong> atau dokumen pendukung.
+                                    </li>
+                                </ul>
+                            </div>
+                        </div>
+
+                        <!-- Socialization Content Action -->
+                        <div class="mt-8 pt-6 border-t border-slate-100 dark:border-slate-800">
+                            <div class="bg-slate-50 dark:bg-slate-800/50 rounded-3xl p-5 border border-slate-100 dark:border-slate-800">
+                                <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3 text-center">Bagikan panduan ini ke Wali Santri lain</p>
+                                <button onclick="copySocializationText()" 
+                                    class="w-full py-4 bg-primary-600 hover:bg-primary-700 text-white rounded-2xl font-bold flex items-center justify-center gap-3 transition-all active:scale-95 shadow-lg shadow-primary-500/20">
+                                    <span class="material-symbols-rounded">content_copy</span>
+                                    Salin Teks Sosialisasi WA
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <script>
+            function copySocializationText() {
+                const text = `*PANDUAN PRESENSI KAJIAN WALI SANTRI*
+
+Assalamu'alaikum Warahmatullahi Wabarakatuh, Ayah/Bunda Wali Santri sekalian. Berikut alur presensi kajian kita:
+
+1️⃣ *HADIR LANGSUNG (FISIK)*
+   - Tunjukkan QR Code di aplikasi atau Kartu Identitas cetak ke petugas.
+   - Tanpa HP/Kartu? Cukup sebutkan Nama Ortu & Nama Ananda ke petugas.
+
+2️⃣ *HADIR ONLINE (STREAMING)*
+   - Klik "Hadir Online" di dashboard aplikasi.
+   - Upload Foto Catatan Kajian tulisan tangan (Bapak dan Ibu mengumpulkan catatan masing-masing).
+
+3️⃣ *IZIN (TIDAK HADIR TOTAL)*
+   - Klik "Izin" di dashboard aplikasi.
+   - Upload surat pernyataan/keterangan berhalangan.
+
+Mohon diperhatikan agar absensi Ananda tetap terjaga. Syukran Jazakumullah Khairan.`;
+                
+                navigator.clipboard.writeText(text).then(() => {
+                    alert('Teks sosialisasi berhasil disalin! Silakan tempel di WhatsApp.');
+                });
+            }
+        </script>
+    @endif
 </div>
