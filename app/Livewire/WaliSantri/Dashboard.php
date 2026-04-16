@@ -23,7 +23,6 @@ class Dashboard extends Component
     public $showIzinModal = false;
     public $showReuploadModal = false;
     public $showFeedbackModal = false;
-    public $showGuideModal = false;
 
     public $feedbackEventId = null;
     public $ratingMateri = 0;
