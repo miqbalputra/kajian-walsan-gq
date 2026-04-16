@@ -110,7 +110,14 @@ class Profile extends Component
         }
 
         $this->reset(['current_password', 'new_password', 'new_password_confirmation']);
-        session()->flash('password-message', 'Password berhasil diperbarui!');
+        
+        // Logout user after password change to force browser password update prompt
+        auth()->logout();
+        session()->invalidate();
+        session()->regenerateToken();
+
+        session()->flash('success', 'Password berhasil diperbarui! Silakan login kembali dengan password baru Anda.');
+        return redirect()->route('login');
     }
 
     public function showCard()

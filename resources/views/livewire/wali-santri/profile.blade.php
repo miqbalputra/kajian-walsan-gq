@@ -157,10 +157,13 @@
             @endif
 
             <form wire:submit="updatePassword" class="space-y-6">
+                {{-- Hidden username for browser password manager --}}
+                <input type="text" name="username" value="{{ $username }}" autocomplete="username" class="hidden" style="display:none;">
+
                 <div>
                     <label class="block text-xs font-black text-slate-400 uppercase tracking-widest mb-3 px-1">Password
                         Saat Ini</label>
-                    <input type="password" wire:model="current_password"
+                    <input type="password" wire:model="current_password" autocomplete="current-password"
                         class="w-full px-6 py-4 bg-slate-50 border border-slate-100 rounded-2xl focus:ring-4 focus:ring-primary-500/10 focus:border-primary-500 transition-all outline-none text-sm font-bold text-slate-700">
                     @error('current_password') <span
                     class="text-red-500 text-xs font-bold mt-2 px-1 block">{{ $message }}</span> @enderror
@@ -169,7 +172,7 @@
                 <div>
                     <label class="block text-xs font-black text-slate-400 uppercase tracking-widest mb-3 px-1">Password
                         Baru</label>
-                    <input type="password" wire:model="new_password"
+                    <input type="password" wire:model="new_password" autocomplete="new-password"
                         class="w-full px-6 py-4 bg-slate-50 border border-slate-100 rounded-2xl focus:ring-4 focus:ring-primary-500/10 focus:border-primary-500 transition-all outline-none text-sm font-bold text-slate-700">
                     @error('new_password') <span
                     class="text-red-500 text-xs font-bold mt-2 px-1 block">{{ $message }}</span> @enderror
@@ -179,7 +182,7 @@
                     <label
                         class="block text-xs font-black text-slate-400 uppercase tracking-widest mb-3 px-1">Konfirmasi
                         Password Baru</label>
-                    <input type="password" wire:model="new_password_confirmation"
+                    <input type="password" wire:model="new_password_confirmation" autocomplete="new-password"
                         class="w-full px-6 py-4 bg-slate-50 border border-slate-100 rounded-2xl focus:ring-4 focus:ring-primary-500/10 focus:border-primary-500 transition-all outline-none text-sm font-bold text-slate-700">
                 </div>
 
