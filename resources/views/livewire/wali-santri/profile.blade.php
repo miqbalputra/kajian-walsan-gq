@@ -417,4 +417,54 @@
             <span class="text-[10px] font-black uppercase tracking-widest">Profil</span>
         </a>
     </nav>
+    
+    {{-- Password Success / Re-login Modal --}}
+    @if($showPasswordSuccessModal)
+        <div class="fixed inset-0 z-[120] overflow-y-auto" aria-modal="true">
+            <div class="flex items-center justify-center min-h-screen px-4">
+                {{-- Overlay --}}
+                <div class="fixed inset-0 bg-primary-950/70 backdrop-blur-md transition-opacity"></div>
+
+                {{-- Modal Container --}}
+                <div class="relative bg-white dark:bg-slate-950 rounded-[2.5rem] shadow-2xl max-w-sm w-full p-8 overflow-hidden border border-white/20 dark:border-slate-800 z-10 transition-all text-center">
+                    
+                    {{-- Decorative Blur --}}
+                    <div class="absolute -top-24 -right-24 w-48 h-48 bg-emerald-500/20 rounded-full blur-[60px]"></div>
+                    <div class="absolute -bottom-24 -left-24 w-48 h-48 bg-primary-500/10 rounded-full blur-[60px]"></div>
+
+                    {{-- Icon Header --}}
+                    <div class="relative w-24 h-24 bg-emerald-50 dark:bg-emerald-950/30 text-emerald-600 dark:text-emerald-400 rounded-[2rem] flex items-center justify-center mx-auto mb-8 border border-emerald-100 dark:border-emerald-900/50 shadow-sm animate-bounce">
+                        <span class="material-symbols-rounded text-5xl fill-1">lock_reset</span>
+                    </div>
+
+                    {{-- Text Content --}}
+                    <h3 class="text-2xl font-black text-slate-900 dark:text-white mb-4 leading-tight">Password Berhasil Diubah!</h3>
+                    
+                    <div class="space-y-4 px-2">
+                        <p class="text-sm text-slate-600 dark:text-slate-400 font-medium leading-relaxed">
+                            Mohon perhatikan layar atas/bawah HP Anda, jika muncul pilihan <span class="font-black text-emerald-600">"Update Password"</span> atau <span class="font-black text-emerald-600">"Simpan Sandi"</span> silakan diklik terlebih dulu.
+                        </p>
+                        
+                        <div class="h-px w-12 bg-slate-100 dark:bg-slate-800 mx-auto"></div>
+                        
+                        <p class="text-xs text-slate-500 dark:text-slate-500 font-bold uppercase tracking-wider italic">
+                            Setelah itu silakan Login Ulang dengan password baru Anda.
+                        </p>
+                    </div>
+
+                    {{-- Action Button --}}
+                    <button wire:click="logoutAfterPasswordChange" 
+                        class="w-full mt-10 py-5 bg-gradient-to-r from-primary-600 to-secondary-600 text-white rounded-[1.5rem] font-black shadow-xl shadow-primary-500/20 hover:scale-[1.02] active:scale-95 transition-all flex items-center justify-center gap-3">
+                        <span>OK, LOGIN ULANG</span>
+                        <span class="material-symbols-rounded text-xl">login</span>
+                    </button>
+                    
+                    {{-- Small Loader Footer --}}
+                    <div class="mt-6">
+                        <span wire:loading wire:target="logoutAfterPasswordChange" class="material-symbols-rounded animate-spin text-primary-500">progress_activity</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    @endif
 </div>

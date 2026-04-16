@@ -80,6 +80,18 @@ class Profile extends Component
         $this->dispatch('profile-updated');
     }
 
+    public $showPasswordSuccessModal = false;
+
+    public function logoutAfterPasswordChange()
+    {
+        auth()->logout();
+        session()->invalidate();
+        session()->regenerateToken();
+
+        session()->flash('success', 'Silakan login kembali dengan password baru Anda.');
+        return redirect()->route('login');
+    }
+
     public function updatePassword()
     {
         $user = auth()->user();
@@ -111,13 +123,8 @@ class Profile extends Component
 
         $this->reset(['current_password', 'new_password', 'new_password_confirmation']);
         
-        // Logout user after password change to force browser password update prompt
-        auth()->logout();
-        session()->invalidate();
-        session()->regenerateToken();
-
-        session()->flash('success', 'Password berhasil diperbarui! Silakan login kembali dengan password baru Anda.');
-        return redirect()->route('login');
+        // Show success modal instead of immediate logout
+        $this->showPasswordSuccessModal = true;
     }
 
     public function showCard()
