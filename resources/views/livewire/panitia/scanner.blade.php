@@ -519,12 +519,6 @@
                         if (this.isProcessing) return;
                         this.isProcessing = true;
 
-                        try {
-                            const beep = new Audio('data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbYiFe4dwdn6AgJF+fXd1eHl3d3V1dnZ3eHh6fYONmKKrr7G0tbSzsK+tq6impaSlpqmsr7O3u76/wL+/vbu4tLGurKqopaOhoKChoqSnrLK5wMjQ19zg4ePk5OLf29nW1NLQz87Nzc3Nzc3OztDT19zi6O/0+Pv8/fz6+Pb08fDv7/Dy9Pf6/gAAAwMEBQUGBQUEAwMCAP79+fXx7Onm5OLh4eDg4ODh4uPl6Ovv8/j8AAMHCg0ODw8ODQsJBgQA/fn26+bjAAAA');
-                            beep.volume = 0.5;
-                            beep.play();
-                        } catch (e) { }
-
                         @this.processQrCode(qrCode);
                     },
 
