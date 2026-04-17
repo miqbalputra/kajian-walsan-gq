@@ -365,13 +365,7 @@
                             };
 
                             await this.scanner.start(
-                                { 
-                                    facingMode: this.facingMode,
-                                    width: { min: 640, ideal: 1280 },
-                                    height: { min: 480, ideal: 720 },
-                                    // Memaksa focus mode jika didukung browser HP (Android)
-                                    advanced: [{ focusMode: "continuous" }]
-                                },
+                                { facingMode: this.facingMode },
                                 config,
                                 (decodedText) => this.onScanSuccess(decodedText),
                                 (error) => { } 
