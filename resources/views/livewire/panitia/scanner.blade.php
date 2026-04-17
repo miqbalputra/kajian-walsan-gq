@@ -21,10 +21,10 @@
             @keyframes scan-laser {
                 0%, 100% { transform: translateY(0); opacity: 0; }
                 10%, 90% { opacity: 1; }
-                50% { transform: translateY(248px); opacity: 1; }
+                50% { transform: translateY(240px); opacity: 1; }
             }
             .animate-scan-laser {
-                animation: scan-laser 2.5s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+                animation: scan-laser 1.5s cubic-bezier(0.4, 0, 0.2, 1) infinite;
             }
             
             /* Styling HTML5QRCode Builder agar rapi & fullscreen container */
@@ -342,20 +342,37 @@
                             if (this.scanner && this.scanning) {
                                 try { 
                                     await this.scanner.stop(); 
-                                    // Beri jeda sebentar agar hardware kamera HP merilis channel
                                     await new Promise(resolve => setTimeout(resolve, 300));
                                 } catch (e) { console.error("Error stopping scanner", e); }
                             }
                             
-                            // Jangan buat instance baru berulang kali, gunakan satu instance
                             if (!this.scanner) {
                                 this.scanner = new Html5Qrcode("qr-reader");
                             }
 
+                            // Konfigurasi optimal untuk HP (Android/iOS)
+                            const config = { 
+                                fps: 20, 
+                                qrbox: (viewfinderWidth, viewfinderHeight) => {
+                                    const minEdge = Math.min(viewfinderWidth, viewfinderHeight);
+                                    const qrboxSize = Math.floor(minEdge * 0.7);
+                                    return { width: qrboxSize, height: qrboxSize };
+                                },
+                                // Fitur eksperimental untuk kecepatan maksimal (Native Barcode API)
+                                experimentalFeatures: {
+                                    useBarCodeDetectorIfSupported: true
+                                }
+                            };
+
                             await this.scanner.start(
-                                { facingMode: this.facingMode },
-                                // Ubah aspect ratio dan qrcode box agar lebih responsif untuk HP Landscape/Potrait
-                                { fps: 12, qrbox: { width: 250, height: 250 }, aspectRatio: 1.0 },
+                                { 
+                                    facingMode: this.facingMode,
+                                    width: { min: 640, ideal: 1280 },
+                                    height: { min: 480, ideal: 720 },
+                                    // Memaksa focus mode jika didukung browser HP (Android)
+                                    advanced: [{ focusMode: "continuous" }]
+                                },
+                                config,
                                 (decodedText) => this.onScanSuccess(decodedText),
                                 (error) => { } 
                             );
