@@ -68,51 +68,27 @@ class Scanner extends Component
             return;
         }
 
-        // Find all children
+        // Find all children for display purposes
         $students = $parent->students;
         $childDisplayNames = [];
-        $recordedCount = 0;
-
-        if ($students->count() > 0) {
-            foreach ($students as $student) {
-                // Check if this specific student already has attendance recorded
-                $exists = Attendance::where('kajian_event_id', $this->activeEvent->id)
-                    ->where('student_id', $student->id)
-                    ->exists();
-
-                if (!$exists) {
-                    Attendance::create([
-                        'kajian_event_id' => $this->activeEvent->id,
-                        'parent_id' => $parent->id,
-                        'student_id' => $student->id,
-                        'status' => 'hadir_fisik',
-                        'method' => 'scan_qr',
-                        'validation_status' => 'approved',
-                        'validated_by' => auth()->id(),
-                        'validated_at' => now(),
-                        'scanned_at' => now(),
-                        'device_info' => request()->userAgent(),
-                    ]);
-                    $recordedCount++;
-                }
-                $childDisplayNames[] = $student->name . ($student->classRoom ? ' (' . $student->classRoom->name . ')' : '');
-            }
-        } else {
-            // Fallback for parents without linked students
-            Attendance::create([
-                'kajian_event_id' => $this->activeEvent->id,
-                'parent_id' => $parent->id,
-                'student_id' => null,
-                'status' => 'hadir_fisik',
-                'method' => 'scan_qr',
-                'validation_status' => 'approved',
-                'validated_by' => auth()->id(),
-                'validated_at' => now(),
-                'scanned_at' => now(),
-                'device_info' => request()->userAgent(),
-            ]);
-            $recordedCount = 1;
+        
+        foreach ($students as $student) {
+            $childDisplayNames[] = $student->name . ($student->classRoom ? ' (' . $student->classRoom->name . ')' : '');
         }
+
+        // Record single attendance for the family (respecting unique constraint on kajian_event_id + parent_id)
+        Attendance::create([
+            'kajian_event_id' => $this->activeEvent->id,
+            'parent_id' => $parent->id,
+            'student_id' => $students->first()?->id, // Link to first student as representative
+            'status' => 'hadir_fisik',
+            'method' => 'scan_qr',
+            'validation_status' => 'approved',
+            'validated_by' => auth()->id(),
+            'validated_at' => now(),
+            'scanned_at' => now(),
+            'device_info' => request()->userAgent(),
+        ]);
 
         $childNameDisplay = count($childDisplayNames) > 0
             ? (count($childDisplayNames) . " Santri: " . implode(', ', $childDisplayNames))
@@ -177,38 +153,21 @@ class Scanner extends Component
         $students = $parent->students;
         $childDisplayNames = [];
 
-        if ($students->count() > 0) {
-            foreach ($students as $student) {
-                $exists = Attendance::where('kajian_event_id', $this->activeEvent->id)
-                    ->where('student_id', $student->id)
-                    ->exists();
-
-                if (!$exists) {
-                    Attendance::create([
-                        'kajian_event_id' => $this->activeEvent->id,
-                        'parent_id' => $parent->id,
-                        'student_id' => $student->id,
-                        'status' => 'hadir_fisik',
-                        'method' => 'manual',
-                        'validation_status' => 'approved',
-                        'validated_by' => auth()->id(),
-                        'validated_at' => now(),
-                    ]);
-                }
-                $childDisplayNames[] = $student->name . ($student->classRoom ? ' (' . $student->classRoom->name . ')' : '');
-            }
-        } else {
-            Attendance::create([
-                'kajian_event_id' => $this->activeEvent->id,
-                'parent_id' => $parent->id,
-                'student_id' => null,
-                'status' => 'hadir_fisik',
-                'method' => 'manual',
-                'validation_status' => 'approved',
-                'validated_by' => auth()->id(),
-                'validated_at' => now(),
-            ]);
+        foreach ($students as $student) {
+            $childDisplayNames[] = $student->name . ($student->classRoom ? ' (' . $student->classRoom->name . ')' : '');
         }
+
+        // Record single attendance for manual check-in
+        Attendance::create([
+            'kajian_event_id' => $this->activeEvent->id,
+            'parent_id' => $parent->id,
+            'student_id' => $students->first()?->id,
+            'status' => 'hadir_fisik',
+            'method' => 'manual',
+            'validation_status' => 'approved',
+            'validated_by' => auth()->id(),
+            'validated_at' => now(),
+        ]);
 
         $parentType = $parent->type === 'father' ? 'Bapak' : 'Ibu';
         $childNameDisplay = count($childDisplayNames) > 0
