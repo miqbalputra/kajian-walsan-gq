@@ -41,6 +41,22 @@
             .mirror-cam video {
                 transform: scaleX(-1) !important;
             }
+
+            /* Fullscreen Mode Fixes */
+            .scanner-fullscreen-mode {
+                width: 100vw !important;
+                height: 100vh !important;
+                max-width: none !important;
+                border-radius: 0 !important;
+                margin: 0 !important;
+                position: fixed !important;
+                top: 0 !important;
+                left: 0 !important;
+                z-index: 9999 !important;
+            }
+            .scanner-fullscreen-mode #qr-reader {
+                height: 100% !important;
+            }
         </style>
 
         <!-- Active Event Info -->
@@ -59,8 +75,9 @@
 
         <!-- Scanner Area -->
         <div class="p-4" x-data="qrScannerComponent()" wire:ignore>
-            <!-- Camera View -->
-            <div :class="{'mirror-cam': facingMode === 'user'}" class="bg-black rounded-2xl overflow-hidden aspect-square max-w-md mx-auto relative mb-4 shadow-xl border-4 border-gray-900 transition-all duration-300">
+            <!-- Camera View Container -->
+            <div id="scanner-container" :class="{'mirror-cam': facingMode === 'user', 'scanner-fullscreen-mode bg-black': isFullscreen}" 
+                class="bg-black rounded-2xl overflow-hidden aspect-square max-w-md mx-auto relative mb-4 shadow-xl border-4 border-gray-900 transition-all duration-300">
                 <div id="qr-reader" class="w-full h-full"></div>
 
                 <!-- Petunjuk arahkan QR -->
@@ -114,6 +131,13 @@
                     class="absolute top-4 right-4 w-12 h-12 bg-black/40 backdrop-blur-md border border-white/20 text-white rounded-full flex items-center justify-center hover:bg-primary-500 transition-all z-40"
                     title="Ganti Kamera">
                     <span class="material-symbols-rounded text-2xl">flip_camera_ios</span>
+                </button>
+
+                <!-- Fullscreen Toggle -->
+                <button @click="toggleFullscreen()" 
+                    class="absolute top-4 left-4 w-12 h-12 bg-black/40 backdrop-blur-md border border-white/20 text-white rounded-full flex items-center justify-center hover:bg-primary-500 transition-all z-40"
+                    :title="isFullscreen ? 'Keluar Layar Penuh' : 'Layar Penuh'">
+                    <span class="material-symbols-rounded text-2xl" x-text="isFullscreen ? 'fullscreen_exit' : 'fullscreen'"></span>
                 </button>
             </div>
 
@@ -306,6 +330,7 @@
                     // Selalu mulai dengan kamera depan tanpa fallback otomatis dari localStorage jika tidak diinginkan
                     // Jika preferensi adalah belakang, bisa dibaca dari localStorage. Tapi default kita adalah 'user'
                     facingMode: localStorage.getItem('scanner_camera_pref') || 'user',
+                    isFullscreen: false,
                     zoomValue: 1,
                     minZoom: 1,
                     maxZoom: 5,
@@ -432,6 +457,33 @@
                                 advanced: [{ zoom: this.zoomValue }]
                             });
                         } catch (e) { console.error("Failed to apply zoom", e); }
+                    },
+
+                    toggleFullscreen() {
+                        const container = document.getElementById('scanner-container');
+                        
+                        if (!document.fullscreenElement) {
+                            if (container.requestFullscreen) {
+                                container.requestFullscreen();
+                            } else if (container.webkitRequestFullscreen) {
+                                container.webkitRequestFullscreen();
+                            } else if (container.msRequestFullscreen) {
+                                container.msRequestFullscreen();
+                            }
+                            this.isFullscreen = true;
+                        } else {
+                            if (document.exitFullscreen) {
+                                document.exitFullscreen();
+                            } else if (document.webkitExitFullscreen) {
+                                document.webkitExitFullscreen();
+                            }
+                            this.isFullscreen = false;
+                        }
+
+                        // Listen for Escape key or manual exit via browser UI
+                        document.addEventListener('fullscreenchange', () => {
+                            this.isFullscreen = !!document.fullscreenElement;
+                        });
                     },
 
                     async stopScanner() {
