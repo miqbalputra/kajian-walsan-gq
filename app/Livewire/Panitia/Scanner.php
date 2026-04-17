@@ -29,88 +29,93 @@ class Scanner extends Component
 
     public function processQrCode($qrCode)
     {
-        $this->lastScanResult = null;
-        $this->lastScanSuccess = false;
+        try {
+            $this->lastScanResult = null;
+            $this->lastScanSuccess = false;
 
-        // Rate limiting - max 20 scans per minute per user/device
-        $key = 'scanner:' . auth()->id() . ':' . request()->ip();
-        if (RateLimiter::tooManyAttempts($key, 20)) {
-            $seconds = RateLimiter::availableIn($key);
-            $this->lastScanMessage = "Terlalu banyak percobaan. Tunggu {$seconds} detik.";
-            $this->dispatch('scan-error', message: $this->lastScanMessage);
-            return;
+            // Rate limiting - max 30 scans per minute per user
+            $key = 'scanner:' . auth()->id();
+            if (RateLimiter::tooManyAttempts($key, 30)) {
+                $seconds = RateLimiter::availableIn($key);
+                $this->lastScanMessage = "Terlalu banyak percobaan. Tunggu {$seconds} detik.";
+                $this->dispatch('scan-error', message: $this->lastScanMessage);
+                return;
+            }
+            RateLimiter::hit($key, 60);
+
+            if (!$this->activeEvent) {
+                $this->lastScanMessage = 'Tidak ada kajian aktif hari ini.';
+                $this->dispatch('scan-error', message: $this->lastScanMessage);
+                return;
+            }
+
+            // Find parent by QR code
+            $parent = ParentModel::with(['user', 'students.classRoom'])->where('qr_code_string', $qrCode)->first();
+
+            if (!$parent) {
+                $this->lastScanMessage = 'QR Code tidak ditemukan dalam sistem.';
+                $this->dispatch('scan-error', message: $this->lastScanMessage);
+                return;
+            }
+
+            // Check if already scanned today for this event
+            $existingAttendance = Attendance::where('kajian_event_id', $this->activeEvent->id)
+                ->where('parent_id', $parent->id)
+                ->first();
+
+            if ($existingAttendance) {
+                $this->lastScanMessage = $parent->user->name . ' sudah tercatat hadir.';
+                $this->dispatch('scan-warning', message: $this->lastScanMessage, name: $parent->user->name);
+                return;
+            }
+
+            // Find all children for display purposes
+            $students = $parent->students;
+            $childDisplayNames = [];
+            
+            foreach ($students as $student) {
+                $childDisplayNames[] = $student->name . ($student->classRoom ? ' (' . $student->classRoom->name . ')' : '');
+            }
+
+            // Record single attendance for the family (respecting unique constraint on kajian_event_id + parent_id)
+            Attendance::create([
+                'kajian_event_id' => $this->activeEvent->id,
+                'parent_id' => $parent->id,
+                'student_id' => $students->first()?->id, // Link to first student as representative
+                'status' => 'hadir_fisik',
+                'method' => 'scan_qr',
+                'validation_status' => 'approved',
+                'validated_by' => auth()->id(),
+                'validated_at' => now(),
+                'scanned_at' => now(),
+                'device_info' => request()->userAgent(),
+            ]);
+
+            $childNameDisplay = count($childDisplayNames) > 0
+                ? (count($childDisplayNames) . " Santri: " . implode(', ', $childDisplayNames))
+                : 'Tidak ada data santri';
+
+            $this->lastScanSuccess = true;
+            $this->lastScanResult = [
+                'parent_name' => $parent->user->name,
+                'parent_type' => $parent->type_display,
+                'child_name' => $childNameDisplay,
+                'time' => now()->format('H:i'),
+            ];
+
+            $parentType = $parent->type === 'father' ? 'Bapak' : 'Ibu';
+            $this->lastScanMessage = "Selamat Datang, {$parentType} {$parent->user->name}. Berhasil mencatat presensi untuk " . ($students->count() ?: 1) . " santri.";
+
+            $this->dispatch('scan-success', [
+                'message' => $this->lastScanMessage,
+                'parentName' => $parent->user->name,
+                'parentType' => $parent->type_display,
+                'childName' => $childNameDisplay,
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Scanner Error: ' . $e->getMessage());
+            $this->dispatch('scan-error', message: 'Server Error: ' . $e->getMessage());
         }
-        RateLimiter::hit($key, 60);
-
-        if (!$this->activeEvent) {
-            $this->lastScanMessage = 'Tidak ada kajian aktif hari ini.';
-            $this->dispatch('scan-error', message: $this->lastScanMessage);
-            return;
-        }
-
-        // Find parent by QR code
-        $parent = ParentModel::with(['user', 'students.classRoom'])->where('qr_code_string', $qrCode)->first();
-
-        if (!$parent) {
-            $this->lastScanMessage = 'QR Code tidak ditemukan dalam sistem.';
-            $this->dispatch('scan-error', message: $this->lastScanMessage);
-            return;
-        }
-
-        // Check if already scanned today for this event
-        $existingAttendance = Attendance::where('kajian_event_id', $this->activeEvent->id)
-            ->where('parent_id', $parent->id)
-            ->first();
-
-        if ($existingAttendance) {
-            $this->lastScanMessage = $parent->user->name . ' sudah tercatat hadir.';
-            $this->dispatch('scan-warning', message: $this->lastScanMessage, name: $parent->user->name);
-            return;
-        }
-
-        // Find all children for display purposes
-        $students = $parent->students;
-        $childDisplayNames = [];
-        
-        foreach ($students as $student) {
-            $childDisplayNames[] = $student->name . ($student->classRoom ? ' (' . $student->classRoom->name . ')' : '');
-        }
-
-        // Record single attendance for the family (respecting unique constraint on kajian_event_id + parent_id)
-        Attendance::create([
-            'kajian_event_id' => $this->activeEvent->id,
-            'parent_id' => $parent->id,
-            'student_id' => $students->first()?->id, // Link to first student as representative
-            'status' => 'hadir_fisik',
-            'method' => 'scan_qr',
-            'validation_status' => 'approved',
-            'validated_by' => auth()->id(),
-            'validated_at' => now(),
-            'scanned_at' => now(),
-            'device_info' => request()->userAgent(),
-        ]);
-
-        $childNameDisplay = count($childDisplayNames) > 0
-            ? (count($childDisplayNames) . " Santri: " . implode(', ', $childDisplayNames))
-            : 'Tidak ada data santri';
-
-        $this->lastScanSuccess = true;
-        $this->lastScanResult = [
-            'parent_name' => $parent->user->name,
-            'parent_type' => $parent->type_display,
-            'child_name' => $childNameDisplay,
-            'time' => now()->format('H:i'),
-        ];
-
-        $parentType = $parent->type === 'father' ? 'Bapak' : 'Ibu';
-        $this->lastScanMessage = "Selamat Datang, {$parentType} {$parent->user->name}. Berhasil mencatat presensi untuk " . ($students->count() ?: 1) . " santri.";
-
-        $this->dispatch('scan-success', [
-            'message' => $this->lastScanMessage,
-            'parentName' => $parent->user->name,
-            'parentType' => $parent->type_display,
-            'childName' => $childNameDisplay,
-        ]);
     }
 
     public function updatedSearchQuery()

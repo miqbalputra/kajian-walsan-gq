@@ -99,6 +99,16 @@
                     <span x-text="facingMode === 'user' ? 'Kamera Depan' : 'Kamera Belakang'"></span>
                 </div>
 
+                <!-- Zoom Controller -->
+                <div x-show="scanning && hasZoom" class="absolute bottom-16 left-1/2 -translate-x-1/2 w-2/3 bg-black/40 backdrop-blur-md px-4 py-2 rounded-2xl border border-white/10 z-40">
+                    <div class="flex items-center gap-3">
+                        <span class="material-symbols-rounded text-white text-sm">zoom_out</span>
+                        <input type="range" x-model="zoomValue" @input="applyZoom()" :min="minZoom" :max="maxZoom" step="0.1" 
+                            class="flex-1 h-1.5 bg-gray-600 rounded-lg appearance-none cursor-pointer accent-primary-500">
+                        <span class="material-symbols-rounded text-white text-sm">zoom_in</span>
+                    </div>
+                </div>
+
                 <!-- Camera Switcher -->
                 <button @click="switchCamera()" 
                     class="absolute top-4 right-4 w-12 h-12 bg-black/40 backdrop-blur-md border border-white/20 text-white rounded-full flex items-center justify-center hover:bg-primary-500 transition-all z-40"
@@ -296,6 +306,11 @@
                     // Selalu mulai dengan kamera depan tanpa fallback otomatis dari localStorage jika tidak diinginkan
                     // Jika preferensi adalah belakang, bisa dibaca dari localStorage. Tapi default kita adalah 'user'
                     facingMode: localStorage.getItem('scanner_camera_pref') || 'user',
+                    zoomValue: 1,
+                    minZoom: 1,
+                    maxZoom: 5,
+                    hasZoom: false,
+                    track: null,
 
                     init() {
                         this.startScanner();
@@ -355,7 +370,8 @@
                                 fps: 20, 
                                 qrbox: (viewfinderWidth, viewfinderHeight) => {
                                     const minEdge = Math.min(viewfinderWidth, viewfinderHeight);
-                                    const qrboxSize = Math.floor(minEdge * 0.7);
+                                    // Perkecil sedikit margin agar area scan lebih luas (85%)
+                                    const qrboxSize = Math.floor(minEdge * 0.85);
                                     return { width: qrboxSize, height: qrboxSize };
                                 },
                                 // Fitur eksperimental untuk kecepatan maksimal (Native Barcode API)
@@ -373,6 +389,9 @@
 
                             this.scanning = true;
                             this.hasCamera = true;
+
+                            // Cek kapabilitas Zoom setelah kamera aktif
+                            setTimeout(() => this.checkZoomCapability(), 1000);
                         } catch (err) {
                             console.error("Camera error:", err);
                             this.hasCamera = false;
@@ -386,6 +405,33 @@
                                 confirmButtonColor: '#10B981'
                             });
                         }
+                    },
+
+                    checkZoomCapability() {
+                        try {
+                            const videoElement = document.querySelector('#qr-reader video');
+                            if (!videoElement || !videoElement.srcObject) return;
+                            
+                            const track = videoElement.srcObject.getVideoTracks()[0];
+                            this.track = track;
+                            const capabilities = track.getCapabilities();
+                            
+                            if (capabilities.zoom) {
+                                this.hasZoom = true;
+                                this.minZoom = capabilities.zoom.min;
+                                this.maxZoom = capabilities.zoom.max;
+                                this.zoomValue = capabilities.zoom.min;
+                            }
+                        } catch (e) { console.warn("Zoom not supported", e); }
+                    },
+
+                    async applyZoom() {
+                        if (!this.track) return;
+                        try {
+                            await this.track.applyConstraints({
+                                advanced: [{ zoom: this.zoomValue }]
+                            });
+                        } catch (e) { console.error("Failed to apply zoom", e); }
                     },
 
                     async stopScanner() {
