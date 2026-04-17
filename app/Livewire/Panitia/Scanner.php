@@ -58,17 +58,6 @@ class Scanner extends Component
                 return;
             }
 
-            // Check if already scanned today for this event
-            $existingAttendance = Attendance::where('kajian_event_id', $this->activeEvent->id)
-                ->where('parent_id', $parent->id)
-                ->first();
-
-            if ($existingAttendance) {
-                $this->lastScanMessage = $parent->user->name . ' sudah tercatat hadir.';
-                $this->dispatch('scan-warning', message: $this->lastScanMessage, name: $parent->user->name);
-                return;
-            }
-
             // Find all children for display purposes
             $students = $parent->students;
             $childDisplayNames = [];
@@ -77,19 +66,45 @@ class Scanner extends Component
                 $childDisplayNames[] = $student->name . ($student->classRoom ? ' (' . $student->classRoom->name . ')' : '');
             }
 
-            // Record single attendance for the family (respecting unique constraint on kajian_event_id + parent_id)
-            Attendance::create([
-                'kajian_event_id' => $this->activeEvent->id,
-                'parent_id' => $parent->id,
-                'student_id' => $students->first()?->id, // Link to first student as representative
-                'status' => 'hadir_fisik',
-                'method' => 'scan_qr',
-                'validation_status' => 'approved',
-                'validated_by' => auth()->id(),
-                'validated_at' => now(),
-                'scanned_at' => now(),
-                'device_info' => request()->userAgent(),
-            ]);
+            // Check if already scanned today for this event (including soft-deleted records)
+            $existingAttendance = Attendance::withTrashed()
+                ->where('kajian_event_id', $this->activeEvent->id)
+                ->where('parent_id', $parent->id)
+                ->first();
+
+            if ($existingAttendance) {
+                if ($existingAttendance->trashed()) {
+                    // Jika pernah dihapus (dibatalkan), pulihkan datanya daripada buat baru (menghindari duplicate entry)
+                    $existingAttendance->restore();
+                    $existingAttendance->update([
+                        'student_id' => $students->first()?->id,
+                        'method' => 'scan_qr',
+                        'validation_status' => 'approved',
+                        'validated_by' => auth()->id(),
+                        'validated_at' => now(),
+                        'scanned_at' => now(),
+                        'device_info' => request()->userAgent(),
+                    ]);
+                } else {
+                    $this->lastScanMessage = $parent->user->name . ' sudah tercatat hadir.';
+                    $this->dispatch('scan-warning', message: $this->lastScanMessage, name: $parent->user->name);
+                    return;
+                }
+            } else {
+                // Record single attendance for the family
+                Attendance::create([
+                    'kajian_event_id' => $this->activeEvent->id,
+                    'parent_id' => $parent->id,
+                    'student_id' => $students->first()?->id,
+                    'status' => 'hadir_fisik',
+                    'method' => 'scan_qr',
+                    'validation_status' => 'approved',
+                    'validated_by' => auth()->id(),
+                    'validated_at' => now(),
+                    'scanned_at' => now(),
+                    'device_info' => request()->userAgent(),
+                ]);
+            }
 
             $childNameDisplay = count($childDisplayNames) > 0
                 ? (count($childDisplayNames) . " Santri: " . implode(', ', $childDisplayNames))
