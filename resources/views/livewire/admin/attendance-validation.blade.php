@@ -107,10 +107,18 @@
                                             <span class="material-symbols-rounded">cancel</span>
                                         </button>
                                     @else
-                                        <span
-                                            class="text-xs font-medium {{ $attendance->validation_status === 'approved' ? 'text-green-600' : 'text-red-600' }}">
-                                            {{ $attendance->validation_status === 'approved' ? 'Disetujui' : 'Ditolak' }}
-                                        </span>
+                                        <div class="flex items-center gap-2">
+                                            <span
+                                                class="text-xs font-medium {{ $attendance->validation_status === 'approved' ? 'text-green-600' : 'text-red-600' }}">
+                                                {{ $attendance->validation_status === 'approved' ? 'Disetujui' : 'Ditolak' }}
+                                            </span>
+                                            <button wire:click="revertToPending({{ $attendance->id }})"
+                                                wire:confirm="Kembalikan status ke Pending? Data validasi sebelumnya akan dihapus."
+                                                class="p-1.5 text-gray-400 hover:text-primary-600 hover:bg-primary-50 rounded-md transition-all"
+                                                title="Ubah Status (Kembalikan ke Pending)">
+                                                <span class="material-symbols-rounded text-sm">history</span>
+                                            </button>
+                                        </div>
                                     @endif
                                 </div>
                             </td>
@@ -193,6 +201,15 @@
                             <button wire:click="approve({{ $selectedAttendance->id }})"
                                 class="flex-1 px-4 py-3 bg-green-600 text-white rounded-xl font-medium hover:bg-green-700 transition-colors shadow-lg shadow-green-600/20">
                                 Setujui Presensi
+                            </button>
+                        </div>
+                    @else
+                        <div class="mt-6">
+                            <button wire:click="revertToPending({{ $selectedAttendance->id }})"
+                                wire:confirm="Kembalikan status ke Pending? Data validasi sebelumnya akan dihapus."
+                                class="w-full px-4 py-3 border border-gray-200 text-gray-600 rounded-xl font-medium hover:bg-gray-50 transition-all flex items-center justify-center gap-2">
+                                <span class="material-symbols-rounded">history</span>
+                                Ubah Status (Kembalikan ke Pending)
                             </button>
                         </div>
                     @endif

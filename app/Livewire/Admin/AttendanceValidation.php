@@ -91,6 +91,19 @@ class AttendanceValidation extends Component
         $this->dispatch('notify', ['type' => 'warning', 'message' => 'Presensi ditolak.']);
     }
 
+    public function revertToPending($id)
+    {
+        $attendance = Attendance::findOrFail($id);
+        $attendance->update([
+            'validation_status' => 'pending',
+            'rejection_reason' => null,
+            'validated_by' => null,
+            'validated_at' => null,
+        ]);
+
+        $this->dispatch('notify', ['type' => 'info', 'message' => 'Status presensi dikembalikan ke pending.']);
+    }
+
     public function render()
     {
         $attendances = Attendance::with(['parent.user', 'parent.students', 'kajianEvent'])
