@@ -72,7 +72,8 @@ class Dashboard extends Component
             return null;
         }
 
-        return Attendance::where('kajian_event_id', $this->activeEvent->id)
+        return Attendance::withTrashed()
+            ->where('kajian_event_id', $this->activeEvent->id)
             ->where('parent_id', $this->parent->id)
             ->first();
     }

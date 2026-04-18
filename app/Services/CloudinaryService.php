@@ -144,37 +144,6 @@ class CloudinaryService
     }
 
     /**
-     * Delete file dari Cloudinary.
-     *
-     * @param string $publicId Cloudinary Public ID
-     * @return bool
-     */
-    public function delete(string $publicId): bool
-    {
-        if (!$this->enabled || empty($this->cloudName)) {
-            return false;
-        }
-
-        $timestamp = time();
-        $signatureString = "public_id={$publicId}&timestamp={$timestamp}" . $this->apiSecret;
-        $signature = sha1($signatureString);
-
-        try {
-            $response = Http::post("https://api.cloudinary.com/v1_1/{$this->cloudName}/image/destroy", [
-                'public_id' => $publicId,
-                'api_key' => $this->apiKey,
-                'timestamp' => $timestamp,
-                'signature' => $signature,
-            ]);
-
-            return $response->successful() && ($response->json('result') === 'ok');
-        } catch (\Exception $e) {
-            Log::error('[Cloudinary] Delete failed', ['message' => $e->getMessage()]);
-            return false;
-        }
-    }
-
-    /**
      * Check apakah URL adalah Cloudinary URL.
      */
     public static function isCloudinaryUrl(?string $url): bool
@@ -202,20 +171,23 @@ class CloudinaryService
     }
 
     /**
-     * Delete a file from Cloudinary by public_id.
-     * Silently fails — deletion is not critical.
+     * Delete file dari Cloudinary.
+     *
+     * @param string $publicId Cloudinary Public ID
+     * @param string $resourceType Resource type (image or raw)
+     * @return bool
      */
     public function delete(string $publicId, string $resourceType = 'image'): bool
     {
-        if (!$this->enabled) {
+        if (!$this->enabled || empty($this->cloudName)) {
             return false;
         }
 
         try {
             $timestamp = time();
             $signParams = [
-                'public_id'     => $publicId,
-                'timestamp'     => $timestamp,
+                'public_id' => $publicId,
+                'timestamp' => $timestamp,
             ];
 
             // Build signature string
@@ -226,7 +198,7 @@ class CloudinaryService
             $signString .= $this->apiSecret;
             $signature = sha1($signString);
 
-            $response = \Illuminate\Support\Facades\Http::asMultipart()->post(
+            $response = Http::post(
                 "https://api.cloudinary.com/v1_1/{$this->cloudName}/{$resourceType}/destroy",
                 [
                     'public_id' => $publicId,
@@ -238,14 +210,14 @@ class CloudinaryService
 
             $result = $response->json();
 
-            \Illuminate\Support\Facades\Log::info('[Cloudinary] Delete result', [
+            Log::info('[Cloudinary] Delete result', [
                 'public_id' => $publicId,
                 'result'    => $result['result'] ?? 'unknown',
             ]);
 
             return ($result['result'] ?? '') === 'ok';
         } catch (\Exception $e) {
-            \Illuminate\Support\Facades\Log::warning('[Cloudinary] Delete failed', [
+            Log::warning('[Cloudinary] Delete failed', [
                 'public_id' => $publicId,
                 'error'     => $e->getMessage(),
             ]);
