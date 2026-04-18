@@ -513,12 +513,11 @@
                                         ">
 
                                     @if($izinDocument)
-                                        <div class="flex flex-col items-center gap-2">
-                                            <div class="w-16 h-16 bg-amber-500 text-white rounded-2xl flex items-center justify-center shadow-lg shadow-amber-500/20">
-                                                <span class="material-symbols-rounded text-3xl">task</span>
+                                        <div class="relative">
+                                            <img src="{{ $izinDocument->temporaryUrl() }}" class="max-h-48 mx-auto rounded-2xl shadow-lg border-4 border-white">
+                                            <div class="absolute inset-0 bg-black/40 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                                                <span class="text-white text-xs font-bold px-3 py-1 bg-white/20 backdrop-blur-md rounded-full">Ganti Foto</span>
                                             </div>
-                                            <p class="text-sm font-bold text-slate-700 mt-2">{{ $izinDocument->getClientOriginalName() }}</p>
-                                            <p class="text-[10px] text-slate-400 font-medium uppercase tracking-wider">Klik untuk ganti file</p>
                                         </div>
                                     @else
                                         <div class="flex flex-col items-center gap-3">
@@ -614,12 +613,11 @@
                                         ">
 
                                     @if($reuploadFile)
-                                        <div class="flex flex-col items-center gap-2">
-                                            <div class="w-16 h-16 bg-red-500 text-white rounded-2xl flex items-center justify-center shadow-lg shadow-red-500/20">
-                                                <span class="material-symbols-rounded text-3xl">task</span>
+                                        <div class="relative">
+                                            <img src="{{ $reuploadFile->temporaryUrl() }}" class="max-h-48 mx-auto rounded-2xl shadow-lg border-4 border-white">
+                                            <div class="absolute inset-0 bg-black/40 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                                                <span class="text-white text-xs font-bold px-3 py-1 bg-white/20 backdrop-blur-md rounded-full">Ganti Foto</span>
                                             </div>
-                                            <p class="text-sm font-bold text-slate-700 mt-2">{{ $reuploadFile->getClientOriginalName() }}</p>
-                                            <p class="text-[10px] text-slate-400 font-medium uppercase tracking-wider">Klik untuk ganti file</p>
                                         </div>
                                     @else
                                         <div class="flex flex-col items-center gap-3">
