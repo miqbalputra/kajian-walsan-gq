@@ -422,7 +422,7 @@
                                         ">
 
                                     @if($proofPhoto)
-                                        <div class="relative">
+                                        <div class="relative pointer-events-none">
                                             <img src="{{ $proofPhoto->temporaryUrl() }}" class="max-h-48 mx-auto rounded-2xl shadow-lg border-4 border-white">
                                             <div class="absolute inset-0 bg-black/40 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
                                                 <span class="text-white text-xs font-bold px-3 py-1 bg-white/20 backdrop-blur-md rounded-full">Ganti Foto</span>
@@ -513,7 +513,7 @@
                                         ">
 
                                     @if($izinDocument)
-                                        <div class="relative">
+                                        <div class="relative pointer-events-none">
                                             <img src="{{ $izinDocument->temporaryUrl() }}" class="max-h-48 mx-auto rounded-2xl shadow-lg border-4 border-white">
                                             <div class="absolute inset-0 bg-black/40 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
                                                 <span class="text-white text-xs font-bold px-3 py-1 bg-white/20 backdrop-blur-md rounded-full">Ganti Foto</span>
@@ -613,7 +613,7 @@
                                         ">
 
                                     @if($reuploadFile)
-                                        <div class="relative">
+                                        <div class="relative pointer-events-none">
                                             <img src="{{ $reuploadFile->temporaryUrl() }}" class="max-h-48 mx-auto rounded-2xl shadow-lg border-4 border-white">
                                             <div class="absolute inset-0 bg-black/40 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
                                                 <span class="text-white text-xs font-bold px-3 py-1 bg-white/20 backdrop-blur-md rounded-full">Ganti Foto</span>
