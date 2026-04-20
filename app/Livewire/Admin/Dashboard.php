@@ -66,6 +66,9 @@ class Dashboard extends Component
         // 5. Top Attending Classes
         $topClasses = $this->getTopClasses();
 
+        // 6. Parents Needing Attention (Multiple Alphas)
+        $parentsNeedingAttention = $this->getParentsNeedingAttention();
+
         return view('livewire.admin.dashboard', [
             'totalKajian' => $totalKajian,
             'totalSiswa' => $totalSiswa,
@@ -81,7 +84,49 @@ class Dashboard extends Component
             'attendanceByClass' => $attendanceByClass,
             'monthlyComparison' => $monthlyComparison,
             'topClasses' => $topClasses,
+            'parentsNeedingAttention' => $parentsNeedingAttention,
         ])->layout('components.layouts.admin', ['title' => 'Dashboard']);
+    }
+
+    public $showFollowUpModal = false;
+    public $selectedParent = null;
+    public $followUpReason = '';
+
+    public function openFollowUpModal($parentId)
+    {
+        $this->selectedParent = ParentModel::with('user')->find($parentId);
+        $this->followUpReason = '';
+        $this->showFollowUpModal = true;
+    }
+
+    public function submitFollowUp()
+    {
+        $this->validate([
+            'followUpReason' => 'required|string|max:255',
+        ]);
+
+        $lastEvent = KajianEvent::where('date', '<=', today())->orderByDesc('date')->first();
+
+        if ($lastEvent && $this->selectedParent) {
+            // Create or update alpha record with reason
+            Attendance::updateOrCreate(
+                [
+                    'kajian_event_id' => $lastEvent->id,
+                    'parent_id' => $this->selectedParent->id,
+                ],
+                [
+                    'status' => 'alpha',
+                    'method' => 'manual',
+                    'notes' => '[Follow-up Admin]: ' . $this->followUpReason,
+                    'validation_status' => 'approved',
+                    'validated_by' => auth()->id(),
+                    'validated_at' => now(),
+                ]
+            );
+
+            $this->showFollowUpModal = false;
+            $this->dispatch('notify', ['type' => 'success', 'message' => 'Hasil follow-up berhasil dicatat.']);
+        }
     }
 
     /**
@@ -330,5 +375,33 @@ class Dashboard extends Component
         usort($classStats, fn($a, $b) => $b['percentage'] - $a['percentage']);
 
         return array_slice($classStats, 0, 5);
+    }
+
+    /**
+     * Identify parents who missed the last 2 events
+     */
+    private function getParentsNeedingAttention(): array
+    {
+        $lastTwoEvents = KajianEvent::where('date', '<=', today())
+            ->orderByDesc('date')
+            ->take(2)
+            ->get();
+
+        if ($lastTwoEvents->count() < 1) {
+            return [];
+        }
+
+        $eventIds = $lastTwoEvents->pluck('id');
+
+        // Find parents who don't have (approved) attendance for these events
+        return ParentModel::with(['user', 'students.classRoom'])
+            ->whereDoesntHave('attendances', function ($q) use ($eventIds) {
+                $q->whereIn('kajian_event_id', $eventIds)
+                    ->whereIn('status', ['hadir_fisik', 'hadir_online', 'izin'])
+                    ->where('validation_status', 'approved');
+            })
+            ->take(5)
+            ->get()
+            ->toArray();
     }
 }

@@ -113,44 +113,92 @@
             <div id="monthlyComparisonChart" class="w-full" style="height: 280px;"></div>
         </div>
 
-        <!-- Top Classes Leaderboard -->
-        <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
-            <div class="mb-6">
-                <h3 class="font-semibold text-gray-900 text-lg">🏆 Top Kelas</h3>
-                <p class="text-sm text-gray-500">Berdasarkan kehadiran</p>
+    </div>
+    
+    <!-- Follow-up & Insights Section -->
+    <div class="grid grid-cols-1 xl:grid-cols-3 gap-6 mb-6">
+        <!-- Parents Needing Attention (Follow-up) -->
+        <div class="xl:col-span-2 bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+            <div class="p-6 border-b border-gray-100 flex items-center justify-between bg-rose-50/30">
+                <div>
+                    <h3 class="font-bold text-gray-900 flex items-center gap-2">
+                        <span class="material-symbols-rounded text-rose-500">priority_high</span>
+                        Perlu Perhatian (Alpha Berturut-turut)
+                    </h3>
+                    <p class="text-sm text-gray-500">Wali santri yang tidak hadir dalam 2 kajian terakhir</p>
+                </div>
+                <span class="px-2.5 py-1 bg-rose-100 text-rose-700 text-xs font-black rounded-lg uppercase tracking-wider">High Priority</span>
             </div>
-            <div class="space-y-4">
-                @forelse($topClasses as $index => $class)
-                            <div class="flex items-center gap-3">
-                                <div
-                                    class="w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm
-                                                                            {{ $index === 0 ? 'bg-gradient-to-br from-yellow-400 to-amber-500 text-white' :
-                    ($index === 1 ? 'bg-gradient-to-br from-gray-300 to-gray-400 text-white' :
-                        ($index === 2 ? 'bg-gradient-to-br from-orange-400 to-orange-500 text-white' : 'bg-gray-100 text-gray-600')) }}">
-                                    {{ $index + 1 }}
-                                </div>
-                                <div class="flex-1">
-                                    <div class="flex items-center justify-between mb-1">
-                                        <span class="font-medium text-gray-800 text-sm">{{ $class['name'] }}</span>
-                                        <span
-                                            class="text-sm font-bold {{ $class['percentage'] >= 70 ? 'text-green-600' : ($class['percentage'] >= 50 ? 'text-yellow-600' : 'text-red-600') }}">
-                                            {{ $class['percentage'] }}%
-                                        </span>
-                                    </div>
-                                    <div class="w-full bg-gray-100 rounded-full h-2">
-                                        <div class="h-2 rounded-full transition-all duration-500
-                                                                                    {{ $class['percentage'] >= 70 ? 'bg-gradient-to-r from-green-400 to-green-500' :
-                    ($class['percentage'] >= 50 ? 'bg-gradient-to-r from-yellow-400 to-yellow-500' : 'bg-gradient-to-r from-red-400 to-red-500') }}"
-                                            style="width: {{ $class['percentage'] }}%"></div>
-                                    </div>
-                                </div>
+            <div class="divide-y divide-gray-100">
+                @forelse($parentsNeedingAttention as $p)
+                    <div class="p-4 hover:bg-gray-50 transition-colors flex items-center justify-between gap-4">
+                        <div class="flex items-center gap-3 min-w-0">
+                            <div class="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center shrink-0">
+                                <span class="material-symbols-rounded text-gray-400">person</span>
                             </div>
+                            <div class="min-w-0">
+                                <p class="font-bold text-gray-900 truncate">{{ $p['user']['name'] }}</p>
+                                <p class="text-xs text-gray-500 truncate">
+                                    {{ $p['students'][0]['name'] ?? '-' }} ({{ $p['students'][0]['class_room']['name'] ?? '-' }})
+                                </p>
+                            </div>
+                        </div>
+                        <div class="flex items-center gap-2 shrink-0">
+                            @php
+                                $phone = $p['user']['phone'] ?? '';
+                                if($phone && !str_starts_with($phone, '62')) {
+                                    $phone = '62' . ltrim($phone, '0');
+                                }
+                                $message = "Assalamu'alaikum Bapak/Ibu " . $p['user']['name'] . ", kami dari tim admin Kajian Wali Santri memperhatikan Bapak/Ibu sudah beberapa kali absen. Apakah ada kendala yang bisa kami bantu?";
+                            @endphp
+                            <a href="https://wa.me/{{ $phone }}?text={{ urlencode($message) }}" target="_blank"
+                                class="p-2 bg-emerald-100 text-emerald-700 rounded-xl hover:bg-emerald-200 transition-colors"
+                                title="Chat WhatsApp">
+                                <span class="material-symbols-rounded">chat</span>
+                            </a>
+                            <button wire:click="openFollowUpModal({{ $p['id'] }})"
+                                class="flex items-center gap-2 px-3 py-2 bg-white border border-gray-200 rounded-xl text-xs font-bold text-gray-700 hover:bg-gray-50 transition-colors">
+                                <span class="material-symbols-rounded text-sm">edit_note</span>
+                                Catat Alasan
+                            </button>
+                        </div>
+                    </div>
                 @empty
-                    <div class="text-center py-8 text-gray-400">
-                        <span class="material-symbols-rounded text-4xl">leaderboard</span>
-                        <p class="mt-2 text-sm">Belum ada data</p>
+                    <div class="p-12 text-center text-gray-400">
+                        <span class="material-symbols-rounded text-5xl text-emerald-100">task_alt</span>
+                        <p class="mt-2 font-medium">Semua wali santri aktif hadir!</p>
                     </div>
                 @endforelse
+            </div>
+        </div>
+
+        <!-- Class Performance / Insights -->
+        <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
+            <div class="mb-6">
+                <h3 class="font-bold text-gray-900 flex items-center gap-2">
+                    <span class="material-symbols-rounded text-amber-500">insights</span>
+                    Insight Per Kelas
+                </h3>
+                <p class="text-sm text-gray-500">Persentase kehadiran rata-rata</p>
+            </div>
+            <div class="space-y-4">
+                @foreach(array_slice($topClasses, 0, 4) as $class)
+                    <div>
+                        <div class="flex items-center justify-between mb-1 text-sm">
+                            <span class="font-medium text-gray-700">{{ $class['name'] }}</span>
+                            <span class="font-bold {{ $class['percentage'] >= 80 ? 'text-emerald-600' : 'text-amber-600' }}">{{ $class['percentage'] }}%</span>
+                        </div>
+                        <div class="w-full bg-gray-100 rounded-full h-1.5">
+                            <div class="h-1.5 rounded-full {{ $class['percentage'] >= 80 ? 'bg-emerald-500' : 'bg-amber-500' }}" style="width: {{ $class['percentage'] }}%"></div>
+                        </div>
+                    </div>
+                @endforeach
+                <div class="pt-4 mt-4 border-t border-gray-50">
+                    <a href="{{ route('admin.reports.index') }}" class="text-xs font-bold text-primary-600 hover:text-primary-700 flex items-center gap-1">
+                        Lihat Laporan Lengkap
+                        <span class="material-symbols-rounded text-sm">arrow_forward</span>
+                    </a>
+                </div>
             </div>
         </div>
     </div>
@@ -237,6 +285,47 @@
             </div>
         </div>
     </div>
+    <!-- Follow-up Modal -->
+    @if($showFollowUpModal && $selectedParent)
+        <div class="fixed inset-0 z-50 overflow-y-auto" aria-modal="true">
+            <div class="flex items-center justify-center min-h-screen px-4 py-8">
+                <div class="fixed inset-0 bg-black/60 backdrop-blur-sm transition-opacity" wire:click="$set('showFollowUpModal', false)"></div>
+
+                <div class="relative bg-white rounded-3xl shadow-2xl max-w-md w-full p-8 z-10">
+                    <div class="mb-6">
+                        <div class="w-14 h-14 bg-rose-100 rounded-2xl flex items-center justify-center mb-4">
+                            <span class="material-symbols-rounded text-rose-600 text-3xl">edit_note</span>
+                        </div>
+                        <h3 class="text-xl font-black text-gray-900">Catat Alasan Alpha</h3>
+                        <p class="text-sm text-gray-500 mt-1">Mencatat hasil follow-up untuk <strong>{{ $selectedParent->user->name }}</strong></p>
+                    </div>
+
+                    <form wire:submit="submitFollowUp">
+                        <div class="space-y-4">
+                            <div>
+                                <label class="block text-sm font-bold text-gray-700 mb-1">Hasil Follow-up / Alasan Alpha</label>
+                                <textarea wire:model="followUpReason" rows="3" 
+                                    class="w-full px-4 py-3 border border-gray-200 rounded-2xl focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all"
+                                    placeholder="Contoh: Sakit, Lupa, Ada acara keluarga, dll."></textarea>
+                                @error('followUpReason') <span class="text-red-500 text-xs">{{ $message }}</span> @enderror
+                            </div>
+                        </div>
+
+                        <div class="mt-8 flex gap-3">
+                            <button type="button" wire:click="$set('showFollowUpModal', false)"
+                                class="flex-1 px-4 py-3 border border-gray-200 rounded-2xl font-bold text-gray-700 hover:bg-gray-50 transition-colors">
+                                Batal
+                            </button>
+                            <button type="submit" 
+                                class="flex-1 px-4 py-3 bg-primary-600 text-white rounded-2xl font-bold hover:bg-primary-700 transition-colors shadow-lg shadow-primary-200">
+                                Simpan Alasan
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    @endif
 </div>
 
 @push('scripts')
