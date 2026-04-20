@@ -40,6 +40,7 @@ class ParentIndex extends Component
     public $editMode = false;
     public $parentId = null;
     public $showManualAttendanceModal = false;
+    public $showHistoryModal = false;
 
     // Form fields
     public $name = '';
@@ -60,6 +61,11 @@ class ParentIndex extends Component
     public $manualProofFile = null;
     public $manualNotes = '';
     public $manualParent = null;
+
+    // Attendance History
+    public $historyParent = null;
+    public $historyAttendances = [];
+    public $historySummary = [];
 
     // Card data
     public $cardParent = null;
@@ -317,6 +323,38 @@ class ParentIndex extends Component
 
         $this->showManualAttendanceModal = false;
         $this->dispatch('notify', ['type' => 'success', 'message' => 'Presensi manual berhasil disimpan!']);
+    }
+
+    public function showHistory($id)
+    {
+        $this->historyParent = ParentModel::with(['user', 'students.classRoom'])->findOrFail($id);
+        
+        // Get all attendances for this parent, ordered by kajian date
+        $this->historyAttendances = Attendance::with('kajianEvent')
+            ->where('parent_id', $id)
+            ->whereHas('kajianEvent') // Ensure event still exists
+            ->get()
+            ->sortByDesc(fn($attendance) => $attendance->kajianEvent->date)
+            ->values()
+            ->toArray();
+
+        // Calculate summary
+        $summary = [
+            'total' => count($this->historyAttendances),
+            'hadir_fisik' => 0,
+            'hadir_online' => 0,
+            'izin' => 0,
+            'alpha' => 0,
+        ];
+
+        foreach ($this->historyAttendances as $attendance) {
+            if (isset($summary[$attendance['status']])) {
+                $summary[$attendance['status']]++;
+            }
+        }
+
+        $this->historySummary = $summary;
+        $this->showHistoryModal = true;
     }
 
     public function openBatchPrintModal()

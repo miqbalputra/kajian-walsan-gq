@@ -159,6 +159,11 @@
                                         title="Generate Kartu">
                                         <span class="material-symbols-rounded text-xl">qr_code_2</span>
                                     </button>
+                                    <button wire:click="showHistory({{ $parent->id }})"
+                                        class="p-2 text-gray-600 hover:text-primary-600 hover:bg-primary-50 rounded-lg transition-colors"
+                                        title="Riwayat Presensi Lengkap">
+                                        <span class="material-symbols-rounded text-xl">history_edu</span>
+                                    </button>
                                     <button wire:click="openManualAttendanceModal({{ $parent->id }})"
                                         class="p-2 text-gray-600 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors"
                                         title="Input Presensi Manual">
@@ -1075,6 +1080,175 @@
                             </button>
                         </div>
                     </form>
+                </div>
+            </div>
+        </div>
+    @endif
+
+    <!-- Attendance History Modal -->
+    @if($showHistoryModal && $historyParent)
+        <div class="fixed inset-0 z-50 overflow-y-auto" aria-modal="true">
+            <div class="flex items-center justify-center min-h-screen px-4 py-8">
+                <div class="fixed inset-0 bg-black/60 backdrop-blur-sm transition-opacity" wire:click="$set('showHistoryModal', false)"></div>
+
+                <div class="relative bg-white rounded-3xl shadow-2xl max-w-4xl w-full z-10 overflow-hidden flex flex-col max-h-[90vh]">
+                    <!-- Header -->
+                    <div class="bg-gradient-to-r from-primary-600 to-primary-500 px-8 py-6 text-white shrink-0">
+                        <div class="flex items-center justify-between">
+                            <div class="flex items-center gap-4">
+                                <div class="w-16 h-16 bg-white/20 rounded-2xl backdrop-blur-md flex items-center justify-center border border-white/30">
+                                    <span class="material-symbols-rounded text-4xl text-white">history_edu</span>
+                                </div>
+                                <div>
+                                    <h3 class="text-2xl font-black tracking-tight">Riwayat Presensi Lengkap</h3>
+                                    <p class="text-primary-100 opacity-90">{{ $historyParent->user->name }} • {{ $historyParent->type_display }}</p>
+                                </div>
+                            </div>
+                            <button wire:click="$set('showHistoryModal', false)" class="p-2 hover:bg-white/10 rounded-xl transition-colors">
+                                <span class="material-symbols-rounded text-3xl">close</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Content -->
+                    <div class="flex-1 overflow-y-auto p-8">
+                        <!-- Summary Stats -->
+                        <div class="grid grid-cols-2 md:grid-cols-5 gap-4 mb-8">
+                            <div class="bg-gray-50 rounded-2xl p-4 border border-gray-100">
+                                <p class="text-xs font-bold text-gray-400 uppercase tracking-widest mb-1">Total</p>
+                                <p class="text-2xl font-black text-gray-900">{{ $historySummary['total'] }}</p>
+                            </div>
+                            <div class="bg-emerald-50 rounded-2xl p-4 border border-emerald-100">
+                                <p class="text-xs font-bold text-emerald-600 uppercase tracking-widest mb-1">Hadir Fisik</p>
+                                <p class="text-2xl font-black text-emerald-700">{{ $historySummary['hadir_fisik'] }}</p>
+                            </div>
+                            <div class="bg-blue-50 rounded-2xl p-4 border border-blue-100">
+                                <p class="text-xs font-bold text-blue-600 uppercase tracking-widest mb-1">Online</p>
+                                <p class="text-2xl font-black text-blue-700">{{ $historySummary['hadir_online'] }}</p>
+                            </div>
+                            <div class="bg-amber-50 rounded-2xl p-4 border border-amber-100">
+                                <p class="text-xs font-bold text-amber-600 uppercase tracking-widest mb-1">Izin</p>
+                                <p class="text-2xl font-black text-amber-700">{{ $historySummary['izin'] }}</p>
+                            </div>
+                            <div class="bg-rose-50 rounded-2xl p-4 border border-rose-100">
+                                <p class="text-xs font-bold text-rose-600 uppercase tracking-widest mb-1">Alpha</p>
+                                <p class="text-2xl font-black text-rose-700">{{ $historySummary['alpha'] }}</p>
+                            </div>
+                        </div>
+
+                        <!-- History List -->
+                        <div class="space-y-4">
+                            <h4 class="text-lg font-bold text-gray-900 flex items-center gap-2">
+                                <span class="material-symbols-rounded text-primary-500">list_alt</span>
+                                Daftar Kehadiran Per Kajian
+                            </h4>
+
+                            @if(count($historyAttendances) > 0)
+                                <div class="overflow-hidden rounded-2xl border border-gray-100">
+                                    <table class="w-full">
+                                        <thead class="bg-gray-50">
+                                            <tr>
+                                                <th class="px-6 py-4 text-left text-xs font-bold text-gray-500 uppercase tracking-widest">Kajian / Tanggal</th>
+                                                <th class="px-6 py-4 text-left text-xs font-bold text-gray-500 uppercase tracking-widest">Status</th>
+                                                <th class="px-6 py-4 text-left text-xs font-bold text-gray-500 uppercase tracking-widest">Metode</th>
+                                                <th class="px-6 py-4 text-center text-xs font-bold text-gray-500 uppercase tracking-widest">Bukti / File</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody class="divide-y divide-gray-100">
+                                            @foreach($historyAttendances as $att)
+                                                <tr class="hover:bg-gray-50/50 transition-colors">
+                                                    <td class="px-6 py-4">
+                                                        <p class="font-bold text-gray-900">{{ $att['kajian_event']['title'] }}</p>
+                                                        <p class="text-xs text-gray-500">{{ \Carbon\Carbon::parse($att['kajian_event']['date'])->translatedFormat('l, d F Y') }}</p>
+                                                    </td>
+                                                    <td class="px-6 py-4">
+                                                        @php
+                                                            $statusClasses = match($att['status']) {
+                                                                'hadir_fisik' => 'bg-emerald-100 text-emerald-700',
+                                                                'hadir_online' => 'bg-blue-100 text-blue-700',
+                                                                'izin' => 'bg-amber-100 text-amber-700',
+                                                                'alpha' => 'bg-rose-100 text-rose-700',
+                                                                default => 'bg-gray-100 text-gray-700'
+                                                            };
+                                                            $statusLabel = match($att['status']) {
+                                                                'hadir_fisik' => 'Hadir Fisik',
+                                                                'hadir_online' => 'Hadir Online',
+                                                                'izin' => 'Izin',
+                                                                'alpha' => 'Alpha',
+                                                                default => $att['status']
+                                                            };
+                                                        @endphp
+                                                        <span class="px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest {{ $statusClasses }}">
+                                                            {{ $statusLabel }}
+                                                        </span>
+                                                    </td>
+                                                    <td class="px-6 py-4">
+                                                        <div class="flex flex-col">
+                                                            <span class="text-sm text-gray-700 font-medium">
+                                                                {{ match($att['method']) {
+                                                                    'scan_qr' => 'Scan QR',
+                                                                    'manual' => 'Input Admin',
+                                                                    'upload' => 'Upload Mandiri',
+                                                                    default => $att['method']
+                                                                } }}
+                                                            </span>
+                                                            @if($att['scanned_at'])
+                                                                <span class="text-[10px] text-gray-400">{{ \Carbon\Carbon::parse($att['scanned_at'])->format('H:i') }} WIB</span>
+                                                            @endif
+                                                        </div>
+                                                    </td>
+                                                    <td class="px-6 py-4 text-center">
+                                                        @if($att['proof_file'])
+                                                            <a href="{{ Storage::url($att['proof_file']) }}" target="_blank" 
+                                                                class="inline-flex items-center gap-2 px-3 py-1.5 bg-primary-50 text-primary-600 rounded-lg hover:bg-primary-100 transition-colors text-xs font-bold">
+                                                                <span class="material-symbols-rounded text-lg">visibility</span>
+                                                                Lihat Bukti
+                                                            </a>
+                                                        @else
+                                                            <span class="text-xs text-gray-400">-</span>
+                                                        @endif
+                                                    </td>
+                                                </tr>
+                                                @if($att['notes'] || $att['rejection_reason'])
+                                                    <tr class="bg-gray-50/30">
+                                                        <td colspan="4" class="px-6 py-3">
+                                                            <div class="flex gap-4 text-xs">
+                                                                @if($att['notes'])
+                                                                    <div class="flex items-start gap-2 max-w-sm">
+                                                                        <span class="material-symbols-rounded text-primary-500 text-sm">notes</span>
+                                                                        <span class="text-gray-600"><strong>Catatan:</strong> {{ $att['notes'] }}</span>
+                                                                    </div>
+                                                                @endif
+                                                                @if($att['rejection_reason'])
+                                                                    <div class="flex items-start gap-2 max-w-sm">
+                                                                        <span class="material-symbols-rounded text-rose-500 text-sm">error</span>
+                                                                        <span class="text-rose-700"><strong>Alasan Tolak:</strong> {{ $att['rejection_reason'] }}</span>
+                                                                    </div>
+                                                                @endif
+                                                            </div>
+                                                        </td>
+                                                    </tr>
+                                                @endif
+                                            @endforeach
+                                        </tbody>
+                                    </table>
+                                </div>
+                            @else
+                                <div class="text-center py-12 bg-gray-50 rounded-3xl border-2 border-dashed border-gray-100">
+                                    <span class="material-symbols-rounded text-5xl text-gray-200">folder_off</span>
+                                    <p class="text-gray-400 mt-2">Belum ada riwayat presensi yang tercatat.</p>
+                                </div>
+                            @endif
+                        </div>
+                    </div>
+
+                    <!-- Footer -->
+                    <div class="bg-gray-50 px-8 py-4 border-t border-gray-100 flex justify-end shrink-0">
+                        <button wire:click="$set('showHistoryModal', false)" 
+                            class="px-6 py-2.5 bg-white border border-gray-200 rounded-xl font-bold text-gray-700 hover:bg-gray-50 transition-colors">
+                            Tutup Riwayat
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>
