@@ -159,6 +159,11 @@
                                         title="Generate Kartu">
                                         <span class="material-symbols-rounded text-xl">qr_code_2</span>
                                     </button>
+                                    <button wire:click="openManualAttendanceModal({{ $parent->id }})"
+                                        class="p-2 text-gray-600 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors"
+                                        title="Input Presensi Manual">
+                                        <span class="material-symbols-rounded text-xl">person_check</span>
+                                    </button>
                                     <button wire:click="openEditModal({{ $parent->id }})"
                                         class="p-2 text-gray-600 hover:text-primary-600 hover:bg-primary-50 rounded-lg transition-colors">
                                         <span class="material-symbols-rounded text-xl">edit</span>
@@ -961,6 +966,118 @@
                 @endforeach
             </div>
         @endif
+    @endif
+
+    <!-- Manual Attendance Modal -->
+    @if($showManualAttendanceModal && $manualParent)
+        <div class="fixed inset-0 z-50 overflow-y-auto" aria-modal="true">
+            <div class="flex items-center justify-center min-h-screen px-4 py-8">
+                <div class="fixed inset-0 bg-black/50 transition-opacity" wire:click="$set('showManualAttendanceModal', false)"></div>
+
+                <div class="relative bg-white rounded-2xl shadow-xl max-w-lg w-full p-6 z-10">
+                    <div class="flex items-center justify-between mb-6">
+                        <div class="flex items-center gap-3">
+                            <div class="w-10 h-10 bg-emerald-100 rounded-xl flex items-center justify-center">
+                                <span class="material-symbols-rounded text-emerald-600">person_check</span>
+                            </div>
+                            <div>
+                                <h3 class="text-xl font-bold text-gray-900">Presensi Manual</h3>
+                                <p class="text-sm text-gray-500">Input presensi untuk {{ $manualParent->user->name }}</p>
+                            </div>
+                        </div>
+                        <button wire:click="$set('showManualAttendanceModal', false)" class="p-2 hover:bg-gray-100 rounded-full">
+                            <span class="material-symbols-rounded">close</span>
+                        </button>
+                    </div>
+
+                    <form wire:submit="saveManualAttendance">
+                        <div class="space-y-4">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Pilih Kajian <span class="text-red-500">*</span></label>
+                                <select wire:model="manualKajianEventId" class="w-full px-4 py-2.5 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-transparent">
+                                    <option value="">-- Pilih Kajian --</option>
+                                    @foreach($allKajianEvents as $event)
+                                        <option value="{{ $event->id }}">{{ $event->formatted_date }} - {{ $event->title }}</option>
+                                    @endforeach
+                                </select>
+                                @error('manualKajianEventId') <span class="text-red-500 text-sm">{{ $message }}</span> @enderror
+                            </div>
+
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Status Kehadiran <span class="text-red-500">*</span></label>
+                                <div class="grid grid-cols-3 gap-2">
+                                    <label class="cursor-pointer">
+                                        <input type="radio" wire:model.live="manualStatus" value="hadir_fisik" class="peer hidden">
+                                        <div class="text-center p-3 rounded-xl border border-gray-200 peer-checked:border-primary-500 peer-checked:bg-primary-50 transition-all">
+                                            <span class="material-symbols-rounded text-gray-400 peer-checked:text-primary-500 block mb-1">person</span>
+                                            <span class="text-xs font-semibold block">Hadir Fisik</span>
+                                        </div>
+                                    </label>
+                                    <label class="cursor-pointer">
+                                        <input type="radio" wire:model.live="manualStatus" value="hadir_online" class="peer hidden">
+                                        <div class="text-center p-3 rounded-xl border border-gray-200 peer-checked:border-primary-500 peer-checked:bg-primary-50 transition-all">
+                                            <span class="material-symbols-rounded text-gray-400 peer-checked:text-primary-500 block mb-1">language</span>
+                                            <span class="text-xs font-semibold block">Online</span>
+                                        </div>
+                                    </label>
+                                    <label class="cursor-pointer">
+                                        <input type="radio" wire:model.live="manualStatus" value="izin" class="peer hidden">
+                                        <div class="text-center p-3 rounded-xl border border-gray-200 peer-checked:border-primary-500 peer-checked:bg-primary-50 transition-all">
+                                            <span class="material-symbols-rounded text-gray-400 peer-checked:text-primary-500 block mb-1">event_busy</span>
+                                            <span class="text-xs font-semibold block">Izin</span>
+                                        </div>
+                                    </label>
+                                </div>
+                                @error('manualStatus') <span class="text-red-500 text-sm">{{ $message }}</span> @enderror
+                            </div>
+
+                            @if($manualStatus !== 'hadir_fisik')
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">
+                                        {{ $manualStatus === 'hadir_online' ? 'Upload Catatan Kajian' : 'Upload Surat Pernyataan Izin' }}
+                                        <span class="text-red-500">*</span>
+                                    </label>
+                                    <div class="relative border-2 border-dashed border-gray-200 rounded-xl p-4 transition-colors hover:border-primary-300">
+                                        <input type="file" wire:model="manualProofFile" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer">
+                                        <div class="text-center">
+                                            @if($manualProofFile)
+                                                <div class="flex items-center justify-center gap-2 text-green-600">
+                                                    <span class="material-symbols-rounded">check_circle</span>
+                                                    <span class="text-sm font-medium">{{ $manualProofFile->getClientOriginalName() }}</span>
+                                                </div>
+                                            @else
+                                                <span class="material-symbols-rounded text-gray-400 text-2xl block mb-1">cloud_upload</span>
+                                                <p class="text-xs text-gray-500">Klik untuk upload bukti</p>
+                                            @endif
+                                        </div>
+                                    </div>
+                                    @error('manualProofFile') <span class="text-red-500 text-sm">{{ $message }}</span> @enderror
+                                    <div wire:loading wire:target="manualProofFile" class="text-xs text-primary-600 mt-1">Mengupload...</div>
+                                </div>
+                            @endif
+
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Catatan Tambahan (Opsional)</label>
+                                <textarea wire:model="manualNotes" rows="2" class="w-full px-4 py-2.5 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-transparent" placeholder="Ketik catatan di sini..."></textarea>
+                                @error('manualNotes') <span class="text-red-500 text-sm">{{ $message }}</span> @enderror
+                            </div>
+                        </div>
+
+                        <div class="mt-6 flex gap-3">
+                            <button type="button" wire:click="$set('showManualAttendanceModal', false)"
+                                class="flex-1 px-4 py-3 border border-gray-200 rounded-xl font-medium text-gray-700 hover:bg-gray-50 transition-colors">
+                                Batal
+                            </button>
+                            <button type="submit" wire:loading.attr="disabled"
+                                class="flex-1 px-4 py-3 bg-emerald-500 text-white rounded-xl font-medium hover:bg-emerald-600 transition-colors disabled:opacity-50">
+                                <span wire:loading.remove>Simpan Presensi</span>
+                                <span wire:loading>Memproses...</span>
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
     @endif
 
     <script>

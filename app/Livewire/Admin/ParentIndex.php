@@ -8,6 +8,8 @@ use App\Models\ParentModel;
 use App\Models\Role;
 use App\Models\Student;
 use App\Models\User;
+use App\Models\KajianEvent;
+use App\Models\Attendance;
 use BaconQrCode\Renderer\Image\SvgImageBackEnd;
 use BaconQrCode\Renderer\ImageRenderer;
 use BaconQrCode\Renderer\RendererStyle\RendererStyle;
@@ -37,6 +39,7 @@ class ParentIndex extends Component
     public $showCredentialsModal = false;
     public $editMode = false;
     public $parentId = null;
+    public $showManualAttendanceModal = false;
 
     // Form fields
     public $name = '';
@@ -50,6 +53,13 @@ class ParentIndex extends Component
     public $address = '';
     public $is_single_parent = false;
     public $selectedChildren = [];
+
+    // Manual Attendance Form
+    public $manualKajianEventId = '';
+    public $manualStatus = 'hadir_fisik';
+    public $manualProofFile = null;
+    public $manualNotes = '';
+    public $manualParent = null;
 
     // Card data
     public $cardParent = null;
@@ -251,6 +261,64 @@ class ParentIndex extends Component
         $this->showCardModal = true;
     }
 
+    public function openManualAttendanceModal($id)
+    {
+        $this->manualParent = ParentModel::with('user')->findOrFail($id);
+        $this->parentId = $id;
+        $this->manualKajianEventId = KajianEvent::orderBy('date', 'desc')->first()?->id ?? '';
+        $this->manualStatus = 'hadir_fisik';
+        $this->manualProofFile = null;
+        $this->manualNotes = '';
+        $this->showManualAttendanceModal = true;
+    }
+
+    public function saveManualAttendance()
+    {
+        $this->validate([
+            'manualKajianEventId' => 'required|exists:kajian_events,id',
+            'manualStatus' => 'required|in:hadir_fisik,hadir_online,izin',
+            'manualProofFile' => $this->manualStatus !== 'hadir_fisik' ? 'required|file|image|max:2048' : 'nullable',
+            'manualNotes' => 'nullable|string|max:500',
+        ], [
+            'manualProofFile.required' => $this->manualStatus === 'hadir_online' ? 'Catatan kajian wajib diupload.' : 'Surat pernyataan izin wajib diupload.',
+        ]);
+
+        // Check for existing attendance
+        $existing = \App\Models\Attendance::where('parent_id', $this->parentId)
+            ->where('kajian_event_id', $this->manualKajianEventId)
+            ->first();
+
+        if ($existing) {
+            $this->dispatch('notify', ['type' => 'error', 'message' => 'Orang tua ini sudah memiliki riwayat presensi untuk kajian tersebut.']);
+            return;
+        }
+
+        $proofPath = null;
+        if ($this->manualProofFile) {
+            $folder = $this->manualStatus === 'hadir_online' ? 'attendance_notes' : 'attendance_permissions';
+            $proofPath = $this->manualProofFile->store($folder, 'public');
+        }
+
+        \App\Models\Attendance::create([
+            'parent_id' => $this->parentId,
+            'kajian_event_id' => $this->manualKajianEventId,
+            'status' => $this->manualStatus,
+            'method' => 'manual',
+            'proof_file' => $proofPath,
+            'notes' => $this->manualNotes,
+            'validation_status' => 'approved',
+            'validated_by' => auth()->id(),
+            'validated_at' => now(),
+        ]);
+
+        // Update kajian attendance count
+        $event = KajianEvent::find($this->manualKajianEventId);
+        $event->updateAttendanceCount();
+
+        $this->showManualAttendanceModal = false;
+        $this->dispatch('notify', ['type' => 'success', 'message' => 'Presensi manual berhasil disimpan!']);
+    }
+
     public function openBatchPrintModal()
     {
         $this->batchPrintClassId = '';
@@ -443,11 +511,13 @@ class ParentIndex extends Component
 
         $allStudents = Student::where('is_active', true)->orderBy('name')->get();
         $allClasses = ClassRoom::orderBy('name')->get();
+        $allKajianEvents = KajianEvent::orderBy('date', 'desc')->take(10)->get();
 
         return view('livewire.admin.parent-index', [
             'parents' => $parents,
             'allStudents' => $allStudents,
             'allClasses' => $allClasses,
+            'allKajianEvents' => $allKajianEvents,
         ])->layout('components.layouts.admin', ['title' => 'Manajemen Orang Tua']);
     }
 }
