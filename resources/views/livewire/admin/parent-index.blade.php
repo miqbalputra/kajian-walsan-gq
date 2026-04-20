@@ -1199,7 +1199,10 @@
                                                     </td>
                                                     <td class="px-6 py-4 text-center">
                                                         @if($att['proof_file'])
-                                                            <a href="{{ Storage::url($att['proof_file']) }}" target="_blank" 
+                                                            @php
+                                                                $proofUrl = \App\Services\CloudinaryService::getDisplayUrl($att['proof_file']);
+                                                            @endphp
+                                                            <a href="{{ $proofUrl }}" target="_blank" 
                                                                 class="inline-flex items-center gap-2 px-3 py-1.5 bg-primary-50 text-primary-600 rounded-lg hover:bg-primary-100 transition-colors text-xs font-bold">
                                                                 <span class="material-symbols-rounded text-lg">visibility</span>
                                                                 Lihat Bukti
