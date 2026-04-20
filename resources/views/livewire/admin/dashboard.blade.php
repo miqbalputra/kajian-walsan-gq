@@ -123,14 +123,14 @@
                 <div>
                     <h3 class="font-bold text-gray-900 flex items-center gap-2">
                         <span class="material-symbols-rounded text-rose-500">priority_high</span>
-                        Perlu Perhatian (Alpha Berturut-turut)
+                        Perlu Perhatian (Alpha {{ $parentsNeedingAttention['count'] > 1 ? 'Berturut-turut' : '' }})
                     </h3>
-                    <p class="text-sm text-gray-500">Wali santri yang tidak hadir dalam 2 kajian terakhir</p>
+                    <p class="text-sm text-gray-500">Wali santri yang tidak hadir dalam {{ $parentsNeedingAttention['count'] }} kajian terakhir</p>
                 </div>
                 <span class="px-2.5 py-1 bg-rose-100 text-rose-700 text-xs font-black rounded-lg uppercase tracking-wider">High Priority</span>
             </div>
             <div class="divide-y divide-gray-100">
-                @forelse($parentsNeedingAttention as $p)
+                @forelse($parentsNeedingAttention['data'] as $p)
                     <div class="p-4 hover:bg-gray-50 transition-colors flex items-center justify-between gap-4">
                         <div class="flex items-center gap-3 min-w-0">
                             <div class="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center shrink-0">

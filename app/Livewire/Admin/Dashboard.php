@@ -392,16 +392,21 @@ class Dashboard extends Component
         }
 
         $eventIds = $lastTwoEvents->pluck('id');
+        $eventCount = $lastTwoEvents->count();
 
         // Find parents who don't have (approved) attendance for these events
-        return ParentModel::with(['user', 'students.classRoom'])
+        $parents = ParentModel::with(['user', 'students.classRoom'])
             ->whereDoesntHave('attendances', function ($q) use ($eventIds) {
                 $q->whereIn('kajian_event_id', $eventIds)
                     ->whereIn('status', ['hadir_fisik', 'hadir_online', 'izin'])
                     ->where('validation_status', 'approved');
             })
             ->take(5)
-            ->get()
-            ->toArray();
+            ->get();
+
+        return [
+            'data' => $parents->toArray(),
+            'count' => $eventCount
+        ];
     }
 }
