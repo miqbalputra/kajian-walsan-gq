@@ -130,6 +130,24 @@ Route::middleware('auth')->group(function () {
     })->name('logout');
 });
 
+// Helper route to sync Guru users with Parent profiles
+Route::get('/sync-guru', function () {
+    $guruRole = \App\Models\Role::where('name', 'guru')->first();
+    if (!$guruRole) return 'Role guru tidak ditemukan.';
+    
+    $users = \App\Models\User::where('role_id', $guruRole->id)->doesntHave('parent')->get();
+    $count = 0;
+    foreach ($users as $user) {
+        \App\Models\ParentModel::create([
+            'user_id' => $user->id,
+            'type' => 'teacher',
+            'occupation' => 'Guru / Pengajar'
+        ]);
+        $count++;
+    }
+    return "Berhasil mensinkronisasi {$count} akun Guru. Silakan cek menu Data Guru.";
+});
+
 // Helper route for cPanel without SSH
 Route::get('/artisan-helper', function () {
     try {
