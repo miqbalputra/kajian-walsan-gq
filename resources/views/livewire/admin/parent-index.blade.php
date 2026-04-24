@@ -45,6 +45,7 @@
                     <option value="">Semua Tipe</option>
                     <option value="father">Ayah</option>
                     <option value="mother">Ibu</option>
+                    <option value="teacher">Guru</option>
                 </select>
             </div>
             <div class="sm:w-40">
@@ -98,9 +99,9 @@
                             <td class="px-6 py-4">
                                 <div class="flex items-center gap-3">
                                     <div
-                                        class="w-10 h-10 bg-{{ $parent->type === 'father' ? 'blue-100 dark:bg-blue-900/40' : 'pink-100 dark:bg-pink-900/40' }} rounded-full flex items-center justify-center transition-colors">
+                                        class="w-10 h-10 bg-{{ $parent->type === 'father' ? 'blue-100 dark:bg-blue-900/40' : ($parent->type === 'mother' ? 'pink-100 dark:bg-pink-900/40' : 'indigo-100 dark:bg-indigo-900/40') }} rounded-full flex items-center justify-center transition-colors">
                                         <span
-                                            class="material-symbols-rounded text-{{ $parent->type === 'father' ? 'blue-600 dark:text-blue-400' : 'pink-600 dark:text-pink-400' }}">{{ $parent->type === 'father' ? 'man' : 'woman' }}</span>
+                                            class="material-symbols-rounded text-{{ $parent->type === 'father' ? 'blue-600 dark:text-blue-400' : ($parent->type === 'mother' ? 'pink-600 dark:text-pink-400' : 'indigo-600 dark:text-indigo-400') }}">{{ $parent->type === 'father' ? 'man' : ($parent->type === 'mother' ? 'woman' : 'person_book') }}</span>
                                     </div>
                                     <div>
                                         <p class="font-medium text-gray-900">{{ $parent->user?->name }}</p>
@@ -126,7 +127,7 @@
                             <td class="px-6 py-4">
                                 <div class="flex flex-col gap-1">
                                     <span
-                                        class="px-2 py-1 rounded-lg text-xs font-medium {{ $parent->type === 'father' ? 'bg-blue-100 text-blue-700' : 'bg-pink-100 text-pink-700' }}">
+                                        class="px-2 py-1 rounded-lg text-xs font-medium {{ $parent->type === 'father' ? 'bg-blue-100 text-blue-700' : ($parent->type === 'mother' ? 'bg-pink-100 text-pink-700' : 'bg-indigo-100 text-indigo-700') }}">
                                         {{ $parent->type_display }}
                                     </span>
                                     @if($parent->is_single_parent)
@@ -270,6 +271,7 @@
                                         class="w-full px-4 py-2.5 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-transparent">
                                         <option value="father">Ayah</option>
                                         <option value="mother">Ibu</option>
+                                        <option value="teacher">Guru</option>
                                     </select>
                                 </div>
                             </div>
@@ -379,14 +381,16 @@
                             class="relative overflow-hidden rounded-xl shadow-2xl bg-white border border-gray-200"
                             style="width: 323.4px; height: 204px; min-width: 323.4px; min-height: 204px; font-family: 'Inter', sans-serif;">
 
-                            @php
+                             @php
                                 $isMother = $cardParent->type === 'mother';
-                                $bgHeader = $isMother ? 'from-rose-500 to-pink-500' : 'from-emerald-600 to-teal-500';
-                                $textColor = $isMother ? 'text-rose-600' : 'text-teal-600';
-                                $borderColor = $isMother ? 'border-rose-100' : 'border-teal-100';
-                                $accentBar = $isMother ? 'from-rose-500 via-pink-400 to-rose-500' : 'from-emerald-600 via-teal-400 to-emerald-600';
-                                $badgeBg = $isMother ? 'bg-rose-50 border-rose-100' : 'bg-emerald-50 border-emerald-100';
-                                $badgeText = $isMother ? 'text-rose-700' : 'text-emerald-700';
+                                $isTeacher = $cardParent->type === 'teacher';
+                                
+                                $bgHeader = $isMother ? 'from-rose-500 to-pink-500' : ($isTeacher ? 'from-indigo-600 to-violet-500' : 'from-emerald-600 to-teal-500');
+                                $textColor = $isMother ? 'text-rose-600' : ($isTeacher ? 'text-indigo-600' : 'text-teal-600');
+                                $borderColor = $isMother ? 'border-rose-100' : ($isTeacher ? 'border-indigo-100' : 'border-teal-100');
+                                $accentBar = $isMother ? 'from-rose-500 via-pink-400 to-rose-500' : ($isTeacher ? 'from-indigo-600 via-violet-400 to-indigo-600' : 'from-emerald-600 via-teal-400 to-emerald-600');
+                                $badgeBg = $isMother ? 'bg-rose-50 border-rose-100' : ($isTeacher ? 'bg-indigo-50 border-indigo-100' : 'bg-emerald-50 border-emerald-100');
+                                $badgeText = $isMother ? 'text-rose-700' : ($isTeacher ? 'text-indigo-700' : 'text-emerald-700');
                             @endphp
 
                             <!-- Header Bar -->
@@ -481,7 +485,7 @@
                                 Tutup
                             </button>
                             <button onclick="printSingleCard()"
-                                class="flex-1 px-4 py-3 bg-gradient-to-r {{ $isMother ? 'from-rose-500 to-pink-600' : 'from-emerald-600 to-teal-600' }} text-white rounded-xl font-semibold hover:opacity-90 transition-all inline-flex items-center justify-center gap-2 shadow-lg {{ $isMother ? 'shadow-rose-500/25' : 'shadow-emerald-500/25' }}">
+                                class="flex-1 px-4 py-3 bg-gradient-to-r {{ $isMother ? 'from-rose-500 to-pink-600' : ($isTeacher ? 'from-indigo-600 to-violet-600' : 'from-emerald-600 to-teal-600') }} text-white rounded-xl font-semibold hover:opacity-90 transition-all inline-flex items-center justify-center gap-2 shadow-lg {{ $isMother ? 'shadow-rose-500/25' : ($isTeacher ? 'shadow-indigo-500/25' : 'shadow-emerald-500/25') }}">
                                 <span class="material-symbols-rounded text-xl">print</span>
                                 Cetak Kartu
                             </button>

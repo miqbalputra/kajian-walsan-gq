@@ -30,6 +30,12 @@ class ParentIndex extends Component
     public $classFilter = '';
     public $perPage = 10;
 
+    protected $queryString = [
+        'search' => ['except' => ''],
+        'typeFilter' => ['except' => ''],
+        'classFilter' => ['except' => ''],
+    ];
+
     // Modal state
     public $showModal = false;
     public $showDeleteModal = false;
@@ -88,7 +94,7 @@ class ParentIndex extends Component
             'nik' => 'nullable|string|max:20',
             // Phone validation: Indonesian format (optional +62/62/0 prefix, 8-13 digits)
             'phone' => ['nullable', 'string', 'max:20', 'regex:/^(\+62|62|0)?[0-9]{8,13}$/'],
-            'type' => 'required|in:father,mother',
+            'type' => 'required|in:father,mother,teacher',
             'occupation' => 'nullable|string|max:100',
             'address' => 'nullable|string|max:500',
             'is_single_parent' => 'boolean',
@@ -187,7 +193,8 @@ class ParentIndex extends Component
             $this->dispatch('notify', ['type' => 'success', 'message' => 'Data orang tua berhasil diperbarui!']);
         } else {
             // Create new
-            $waliSantriRole = Role::where('name', 'wali_santri')->first();
+            $roleName = $this->type === 'teacher' ? 'guru' : 'wali_santri';
+            $targetRole = Role::where('name', $roleName)->first();
 
             $user = User::create([
                 'name' => $this->name,
@@ -195,7 +202,7 @@ class ParentIndex extends Component
                 'email' => $this->email,
                 'password' => Hash::make($this->password ?: 'password'),
                 'phone' => $this->phone,
-                'role_id' => $waliSantriRole?->id,
+                'role_id' => $targetRole?->id,
                 'is_active' => true,
             ]);
 
