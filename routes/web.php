@@ -49,6 +49,8 @@ Route::middleware('auth')->group(function () {
             return redirect()->route('wali-kelas.dashboard');
         } elseif ($user->isKepsek()) {
             return view('dashboard.kepsek');
+        } elseif ($user->isGuru()) {
+            return redirect()->route('wali-santri.dashboard');
         } else {
             return redirect()->route('wali-santri.dashboard');
         }
@@ -81,8 +83,8 @@ Route::middleware('auth')->group(function () {
         Route::get('/reports', \App\Livewire\WaliKelas\ReportIndex::class)->name('reports');
     });
 
-    // Wali Santri Routes - Only Wali Santri can access
-    Route::prefix('wali-santri')->name('wali-santri.')->middleware('role:wali_santri')->group(function () {
+    // Wali Santri Routes - Only Wali Santri and Guru can access
+    Route::prefix('wali-santri')->name('wali-santri.')->middleware('role:wali_santri,guru')->group(function () {
         Route::get('/', WaliSantriDashboard::class)->name('dashboard');
         Route::get('/schedule', \App\Livewire\WaliSantri\KajianSchedule::class)->name('schedule');
         Route::get('/profile', \App\Livewire\WaliSantri\Profile::class)->name('profile');

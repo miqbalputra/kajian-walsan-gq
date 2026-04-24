@@ -30,6 +30,9 @@
         <p class="text-white/80 text-sm">Assalamu'alaikum,</p>
         <h1 class="text-2xl font-black">
             {{ ucwords(strtolower(auth()->user()->name)) }}
+            @if($this->isGuru)
+                <span class="ml-2 text-[10px] bg-white/20 px-2 py-0.5 rounded-lg border border-white/20 align-middle">GURU</span>
+            @endif
         </h1>
 
         @if($this->parent?->students->count() > 0)
@@ -176,10 +179,22 @@
                                     Status: {{ ucfirst(str_replace('_', ' ', $this->myAttendanceToday->status)) }}
                                     @if($this->myAttendanceToday->validation_status === 'pending')
                                         <span class="text-yellow-600 text-xs">(Menunggu validasi)</span>
-                                    @elseif($this->myAttendanceToday->validation_status === 'approved' && in_array($this->myAttendanceToday->method, ['upload', 'manual']))
+                                    @elseif($this->myAttendanceToday->validation_status === 'approved' && in_array($this->myAttendanceToday->method, ['upload', 'manual', 'scan_qr']))
                                         <span class="text-green-600 text-xs">(Divalidasi)</span>
                                     @endif
                                 </p>
+
+                                @if($this->isGuru && $this->myAttendanceToday->status === 'hadir_fisik' && !$this->myAttendanceToday->proof_file)
+                                    <div class="mt-4 p-4 bg-yellow-50 rounded-2xl border border-yellow-100 animate-pulse">
+                                        <p class="text-xs font-bold text-yellow-800 uppercase tracking-widest mb-2 text-left">Langkah Terakhir:</p>
+                                        <p class="text-sm text-yellow-700 text-left mb-4">Sebagai Guru, Anda wajib mengupload <b>catatan kajian</b> untuk melengkapi presensi kehadiran langsung.</p>
+                                        <button wire:click="openReuploadModal({{ $this->myAttendanceToday->id }}, true)"
+                                            class="w-full py-3 bg-yellow-500 text-white rounded-xl font-bold flex items-center justify-center gap-2 hover:bg-yellow-600 transition-colors shadow-lg shadow-yellow-500/20">
+                                            <span class="material-symbols-rounded">upload_file</span>
+                                            Upload Catatan Kajian
+                                        </button>
+                                    </div>
+                                @endif
                                 @if($this->myAttendanceToday->proof_file)
                                     <div class="mt-3">
                                         <a href="{{ $this->myAttendanceToday->proof_file }}" target="_blank"
@@ -398,12 +413,21 @@
                     <div class="w-16 h-1.5 bg-slate-200 rounded-full mx-auto mb-8"></div>
 
                     <h3 class="text-2xl font-black text-slate-900 mb-2">Hadir Online</h3>
-                    <p class="text-slate-500 text-sm mb-6 leading-relaxed">Upload foto catatan kajian sebagai bukti kehadiran online Anda hari ini.</p>
+                    <p class="text-slate-500 text-sm mb-6 leading-relaxed">
+                        @if($this->isGuru)
+                            Upload foto <b>catatan kajian</b> sebagai bukti kehadiran online Anda hari ini.
+                        @else
+                            Upload foto bukti Anda menyimak kajian secara online.
+                        @endif
+                    </p>
 
                     <form wire:submit="submitOnlineAttendance">
                         <div class="space-y-6">
                             <div>
-                                <label class="block text-xs font-black text-slate-400 uppercase tracking-widest mb-3">Foto Catatan Kajian <span class="text-primary-500">*</span></label>
+                                <label class="block text-xs font-black text-slate-400 uppercase tracking-widest mb-3">
+                                    {{ $this->isGuru ? 'Foto Catatan Kajian' : 'Foto Bukti Online' }} 
+                                    <span class="text-primary-500">*</span>
+                                </label>
                                 <div class="border-2 border-dashed border-slate-200 rounded-3xl p-8 text-center hover:border-primary-500 hover:bg-primary-50/30 transition-all cursor-pointer relative group"
                                     x-data="{ compressing: false }" data-compress-container>
                                     <input type="file" accept="image/jpeg,image/png"
@@ -488,12 +512,21 @@
                     <div class="w-16 h-1.5 bg-slate-200 rounded-full mx-auto mb-8"></div>
 
                     <h3 class="text-2xl font-black text-slate-900 mb-2">Izin / Berhalangan</h3>
-                    <p class="text-slate-500 text-sm mb-6 leading-relaxed">Upload surat izin atau keterangan berhalangan hadir jika Anda tidak bisa mengikuti kajian.</p>
+                    <p class="text-slate-500 text-sm mb-6 leading-relaxed">
+                        @if($this->isGuru)
+                            Wajib upload <b>surat pernyataan</b> berhalangan hadir.
+                        @else
+                            Upload surat izin atau keterangan berhalangan hadir jika Anda tidak bisa mengikuti kajian.
+                        @endif
+                    </p>
 
                     <form wire:submit="submitIzin">
                         <div class="space-y-6">
                             <div>
-                                <label class="block text-xs font-black text-slate-400 uppercase tracking-widest mb-3">Surat/Dokumen Izin <span class="text-amber-500">*</span></label>
+                                <label class="block text-xs font-black text-slate-400 uppercase tracking-widest mb-3">
+                                    {{ $this->isGuru ? 'Surat Pernyataan' : 'Surat/Dokumen Izin' }} 
+                                    <span class="text-amber-500">*</span>
+                                </label>
                                 <div class="border-2 border-dashed border-slate-200 rounded-3xl p-8 text-center hover:border-amber-500 hover:bg-amber-50/30 transition-all cursor-pointer relative group"
                                     x-data="{ compressing: false }" data-compress-container>
                                     <input type="file"
@@ -583,18 +616,27 @@
                         <div class="w-10 h-10 {{ $reuploadIsPendingReplace ? 'bg-yellow-100' : 'bg-red-100' }} rounded-xl flex items-center justify-center">
                             <span class="material-symbols-rounded {{ $reuploadIsPendingReplace ? 'text-yellow-600' : 'text-red-600' }}">{{ $reuploadIsPendingReplace ? 'swap_horiz' : 'upload_file' }}</span>
                         </div>
-                        <h3 class="text-2xl font-black text-slate-900">{{ $reuploadIsPendingReplace ? 'Ganti Foto Bukti' : 'Upload Ulang Bukti' }}</h3>
+                        <h3 class="text-2xl font-black text-slate-900">{{ $reuploadIsPendingReplace ? ($this->isGuru ? 'Upload Catatan Kajian' : 'Ganti Foto Bukti') : 'Upload Ulang Bukti' }}</h3>
                     </div>
                     <p class="text-slate-500 text-sm mb-6 leading-relaxed">
-                        {{ $reuploadIsPendingReplace
-                            ? 'Foto bukti lama akan dihapus dan diganti dengan foto baru. Presensi Anda tetap tercatat menunggu validasi.'
-                            : 'Bukti sebelumnya ditolak. Silakan upload file baru yang sesuai.' }}
+                        @if($reuploadIsPendingReplace)
+                            @if($this->isGuru)
+                                Silakan upload foto <b>catatan kajian</b> Anda untuk melengkapi presensi.
+                            @else
+                                Foto bukti lama akan dihapus dan diganti dengan foto baru. Presensi Anda tetap tercatat menunggu validasi.
+                            @endif
+                        @else
+                            Bukti sebelumnya ditolak. Silakan upload file baru yang sesuai.
+                        @endif
                     </p>
 
                     <form wire:submit="reuploadProof">
                         <div class="space-y-6">
                             <div>
-                                <label class="block text-xs font-black text-slate-400 uppercase tracking-widest mb-3">File Bukti Baru <span class="text-red-500">*</span></label>
+                                <label class="block text-xs font-black text-slate-400 uppercase tracking-widest mb-3">
+                                    {{ ($reuploadIsPendingReplace && $this->isGuru) ? 'Foto Catatan Kajian' : 'File Bukti Baru' }} 
+                                    <span class="text-red-500">*</span>
+                                </label>
                                 <div class="border-2 border-dashed border-slate-200 rounded-3xl p-8 text-center hover:border-red-500 hover:bg-red-50/30 transition-all cursor-pointer relative group"
                                     x-data="{ compressing: false }" data-compress-container>
                                     <input type="file" accept="image/jpeg,image/png"

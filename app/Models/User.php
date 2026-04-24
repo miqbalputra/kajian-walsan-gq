@@ -130,6 +130,14 @@ class User extends Authenticatable
     }
 
     /**
+     * Check if user is guru.
+     */
+    public function isGuru(): bool
+    {
+        return $this->hasRole('guru');
+    }
+
+    /**
      * Check if user is wali santri.
      */
     public function isWaliSantri(): bool
@@ -150,7 +158,7 @@ class User extends Authenticatable
      */
     public function canViewReports(): bool
     {
-        return $this->isAdmin() || $this->isPanitia() || $this->isKepsek() || $this->isWaliKelas();
+        return $this->isAdmin() || $this->isPanitia() || $this->isKepsek() || $this->isWaliKelas() || $this->isGuru();
     }
 
     /**

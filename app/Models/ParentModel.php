@@ -61,7 +61,12 @@ class ParentModel extends Model
         $student = $parent->students()->first();
 
         if ($student && !empty($student->nis)) {
-            $prefix = ($parent->type === 'father') ? 'A' : 'B';
+            $prefix = match ($parent->type) {
+                'father' => 'A',
+                'mother' => 'B',
+                'teacher' => 'T',
+                default => 'X',
+            };
             return $prefix . $student->nis;
         }
 
@@ -125,11 +130,24 @@ class ParentModel extends Model
     }
 
     /**
+     * Check if this parent is a teacher.
+     */
+    public function isTeacher(): bool
+    {
+        return $this->type === 'teacher';
+    }
+
+    /**
      * Get the type display name.
      */
     public function getTypeDisplayAttribute(): string
     {
-        return $this->isFather() ? 'Ayah' : 'Ibu';
+        return match ($this->type) {
+            'father' => 'Ayah',
+            'mother' => 'Ibu',
+            'teacher' => 'Guru',
+            default => 'Unknown',
+        };
     }
 
     /**

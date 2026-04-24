@@ -79,9 +79,9 @@ class Scanner extends Component
                     $existingAttendance->update([
                         'student_id' => $students->first()?->id,
                         'method' => 'scan_qr',
-                        'validation_status' => 'approved',
-                        'validated_by' => auth()->id(),
-                        'validated_at' => now(),
+                        'validation_status' => $parent->isTeacher() ? 'pending' : 'approved',
+                        'validated_by' => $parent->isTeacher() ? null : auth()->id(),
+                        'validated_at' => $parent->isTeacher() ? null : now(),
                         'scanned_at' => now(),
                         'device_info' => request()->userAgent(),
                     ]);
@@ -98,9 +98,9 @@ class Scanner extends Component
                     'student_id' => $students->first()?->id,
                     'status' => 'hadir_fisik',
                     'method' => 'scan_qr',
-                    'validation_status' => 'approved',
-                    'validated_by' => auth()->id(),
-                    'validated_at' => now(),
+                    'validation_status' => $parent->isTeacher() ? 'pending' : 'approved',
+                    'validated_by' => $parent->isTeacher() ? null : auth()->id(),
+                    'validated_at' => $parent->isTeacher() ? null : now(),
                     'scanned_at' => now(),
                     'device_info' => request()->userAgent(),
                 ]);
@@ -118,8 +118,18 @@ class Scanner extends Component
                 'time' => now()->format('H:i'),
             ];
 
-            $parentType = $parent->type === 'father' ? 'Bapak' : 'Ibu';
-            $this->lastScanMessage = "Selamat Datang, {$parentType} {$parent->user->name}. Berhasil mencatat presensi untuk " . ($students->count() ?: 1) . " santri.";
+            $parentType = match($parent->type) {
+                'father' => 'Bapak',
+                'mother' => 'Ibu',
+                'teacher' => 'Ustadz/ah',
+                default => 'Peserta',
+            };
+
+            if ($parent->isTeacher()) {
+                $this->lastScanMessage = "Selamat Datang, {$parentType} {$parent->user->name}. Berhasil mencatat, mohon ingatkan untuk upload catatan kajian di dashboard.";
+            } else {
+                $this->lastScanMessage = "Selamat Datang, {$parentType} {$parent->user->name}. Berhasil mencatat presensi untuk " . ($students->count() ?: 1) . " santri.";
+            }
 
             $this->dispatch('scan-success', [
                 'message' => $this->lastScanMessage,
@@ -184,18 +194,28 @@ class Scanner extends Component
             'student_id' => $students->first()?->id,
             'status' => 'hadir_fisik',
             'method' => 'manual',
-            'validation_status' => 'approved',
-            'validated_by' => auth()->id(),
-            'validated_at' => now(),
+            'validation_status' => $parent->isTeacher() ? 'pending' : 'approved',
+            'validated_by' => $parent->isTeacher() ? null : auth()->id(),
+            'validated_at' => $parent->isTeacher() ? null : now(),
         ]);
 
-        $parentType = $parent->type === 'father' ? 'Bapak' : 'Ibu';
+        $parentType = match($parent->type) {
+            'father' => 'Bapak',
+            'mother' => 'Ibu',
+            'teacher' => 'Ustadz/ah',
+            default => 'Peserta',
+        };
+
         $childNameDisplay = count($childDisplayNames) > 0
             ? (count($childDisplayNames) . " Santri: " . implode(', ', $childDisplayNames))
             : 'Tidak ada data santri';
 
+        $message = $parent->isTeacher()
+            ? "Selamat Datang, {$parentType} {$parent->user->name}! Berhasil mencatat, mohon ingatkan untuk upload catatan kajian."
+            : "Selamat Datang, {$parentType} {$parent->user->name}! Berhasil mencatat presensi untuk " . ($students->count() ?: 1) . " santri.";
+
         $this->dispatch('scan-success', [
-            'message' => "Selamat Datang, {$parentType} {$parent->user->name}! Berhasil mencatat presensi untuk " . ($students->count() ?: 1) . " santri.",
+            'message' => $message,
             'parentName' => $parent->user->name,
             'parentType' => $parent->type_display,
             'childName' => $childNameDisplay,

@@ -3,7 +3,7 @@
     <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6 transition-all">
         <div>
             <h1 class="text-2xl font-bold text-gray-900 dark:text-white">Validasi Presensi</h1>
-            <p class="text-gray-500 dark:text-gray-400">Review dan validasi presensi online/izin wali santri</p>
+            <p class="text-gray-500 dark:text-gray-400">Review dan validasi presensi online, izin, dan catatan guru</p>
         </div>
     </div>
 
@@ -65,7 +65,11 @@
                             <td class="px-6 py-4">
                                 <div>
                                     <p class="font-medium text-gray-900 dark:text-white">
-                                        {{ $attendance->parent?->user?->name }}</p>
+                                        {{ $attendance->parent?->user?->name }}
+                                        @if($attendance->parent?->isTeacher())
+                                            <span class="ml-1 text-[9px] bg-indigo-100 text-indigo-700 px-1.5 py-0.5 rounded uppercase font-black">Guru</span>
+                                        @endif
+                                    </p>
                                     <p class="text-xs text-gray-500 dark:text-gray-400">Anak:
                                         {{ $attendance->parent?->students->first()?->name ?? '-' }}
                                     </p>
@@ -80,8 +84,11 @@
                             <td class="px-6 py-4">
                                 <span class="px-2 py-1 rounded-lg text-xs font-medium 
                                                         @if($attendance->status === 'hadir_online') bg-blue-100 text-blue-700
+                                                        @elseif($attendance->status === 'hadir_fisik') bg-emerald-100 text-emerald-700
                                                         @else bg-yellow-100 text-yellow-700 @endif">
-                                    {{ $attendance->status === 'hadir_online' ? 'Online' : 'Izin' }}
+                                    @if($attendance->status === 'hadir_online') Online
+                                    @elseif($attendance->status === 'hadir_fisik') Hadir Fisik (QR)
+                                    @else Izin @endif
                                 </span>
                             </td>
                             <td class="px-6 py-4 text-sm text-gray-500">
@@ -149,7 +156,7 @@
                     class="relative bg-white rounded-2xl shadow-xl max-w-4xl w-full p-6 z-10 max-h-[90vh] overflow-hidden flex flex-col">
                     <div class="flex items-center justify-between mb-4">
                         <div>
-                            <h3 class="text-xl font-bold text-gray-900">Bukti Kesantrian / Izin</h3>
+                            <h3 class="text-xl font-bold text-gray-900">Bukti Presensi / Izin</h3>
                             <p class="text-sm text-gray-500">{{ $selectedAttendance->parent?->user?->name }} -
                                 {{ $selectedAttendance->kajianEvent?->title }}
                             </p>
@@ -187,7 +194,7 @@
 
                     @if($selectedAttendance->notes)
                         <div class="mt-4 p-4 bg-primary-50 rounded-xl border border-primary-100">
-                            <p class="text-xs font-bold text-primary-700 uppercase tracking-wider mb-1">Catatan Wali Santri:</p>
+                            <p class="text-xs font-bold text-primary-700 uppercase tracking-wider mb-1">Catatan / Keterangan:</p>
                             <p class="text-gray-700">{{ $selectedAttendance->notes }}</p>
                         </div>
                     @endif

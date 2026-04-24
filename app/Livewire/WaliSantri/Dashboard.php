@@ -42,7 +42,18 @@ class Dashboard extends Component
 
     public function getParentProperty()
     {
-        return ParentModel::where('user_id', auth()->id())->first();
+        $parent = ParentModel::where('user_id', auth()->id())->first();
+
+        // Auto-create teacher profile if not exists
+        if (!$parent && auth()->check() && auth()->user()->isGuru()) {
+            $parent = ParentModel::create([
+                'user_id' => auth()->id(),
+                'type' => 'teacher',
+                'occupation' => 'Guru / Pengajar',
+            ]);
+        }
+
+        return $parent;
     }
 
     public function getActiveEventProperty()
@@ -76,6 +87,11 @@ class Dashboard extends Component
             ->where('kajian_event_id', $this->activeEvent->id)
             ->where('parent_id', $this->parent->id)
             ->first();
+    }
+
+    public function getIsGuruProperty()
+    {
+        return auth()->check() && auth()->user()->isGuru();
     }
 
     /**
