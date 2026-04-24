@@ -2,8 +2,8 @@
     <!-- Header -->
     <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
         <div>
-            <h1 class="text-2xl font-bold text-gray-900">Manajemen Orang Tua</h1>
-            <p class="text-gray-500">Kelola data wali santri dan generate kartu ID</p>
+            <h1 class="text-2xl font-bold text-gray-900">{{ request()->get('typeFilter') === 'teacher' ? 'Data Guru' : 'Manajemen Orang Tua' }}</h1>
+            <p class="text-gray-500">{{ request()->get('typeFilter') === 'teacher' ? 'Kelola data guru dan pengajar' : 'Kelola data wali santri dan generate kartu ID' }}</p>
         </div>
         <div class="flex gap-3">
             <button wire:click="$set('showImportModal', true)"
@@ -14,7 +14,7 @@
             <button wire:click="openCreateModal"
                 class="inline-flex items-center justify-center gap-2 px-6 py-3 bg-primary-500 text-white rounded-xl font-semibold hover:bg-primary-600 transition-colors shadow-lg shadow-primary-500/25">
                 <span class="material-symbols-rounded">add</span>
-                Tambah Orang Tua
+                {{ request()->get('typeFilter') === 'teacher' ? 'Tambah Guru' : 'Tambah Orang Tua' }}
             </button>
         </div>
     </div>
@@ -208,7 +208,7 @@
 
                 <div class="relative bg-white rounded-2xl shadow-xl max-w-lg w-full p-6 z-10 max-h-[90vh] overflow-y-auto">
                     <div class="flex items-center justify-between mb-6">
-                        <h3 class="text-xl font-bold text-gray-900">{{ $editMode ? 'Edit Orang Tua' : 'Tambah Orang Tua' }}
+                        <h3 class="text-xl font-bold text-gray-900">{{ $editMode ? 'Edit Data' : (request()->get('typeFilter') === 'teacher' ? 'Tambah Guru' : 'Tambah Orang Tua') }}
                         </h3>
                         <button wire:click="$set('showModal', false)" class="p-2 hover:bg-gray-100 rounded-full">
                             <span class="material-symbols-rounded">close</span>

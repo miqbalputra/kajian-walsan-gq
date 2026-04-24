@@ -115,7 +115,7 @@ class ParentIndex extends Component
     public function openCreateModal()
     {
         $this->reset(['name', 'email', 'password', 'phone', 'nik', 'type', 'occupation', 'address', 'is_single_parent', 'selectedChildren', 'editMode', 'parentId']);
-        $this->type = 'father';
+        $this->type = $this->typeFilter === 'teacher' ? 'teacher' : 'father';
         $this->showModal = true;
     }
 
