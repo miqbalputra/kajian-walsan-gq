@@ -1,6 +1,6 @@
 {{-- PWA Install Banner & Service Worker Registration --}}
 <div id="pwa-install-banner"
-    style="display:none; position:fixed; bottom:20px; left:50%; transform:translateX(-50%); z-index:9999; width:calc(100% - 32px); max-width:420px;"
+    style="position:fixed; bottom:20px; left:50%; transform:translateX(-50%); z-index:9999; width:calc(100% - 32px); max-width:420px;"
     x-data="pwaInstall()" x-init="init()" x-show="showBanner" x-cloak
     x-transition:enter="transition ease-out duration-500" x-transition:enter-start="opacity-0 translate-y-8"
     x-transition:enter-end="opacity-100 translate-y-0" x-transition:leave="transition ease-in duration-300"
@@ -111,6 +111,16 @@
     </div>
 </div>
 
+{{-- Global beforeinstallprompt handler --}}
+<script>
+    window.pwaDeferredPrompt = null;
+    window.addEventListener('beforeinstallprompt', (e) => {
+        e.preventDefault();
+        window.pwaDeferredPrompt = e;
+        window.dispatchEvent(new CustomEvent('pwa-prompt-available'));
+    });
+</script>
+
 {{-- Service Worker Registration & PWA Install Logic --}}
 <script>
     // Register Service Worker
@@ -119,11 +129,9 @@
             navigator.serviceWorker.register('/sw.js')
                 .then((registration) => {
                     console.log('[PWA] Service Worker registered:', registration.scope);
-
-                    // Check for updates periodically
                     setInterval(() => {
                         registration.update();
-                    }, 60 * 60 * 1000); // Check every hour
+                    }, 60 * 60 * 1000);
                 })
                 .catch((error) => {
                     console.log('[PWA] Service Worker registration failed:', error);
@@ -135,7 +143,6 @@
     function pwaInstall() {
         return {
             showBanner: false,
-            deferredPrompt: null,
             isIos: false,
             isInstalled: false,
 
@@ -157,29 +164,32 @@
                 // Detect iOS
                 this.isIos = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
 
-                // Listen for beforeinstallprompt (Chrome, Edge, etc.)
-                window.addEventListener('beforeinstallprompt', (e) => {
-                    e.preventDefault();
-                    this.deferredPrompt = e;
-                    // Show banner after a short delay
-                    setTimeout(() => {
-                        this.showBanner = true;
-                        document.getElementById('pwa-install-banner').style.display = 'block';
-                    }, 2000);
-                });
-
-                // For iOS, show banner after delay
+                // If on iOS, show banner after delay
                 if (this.isIos) {
                     setTimeout(() => {
                         this.showBanner = true;
-                        document.getElementById('pwa-install-banner').style.display = 'block';
                     }, 3000);
+                    return;
                 }
+
+                // If beforeinstallprompt already fired, capture it
+                if (window.pwaDeferredPrompt) {
+                    setTimeout(() => {
+                        this.showBanner = true;
+                    }, 2000);
+                }
+
+                // Listen for custom event if Alpine loaded beforeinstallprompt
+                window.addEventListener('pwa-prompt-available', () => {
+                    setTimeout(() => {
+                        this.showBanner = true;
+                    }, 2000);
+                });
 
                 // Listen for successful install
                 window.addEventListener('appinstalled', () => {
                     this.showBanner = false;
-                    this.deferredPrompt = null;
+                    window.pwaDeferredPrompt = null;
                     localStorage.removeItem('pwa-install-dismissed');
                     console.log('[PWA] App installed successfully');
                 });
@@ -187,20 +197,21 @@
 
             async installPwa() {
                 if (this.isIos) {
-                    // Show iOS install guide
                     window.dispatchEvent(new CustomEvent('show-ios-guide'));
                     this.showBanner = false;
                     return;
                 }
 
-                if (this.deferredPrompt) {
-                    this.deferredPrompt.prompt();
-                    const { outcome } = await this.deferredPrompt.userChoice;
+                if (window.pwaDeferredPrompt) {
+                    window.pwaDeferredPrompt.prompt();
+                    const { outcome } = await window.pwaDeferredPrompt.userChoice;
                     console.log('[PWA] Install outcome:', outcome);
                     if (outcome === 'accepted') {
                         this.showBanner = false;
                     }
-                    this.deferredPrompt = null;
+                    window.pwaDeferredPrompt = null;
+                } else {
+                    alert('Gunakan menu browser (titik tiga) untuk menginstall aplikasi ini.');
                 }
             },
 
