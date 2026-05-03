@@ -1,4 +1,4 @@
-const CACHE_NAME = 'kajian-walsan-v1';
+const CACHE_NAME = 'kajian-walsan-v2';
 const OFFLINE_URL = '/offline.html';
 
 // Static assets to pre-cache (app shell)
