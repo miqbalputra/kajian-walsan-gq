@@ -16,7 +16,12 @@ self.addEventListener('install', (event) => {
         caches.open(CACHE_NAME)
             .then((cache) => {
                 console.log('[SW] Pre-caching app shell');
-                return cache.addAll(PRECACHE_ASSETS);
+                // Use Promise.allSettled to prevent single file failure from breaking the SW installation
+                return Promise.allSettled(
+                    PRECACHE_ASSETS.map(url => 
+                        cache.add(url).catch(err => console.warn(`[SW] Failed to cache ${url}:`, err))
+                    )
+                );
             })
             .then(() => self.skipWaiting())
     );
