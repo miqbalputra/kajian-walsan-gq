@@ -60,6 +60,9 @@
 
 <body
     class="min-h-screen {{ $forceLight ? 'bg-gradient-to-br from-primary-600 via-primary-700 to-secondary-700' : 'bg-gray-50 dark:bg-slate-950' }} font-sans transition-colors duration-300">
+    {{-- PWA Install Banner & Service Worker --}}
+    @include('components.pwa-install')
+
     <!-- Main Content -->
     <main>
         {{ $slot }}
@@ -70,9 +73,6 @@
 
     <!-- Page Scripts -->
     @stack('scripts')
-
-    {{-- PWA Install Banner & Service Worker --}}
-    @include('components.pwa-install')
 </body>
 
 </html>

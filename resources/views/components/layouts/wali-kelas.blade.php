@@ -41,6 +41,9 @@
 </head>
 
 <body class="min-h-screen bg-gray-50 dark:bg-slate-950 transition-colors duration-300" x-data="{ sidebarOpen: false }">
+    {{-- PWA Install Banner & Service Worker --}}
+    @include('components.pwa-install')
+
     <div class="flex min-h-screen">
         <!-- Sidebar -->
         <aside :class="sidebarOpen ? 'translate-x-0' : '-translate-x-full'"
@@ -169,7 +172,6 @@
     @stack('scripts')
 
     {{-- PWA Install Banner & Service Worker --}}
-    @include('components.pwa-install')
 </body>
 
 </html>

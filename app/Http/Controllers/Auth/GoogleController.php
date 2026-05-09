@@ -18,9 +18,14 @@ class GoogleController extends Controller
      */
     public function redirect()
     {
-        return Socialite::driver('google')
+        $redirectUrl = Socialite::driver('google')
             ->scopes(['openid', 'profile', 'email'])
-            ->redirect();
+            ->redirect()
+            ->getTargetUrl();
+
+        return response()
+            ->view('auth.google-redirect', ['redirectUrl' => $redirectUrl])
+            ->header('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0');
     }
 
     /**
