@@ -18,8 +18,8 @@
                     <span class="material-symbols-rounded text-5xl text-white">lock_reset</span>
                 </div>
                 <h1 class="text-3xl font-extrabold text-white tracking-tight">Lupa Password</h1>
-                <p class="text-white/70 text-sm mt-2 font-medium tracking-wide">Kami akan mengirimkan link reset ke
-                    email Anda</p>
+                <p class="text-white/70 text-sm mt-2 font-medium tracking-wide">Kami akan mengirimkan instruksi reset
+                    melalui email atau WhatsApp terdaftar</p>
             </div>
 
             <!-- Glassmorphism Card -->
@@ -39,18 +39,22 @@
                 <form method="POST" action="{{ route('password.email') }}">
                     @csrf
 
-                    <!-- Email -->
                     <div class="mb-6">
-                        <label for="email"
-                            class="block text-[13px] font-bold text-gray-700 mb-2 ml-1 uppercase tracking-wider">Email</label>
+                        <label for="identifier"
+                            class="block text-[13px] font-bold text-gray-700 mb-2 ml-1 uppercase tracking-wider">
+                            Username, Email, atau Nomor HP
+                        </label>
                         <div class="group relative">
                             <span
-                                class="material-symbols-rounded absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-primary-500 transition-colors text-xl">mail</span>
-                            <input type="email" id="email" name="email" value="{{ old('email') }}"
+                                class="material-symbols-rounded absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-primary-500 transition-colors text-xl">manage_accounts</span>
+                            <input type="text" id="identifier" name="identifier" value="{{ old('identifier') }}"
                                 class="w-full pl-12 pr-4 py-3.5 bg-gray-50 border border-gray-200 rounded-2xl focus:bg-white focus:ring-4 focus:ring-primary-500/10 focus:border-primary-500 transition-all outline-none text-gray-900 font-medium"
-                                placeholder="Masukkan email Anda" required autofocus>
+                                placeholder="Contoh: A0214460290 / email@gmail.com / 0812..." required autofocus>
                         </div>
-                        @error('email')
+                        <p class="text-gray-500 text-xs mt-2">
+                            Jika nomor HP cocok, pesan reset akan dikirim melalui WhatsApp. Jika email cocok, link juga bisa dikirim melalui email.
+                        </p>
+                        @error('identifier')
                             <p class="text-red-500 text-xs mt-2 ml-1 font-medium">{{ $message }}</p>
                         @enderror
                     </div>
@@ -61,7 +65,7 @@
                                hover:from-primary-700 hover:to-primary-800 focus:outline-none focus:ring-4 focus:ring-primary-500/30
                                active:scale-[0.98] transition-all duration-200 flex items-center justify-center gap-3 shadow-xl shadow-primary-600/20">
                         <span class="material-symbols-rounded">send</span>
-                        Kirim Link Reset
+                        Kirim Instruksi Reset
                     </button>
                 </form>
 

@@ -38,6 +38,8 @@ return [
     'n8n' => [
         'enabled' => env('N8N_WEBHOOK_ENABLED', false),
         'webhook_url' => env('N8N_WEBHOOK_URL', ''),
+        'password_reset_webhook_url' => env('N8N_PASSWORD_RESET_WEBHOOK_URL', ''),
+        'password_reset_secret' => env('N8N_PASSWORD_RESET_SECRET', ''),
     ],
 
 

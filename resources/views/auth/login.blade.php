@@ -35,6 +35,12 @@
                     </div>
                 @endif
 
+                @if (session('status'))
+                    <div class="mb-5 p-3 bg-green-50 border border-green-100 rounded-2xl text-sm text-green-700 font-medium">
+                        {{ session('status') }}
+                    </div>
+                @endif
+
                 <form method="POST" action="{{ route('login') }}" @submit="loading = true">
                     @csrf
 
@@ -74,6 +80,13 @@
                         @error('password')
                             <p class="text-red-500 text-xs mt-2 ml-1 font-medium">{{ $message }}</p>
                         @enderror
+                    </div>
+
+                    <div class="flex justify-end mb-6">
+                        <a href="{{ route('password.request') }}"
+                            class="text-sm font-bold text-primary-600 hover:text-primary-700 transition-colors">
+                            Lupa password?
+                        </a>
                     </div>
 
                     <button type="submit"
