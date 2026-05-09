@@ -44,7 +44,7 @@ class GoogleController extends Controller
         }
 
         try {
-            $user = $this->findLoginUser($googleUser->getId(), $googleEmail, $googleUser->token);
+            $user = $this->findLoginUser($googleUser->getId(), $googleEmail);
         } catch (\Throwable $e) {
             Log::error('[Google Login] User lookup failed', [
                 'error' => $e->getMessage(),
@@ -74,28 +74,29 @@ class GoogleController extends Controller
         return redirect()->intended(route('dashboard'));
     }
 
-    private function findLoginUser(string $googleId, string $googleEmail, ?string $googleToken): ?User
+    private function findLoginUser(string $googleId, string $googleEmail): ?User
     {
-        $hasGoogleColumns = $this->hasGoogleColumns();
+        if (!$this->hasGoogleColumns()) {
+            throw new \RuntimeException('Missing users.google_id column');
+        }
 
-        if ($hasGoogleColumns) {
-            $user = User::where('google_id', $googleId)->first();
-            if ($user) {
-                return $user;
+        $user = User::where('google_id', $googleId)->first();
+        if ($user) {
+            if (Str::lower(trim((string) $user->email)) !== $googleEmail) {
+                Log::warning('[Google Login] google_id matched but email is different', [
+                    'user_id' => $user->id,
+                    'google_email' => $googleEmail,
+                ]);
+
+                return null;
             }
+
+            return $user;
         }
 
         $user = User::whereRaw('LOWER(email) = ?', [$googleEmail])->first();
         if (!$user) {
             return null;
-        }
-
-        if (!$hasGoogleColumns) {
-            Log::warning('[Google Login] google_id/google_token columns are missing; logged in by email only', [
-                'user_id' => $user->id,
-            ]);
-
-            return $user;
         }
 
         if ($user->google_id && $user->google_id !== $googleId) {
@@ -108,7 +109,6 @@ class GoogleController extends Controller
 
         $user->update([
             'google_id' => $googleId,
-            'google_token' => $googleToken,
         ]);
 
         return $user;
@@ -116,7 +116,7 @@ class GoogleController extends Controller
 
     private function hasGoogleColumns(): bool
     {
-        return Schema::hasColumn('users', 'google_id') && Schema::hasColumn('users', 'google_token');
+        return Schema::hasColumn('users', 'google_id');
     }
 
     /**
@@ -213,7 +213,6 @@ class GoogleController extends Controller
 
         $targetUser->update([
             'google_id'    => $googleUser->getId(),
-            'google_token' => $googleUser->token,
             'email'        => $targetUser->email ?? $googleUser->getEmail(),
         ]);
 
@@ -235,7 +234,7 @@ class GoogleController extends Controller
             return redirect()->route('wali-santri.profile')->with('google-error', 'Tidak dapat melepas Google karena Anda tidak memiliki password. Atur password terlebih dahulu.');
         }
 
-        $user->update(['google_id' => null, 'google_token' => null]);
+        $user->update(['google_id' => null]);
 
         return redirect()->route('wali-santri.profile')->with('google-success', 'Akun Google berhasil dilepaskan.');
     }
