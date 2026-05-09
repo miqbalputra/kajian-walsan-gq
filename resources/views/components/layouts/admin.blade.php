@@ -84,6 +84,11 @@
                     <span class="material-symbols-rounded">event</span>
                     Kajian
                 </a>
+                <a href="{{ route('admin.announcements.index') }}"
+                    class="flex items-center gap-3 px-4 py-3 rounded-xl font-medium transition-colors {{ request()->routeIs('admin.announcements.*') ? 'bg-primary-50 dark:bg-primary-900/20 text-primary-600 dark:text-primary-400' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-slate-800' }}">
+                    <span class="material-symbols-rounded">campaign</span>
+                    Pengumuman
+                </a>
                 <a href="{{ route('admin.classes.index') }}"
                     class="flex items-center gap-3 px-4 py-3 rounded-xl font-medium transition-colors {{ request()->routeIs('admin.classes.*') ? 'bg-primary-50 dark:bg-primary-900/20 text-primary-600 dark:text-primary-400' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-slate-800' }}">
                     <span class="material-symbols-rounded">meeting_room</span>

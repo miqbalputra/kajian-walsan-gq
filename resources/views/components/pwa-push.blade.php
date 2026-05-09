@@ -12,20 +12,22 @@
         return outputArray;
     }
 
-    async function initPushNotification() {
+    async function initPushNotification(silent = false) {
         if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
             console.warn('[Push] Browser tidak mendukung push notification');
-            alert('Browser Anda tidak mendukung fitur Notifikasi/Pengingat.');
+            if (!silent) alert('Browser Anda tidak mendukung fitur Notifikasi/Pengingat.');
             return;
         }
 
         try {
-            // Langsung minta izin supaya user melihat popup seketika
-            const permission = await Notification.requestPermission();
+            let permission = Notification.permission;
+            if (permission === 'default' && !silent) {
+                permission = await Notification.requestPermission();
+            }
 
             if (permission !== 'granted') {
                 console.warn('[Push] Izin ditolak');
-                alert('Izin notifikasi ditolak. Anda tidak akan mendapatkan pengingat kajian.');
+                if (!silent) alert('Izin notifikasi ditolak. Anda tidak akan mendapatkan pengingat kajian.');
                 return;
             }
 
@@ -42,11 +44,13 @@
                 return;
             }
 
-            // Subscribe to push service
-            const subscription = await registration.pushManager.subscribe({
-                userVisibleOnly: true,
-                applicationServerKey: urlBase64ToUint8Array(vapidPublicKey)
-            });
+            let subscription = await registration.pushManager.getSubscription();
+            if (!subscription) {
+                subscription = await registration.pushManager.subscribe({
+                    userVisibleOnly: true,
+                    applicationServerKey: urlBase64ToUint8Array(vapidPublicKey)
+                });
+            }
 
             // Send to our server
             const subData = subscription.toJSON();
@@ -64,16 +68,20 @@
 
             if (response.ok) {
                 console.log('[Push] Berhasil berlangganan!');
-                alert('Pendaftaran notifikasi berhasil! Anda akan menerima pengingat kajian.');
+                if (!silent) alert('Pendaftaran notifikasi berhasil! Anda akan menerima pengingat kajian.');
             } else {
                 console.error('[Push] Gagal simpan ke server');
-                alert('Gagal menyimpan langganan ke server. Error Code: ' + response.status);
+                if (!silent) alert('Gagal menyimpan langganan ke server. Error Code: ' + response.status);
             }
 
         } catch (e) {
             console.error('[Push] Error init:', e);
-            alert('Gagal mengaktifkan notifikasi: ' + e.message);
+            if (!silent) alert('Gagal mengaktifkan notifikasi: ' + e.message);
         }
+    }
+
+    if ('Notification' in window && Notification.permission === 'granted') {
+        window.addEventListener('load', () => initPushNotification(true));
     }
 
     // Fungsi test notification (local)

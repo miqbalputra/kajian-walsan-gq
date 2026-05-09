@@ -16,7 +16,9 @@ class GoogleController extends Controller
      */
     public function redirect()
     {
-        return Socialite::driver('google')->redirect();
+        return Socialite::driver('google')
+            ->scopes(['openid', 'profile', 'email'])
+            ->redirect();
     }
 
     /**
@@ -31,12 +33,15 @@ class GoogleController extends Controller
             return redirect()->route('login')->withErrors(['google' => 'Gagal login dengan Google. Silakan coba lagi.']);
         }
 
+        $googleEmail = strtolower((string) $googleUser->getEmail());
+
         // Cari user berdasarkan google_id
         $user = User::where('google_id', $googleUser->getId())->first();
 
         if (!$user) {
-            // Coba cari berdasarkan email (jika email cocok, bisa link otomatis)
-            $userByEmail = User::where('email', $googleUser->getEmail())->first();
+            // Supabase-style: jika email Google sama dengan email akun yang tersimpan,
+            // akun langsung ditautkan dan user boleh masuk dengan Google.
+            $userByEmail = User::whereRaw('LOWER(email) = ?', [$googleEmail])->first();
 
             if ($userByEmail) {
                 // Link akun yang sudah ada dengan Google
@@ -48,7 +53,7 @@ class GoogleController extends Controller
             } else {
                 // Akun Google belum terdaftar & email tidak cocok - tolak
                 return redirect()->route('login')->withErrors([
-                    'google' => 'Akun Google ini belum terhubung. Silakan login dengan username & password terlebih dahulu, lalu hubungkan akun Google di halaman Profil.'
+                    'google' => 'Email Google ini belum terdaftar di aplikasi. Pastikan email Gmail sudah disimpan di akun wali santri.'
                 ]);
             }
         }

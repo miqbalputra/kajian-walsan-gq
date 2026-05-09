@@ -62,6 +62,24 @@
 
     <!-- Main Content -->
     <main class="flex-1 px-4 space-y-4">
+        <div x-data="{ supported: 'Notification' in window && 'serviceWorker' in navigator && 'PushManager' in window, permission: 'Notification' in window ? Notification.permission : 'unsupported' }"
+            x-show="supported && permission !== 'granted'"
+            x-cloak
+            class="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-primary-100 dark:border-slate-800 p-4 flex items-center gap-4">
+            <div class="w-12 h-12 rounded-2xl bg-primary-50 dark:bg-primary-950/30 text-primary-600 dark:text-primary-400 flex items-center justify-center shrink-0">
+                <span class="material-symbols-rounded text-2xl">notifications_active</span>
+            </div>
+            <div class="flex-1 min-w-0">
+                <p class="font-bold text-gray-900 dark:text-white">Aktifkan Notifikasi</p>
+                <p class="text-sm text-gray-500 dark:text-gray-400">Terima pengumuman kajian langsung di HP.</p>
+            </div>
+            <button type="button"
+                @click="initPushNotification().then(() => permission = Notification.permission)"
+                class="px-4 py-2.5 bg-primary-600 hover:bg-primary-700 text-white rounded-xl font-bold text-sm transition-colors shrink-0">
+                Aktifkan
+            </button>
+        </div>
+
         <!-- Survey/Feedback Banner -->
         @foreach($this->pendingFeedbackEvents as $event)
             <div wire:key="survey-banner-{{ $event->id }}" 

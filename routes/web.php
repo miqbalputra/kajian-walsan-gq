@@ -3,6 +3,7 @@
 use App\Http\Controllers\Auth\GoogleController;
 use App\Http\Controllers\Auth\QrLoginController;
 use App\Http\Controllers\HomeController;
+use App\Livewire\Admin\AnnouncementIndex;
 use App\Livewire\Admin\AttendanceValidation;
 use App\Livewire\Admin\ClassIndex;
 use App\Livewire\Admin\Dashboard;
@@ -62,6 +63,7 @@ Route::middleware('auth')->group(function () {
         Route::get('/students', StudentIndex::class)->name('students.index');
         Route::get('/parents', ParentIndex::class)->name('parents.index');
         Route::get('/kajian', KajianIndex::class)->name('kajian.index');
+        Route::get('/announcements', AnnouncementIndex::class)->name('announcements.index');
         Route::get('/classes', ClassIndex::class)->name('classes.index');
         Route::get('/reports', ReportIndex::class)->name('reports.index');
         Route::get('/validation', AttendanceValidation::class)->name('validation.index');
@@ -235,4 +237,3 @@ Route::any('/test-upload', function (\Illuminate\Http\Request $request) {
 
 // Jalur khusus reset password dari Chatbot n8n
 Route::post('/internal-reset-password', [App\Http\Controllers\Api\PasswordResetController::class, 'reset']);
-

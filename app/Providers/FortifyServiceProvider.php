@@ -37,9 +37,11 @@ class FortifyServiceProvider extends ServiceProvider
 
         // Custom authentication logic - support username or email
         Fortify::authenticateUsing(function (Request $request) {
-            $user = User::where(function ($query) use ($request) {
-                $query->where('username', $request->username)
-                    ->orWhere('email', $request->username);
+            $login = trim((string) $request->input('username'));
+
+            $user = User::where(function ($query) use ($login) {
+                $query->where('username', $login)
+                    ->orWhereRaw('LOWER(email) = ?', [Str::lower($login)]);
             })
                 ->where('is_active', true)
                 ->first();
