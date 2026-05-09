@@ -1,29 +1,37 @@
 {{-- PWA Install Banner & Service Worker Registration --}}
 <div id="pwa-install-banner"
-    style="position:fixed; bottom:20px; left:50%; transform:translate(-50%, 24px); z-index:9999; width:calc(100% - 32px); max-width:430px; display:none; opacity:0; transition:opacity .35s ease, transform .35s ease;">
+    style="position:fixed; right:16px; bottom:16px; left:16px; z-index:2147483647; max-width:430px; margin:0 auto; opacity:1; transform:translateY(0); transition:opacity .35s ease, transform .35s ease; font-family:Inter,ui-sans-serif,system-ui,sans-serif;">
     <div class="bg-white rounded-3xl shadow-2xl border border-emerald-100 overflow-hidden"
-        style="box-shadow: 0 25px 60px rgba(0,0,0,0.18), 0 0 0 1px rgba(16,185,129,0.12);">
+        style="background:#fff; border:1px solid rgba(16,185,129,.18); border-radius:24px; overflow:hidden; box-shadow:0 25px 60px rgba(0,0,0,.22),0 0 0 1px rgba(16,185,129,.12);">
 
-        <div class="bg-gradient-to-r from-primary-500 to-primary-600 px-5 py-4 flex items-center gap-4">
+        <div class="bg-gradient-to-r from-primary-500 to-primary-600 px-5 py-4 flex items-center gap-4"
+            style="display:flex; align-items:center; gap:16px; padding:16px 20px; background:linear-gradient(135deg,#059669,#047857);">
             <div
-                class="w-14 h-14 bg-white/20 backdrop-blur-sm rounded-2xl flex items-center justify-center flex-shrink-0 border border-white/30">
-                <img src="/icons/icon-96x96.png" alt="Kajian Walsan" class="w-10 h-10 rounded-lg">
+                class="w-14 h-14 bg-white/20 backdrop-blur-sm rounded-2xl flex items-center justify-center flex-shrink-0 border border-white/30"
+                style="width:56px; height:56px; flex-shrink:0; display:flex; align-items:center; justify-content:center; border-radius:16px; background:rgba(255,255,255,.2); border:1px solid rgba(255,255,255,.3);">
+                <img src="/icons/icon-96x96.png" alt="Kajian Walsan" class="w-10 h-10 rounded-lg"
+                    style="width:40px; height:40px; border-radius:8px;">
             </div>
-            <div class="flex-1 min-w-0">
-                <h3 class="text-white font-bold text-base">Install di HP</h3>
-                <p class="text-white/85 text-xs mt-0.5 truncate">Akses cepat dan notifikasi otomatis</p>
+            <div class="flex-1 min-w-0" style="flex:1; min-width:0;">
+                <h3 class="text-white font-bold text-base" style="margin:0; color:#fff; font-size:16px; font-weight:800;">Install di HP</h3>
+                <p class="text-white/85 text-xs mt-0.5 truncate"
+                    style="margin:3px 0 0; color:rgba(255,255,255,.86); font-size:12px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
+                    Akses cepat dan notifikasi otomatis
+                </p>
             </div>
             <button id="pwa-dismiss-button" type="button" aria-label="Tutup ajakan install"
-                class="p-1.5 rounded-xl hover:bg-white/10 transition-colors text-white/70 hover:text-white flex-shrink-0">
-                <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke-width="2"
+                class="p-1.5 rounded-xl hover:bg-white/10 transition-colors text-white/70 hover:text-white flex-shrink-0"
+                style="width:34px; height:34px; flex-shrink:0; border:0; border-radius:12px; background:transparent; color:rgba(255,255,255,.78); cursor:pointer;">
+                <svg xmlns="http://www.w3.org/2000/svg" style="width:20px; height:20px;" fill="none" viewBox="0 0 24 24" stroke-width="2"
                     stroke="currentColor">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12" />
                 </svg>
             </button>
         </div>
 
-        <div class="px-5 py-4">
-            <p class="text-sm font-medium leading-relaxed text-gray-700 mb-4">
+        <div class="px-5 py-4" style="padding:16px 20px;">
+            <p class="text-sm font-medium leading-relaxed text-gray-700 mb-4"
+                style="margin:0 0 16px; color:#374151; font-size:14px; line-height:1.55; font-weight:600;">
                 Install di HP untuk akses lebih cepat dan menerima notifikasi pengumuman otomatis.
             </p>
 
@@ -42,13 +50,15 @@
                 </div>
             </div>
 
-            <div class="flex gap-3">
+            <div class="flex gap-3" style="display:flex; gap:12px;">
                 <button id="pwa-later-button" type="button"
-                    class="flex-1 py-2.5 px-4 rounded-xl font-semibold text-sm text-gray-500 hover:bg-gray-100 transition-colors">
+                    class="flex-1 py-2.5 px-4 rounded-xl font-semibold text-sm text-gray-500 hover:bg-gray-100 transition-colors"
+                    style="flex:1; border:0; border-radius:12px; background:#f3f4f6; color:#6b7280; padding:10px 14px; font-size:14px; font-weight:700; cursor:pointer;">
                     Nanti Saja
                 </button>
                 <button id="pwa-install-button" type="button"
-                    class="flex-1 py-2.5 px-4 rounded-xl font-bold text-sm text-white bg-gradient-to-r from-primary-500 to-primary-600 hover:from-primary-600 hover:to-primary-700 shadow-lg shadow-primary-500/25 transition-all active:scale-[0.98] flex items-center justify-center gap-2">
+                    class="flex-1 py-2.5 px-4 rounded-xl font-bold text-sm text-white bg-gradient-to-r from-primary-500 to-primary-600 hover:from-primary-600 hover:to-primary-700 shadow-lg shadow-primary-500/25 transition-all active:scale-[0.98] flex items-center justify-center gap-2"
+                    style="flex:1; border:0; border-radius:12px; background:linear-gradient(135deg,#10b981,#059669); color:#fff; padding:10px 14px; font-size:14px; font-weight:800; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:8px;">
                     <span class="material-symbols-rounded text-lg">download</span>
                     Install Sekarang
                 </button>
@@ -156,6 +166,12 @@
         }
 
         function wasDismissedRecently() {
+            const url = new URL(window.location.href);
+            if (url.searchParams.has('show_pwa')) {
+                localStorage.removeItem(dismissedKey);
+                return false;
+            }
+
             const dismissed = localStorage.getItem(dismissedKey);
             if (!dismissed) return false;
 
@@ -168,10 +184,9 @@
             const banner = document.getElementById('pwa-install-banner');
             if (!banner || isInstalled() || wasDismissedRecently()) return;
 
-            banner.style.display = 'block';
             requestAnimationFrame(() => {
                 banner.style.opacity = '1';
-                banner.style.transform = 'translate(-50%, 0)';
+                banner.style.transform = 'translateY(0)';
             });
         }
 
@@ -180,7 +195,7 @@
             if (!banner) return;
 
             banner.style.opacity = '0';
-            banner.style.transform = 'translate(-50%, 24px)';
+            banner.style.transform = 'translateY(24px)';
             setTimeout(() => {
                 banner.style.display = 'none';
             }, 350);
@@ -220,6 +235,10 @@
         }
 
         function initPwaInstall() {
+            if (isInstalled() || wasDismissedRecently()) {
+                hideBanner();
+            }
+
             if ('serviceWorker' in navigator) {
                 navigator.serviceWorker.register('/sw.js')
                     .then((registration) => {

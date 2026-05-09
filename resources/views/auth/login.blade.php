@@ -1,6 +1,6 @@
 <x-layouts.app title="Login" :force-light="true">
     <div
-        class="min-h-screen flex items-center justify-center p-4 bg-gradient-to-br from-primary-600 via-primary-700 to-secondary-700 overflow-hidden">
+        class="min-h-screen min-h-[100svh] flex items-center justify-center p-4 bg-gradient-to-br from-primary-600 via-primary-700 to-secondary-700 overflow-hidden">
         <div class="absolute inset-0 z-0">
             <div
                 class="absolute top-[10%] right-[5%] w-96 h-96 bg-primary-400/30 rounded-full blur-[120px] animate-pulse">

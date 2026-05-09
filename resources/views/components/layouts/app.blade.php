@@ -59,7 +59,7 @@
 </head>
 
 <body
-    class="min-h-screen bg-gray-50 {{ $forceLight ? '' : 'dark:bg-slate-950' }} font-sans transition-colors duration-300">
+    class="min-h-screen {{ $forceLight ? 'bg-gradient-to-br from-primary-600 via-primary-700 to-secondary-700' : 'bg-gray-50 dark:bg-slate-950' }} font-sans transition-colors duration-300">
     <!-- Main Content -->
     <main>
         {{ $slot }}
