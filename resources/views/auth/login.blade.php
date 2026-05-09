@@ -1,5 +1,4 @@
 <x-layouts.app title="Login" :force-light="true">
-    {{-- deploy-marker: pwa-inline-install-ff1db75 --}}
     <div
         class="min-h-screen min-h-[100svh] flex items-center justify-center p-4 bg-gradient-to-br from-primary-600 via-primary-700 to-secondary-700 overflow-hidden">
         <div class="absolute inset-0 z-0">
@@ -41,10 +40,6 @@
                         {{ session('status') }}
                     </div>
                 @endif
-
-                <div class="mb-6">
-                    @include('components.pwa-inline-install')
-                </div>
 
                 <form method="POST" action="{{ route('login') }}" @submit="loading = true">
                     @csrf

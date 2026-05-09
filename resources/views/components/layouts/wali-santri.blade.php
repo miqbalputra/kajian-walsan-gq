@@ -41,9 +41,6 @@
 
 <body
     class="min-h-screen bg-gray-100 {{ $forceLight ? '' : 'dark:bg-slate-950' }} font-sans transition-colors duration-300">
-    {{-- PWA Install Banner & Service Worker --}}
-    @include('components.pwa-install')
-
     {{ $slot }}
 
     @livewireScripts
