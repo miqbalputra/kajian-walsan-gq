@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\User;
 use Illuminate\Auth\Events\PasswordReset;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
@@ -101,19 +102,31 @@ class ForgotPasswordController extends Controller
     private function findUser(string $identifier): ?User
     {
         $identifier = trim($identifier);
-        $normalizedPhone = $this->normalizePhone($identifier);
+
+        if (str_contains($identifier, '@')) {
+            return User::where('is_active', true)
+                ->whereRaw('LOWER(email) = ?', [Str::lower($identifier)])
+                ->first();
+        }
+
+        $userByUsername = User::where('is_active', true)
+            ->where('username', $identifier)
+            ->first();
+
+        if ($userByUsername) {
+            return $userByUsername;
+        }
+
+        $phoneCandidates = $this->phoneCandidates($identifier);
+        if ($phoneCandidates === []) {
+            return null;
+        }
+
+        $normalizedPhoneSql = "REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(phone, '+', ''), '-', ''), ' ', ''), '(', ''), ')', '')";
 
         return User::where('is_active', true)
-            ->where(function ($query) use ($identifier, $normalizedPhone) {
-                $query->whereRaw('LOWER(email) = ?', [Str::lower($identifier)])
-                    ->orWhere('username', $identifier);
-
-                if ($normalizedPhone) {
-                    $query->orWhereRaw("REPLACE(REPLACE(REPLACE(REPLACE(phone, '+', ''), '-', ''), ' ', ''), '(', '') LIKE ?", [
-                        '%' . substr($normalizedPhone, -10),
-                    ]);
-                }
-            })
+            ->whereNotNull('phone')
+            ->whereIn(DB::raw($normalizedPhoneSql), $phoneCandidates)
             ->first();
     }
 
@@ -150,10 +163,26 @@ class ForgotPasswordController extends Controller
         }
     }
 
-    private function normalizePhone(string $phone): ?string
+    private function phoneCandidates(string $phone): array
     {
         $digits = preg_replace('/\D+/', '', $phone);
-        return $digits !== '' ? $digits : null;
+        if (!$digits || strlen($digits) < 8) {
+            return [];
+        }
+
+        $local = $digits;
+        if (str_starts_with($local, '62')) {
+            $local = '0' . substr($local, 2);
+        } elseif (str_starts_with($local, '8')) {
+            $local = '0' . $local;
+        }
+
+        $international = $local;
+        if (str_starts_with($international, '0')) {
+            $international = '62' . substr($international, 1);
+        }
+
+        return array_values(array_unique([$digits, $local, $international]));
     }
 
     private function formatPhoneForWa(?string $phone): ?string
