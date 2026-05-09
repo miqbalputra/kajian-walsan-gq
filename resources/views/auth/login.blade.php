@@ -41,14 +41,14 @@
                     <div class="mb-5">
                         <label for="username"
                             class="block text-[13px] font-bold text-gray-700 mb-2 ml-1 uppercase tracking-wider">
-                            Email
+                            Username atau Email
                         </label>
                         <div class="group relative">
                             <span
                                 class="material-symbols-rounded absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-primary-500 transition-colors text-xl">alternate_email</span>
-                            <input type="email" id="username" name="username" value="{{ old('username') }}"
+                            <input type="text" id="username" name="username" value="{{ old('username') }}"
                                 class="w-full pl-12 pr-4 py-3.5 bg-gray-50 border border-gray-200 rounded-2xl focus:bg-white focus:ring-4 focus:ring-primary-500/10 focus:border-primary-500 transition-all outline-none text-gray-900 font-medium"
-                                placeholder="email@contoh.com" required autofocus autocomplete="email">
+                                placeholder="Username atau email" required autofocus autocomplete="username">
                         </div>
                         @error('username')
                             <p class="text-red-500 text-xs mt-2 ml-1 font-medium">{{ $message }}</p>
@@ -92,7 +92,7 @@
                                 </path>
                             </svg>
                         </span>
-                        <span x-text="loading ? 'Memproses...' : 'Masuk dengan Email'">Masuk dengan Email</span>
+                        <span x-text="loading ? 'Memproses...' : 'Masuk Akun'">Masuk Akun</span>
                     </button>
                 </form>
 
