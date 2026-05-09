@@ -69,6 +69,10 @@
                 </p>
             </div>
 
+            <div class="w-full mb-8">
+                @include('components.pwa-inline-install')
+            </div>
+
             <!-- Current/Next Kajian Info Card -->
             @if($currentKajian)
                 <div class="w-full mb-8 transform hover:scale-[1.02] transition-transform duration-300">

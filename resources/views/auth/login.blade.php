@@ -41,6 +41,10 @@
                     </div>
                 @endif
 
+                <div class="mb-6">
+                    @include('components.pwa-inline-install')
+                </div>
+
                 <form method="POST" action="{{ route('login') }}" @submit="loading = true">
                     @csrf
 
