@@ -1,11 +1,6 @@
 {{-- PWA Install Banner & Service Worker Registration --}}
 <div id="pwa-install-banner"
-    style="position:fixed; bottom:20px; left:50%; transform:translateX(-50%); z-index:9999; width:calc(100% - 32px); max-width:430px;"
-    x-data="pwaInstall()" x-init="init()" x-show="showBanner" x-cloak
-    x-transition:enter="transition ease-out duration-500" x-transition:enter-start="opacity-0 translate-y-8"
-    x-transition:enter-end="opacity-100 translate-y-0" x-transition:leave="transition ease-in duration-300"
-    x-transition:leave-start="opacity-100 translate-y-0" x-transition:leave-end="opacity-0 translate-y-8">
-
+    style="position:fixed; bottom:20px; left:50%; transform:translate(-50%, 24px); z-index:9999; width:calc(100% - 32px); max-width:430px; display:none; opacity:0; transition:opacity .35s ease, transform .35s ease;">
     <div class="bg-white rounded-3xl shadow-2xl border border-emerald-100 overflow-hidden"
         style="box-shadow: 0 25px 60px rgba(0,0,0,0.18), 0 0 0 1px rgba(16,185,129,0.12);">
 
@@ -18,7 +13,7 @@
                 <h3 class="text-white font-bold text-base">Install di HP</h3>
                 <p class="text-white/85 text-xs mt-0.5 truncate">Akses cepat dan notifikasi otomatis</p>
             </div>
-            <button @click="dismissBanner()" type="button" aria-label="Tutup ajakan install"
+            <button id="pwa-dismiss-button" type="button" aria-label="Tutup ajakan install"
                 class="p-1.5 rounded-xl hover:bg-white/10 transition-colors text-white/70 hover:text-white flex-shrink-0">
                 <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke-width="2"
                     stroke="currentColor">
@@ -48,11 +43,11 @@
             </div>
 
             <div class="flex gap-3">
-                <button @click="dismissBanner()" type="button"
+                <button id="pwa-later-button" type="button"
                     class="flex-1 py-2.5 px-4 rounded-xl font-semibold text-sm text-gray-500 hover:bg-gray-100 transition-colors">
                     Nanti Saja
                 </button>
-                <button @click="installPwa()" type="button"
+                <button id="pwa-install-button" type="button"
                     class="flex-1 py-2.5 px-4 rounded-xl font-bold text-sm text-white bg-gradient-to-r from-primary-500 to-primary-600 hover:from-primary-600 hover:to-primary-700 shadow-lg shadow-primary-500/25 transition-all active:scale-[0.98] flex items-center justify-center gap-2">
                     <span class="material-symbols-rounded text-lg">download</span>
                     Install Sekarang
@@ -63,15 +58,10 @@
 </div>
 
 {{-- Android/Chrome Install Guide Modal --}}
-<div x-data="{ showBrowserGuide: false }" @show-browser-install-guide.window="showBrowserGuide = true"
-    x-show="showBrowserGuide" x-cloak class="fixed inset-0 z-[10000] flex items-end justify-center p-4"
-    x-transition:enter="transition ease-out duration-300" x-transition:enter-start="opacity-0"
-    x-transition:enter-end="opacity-100" x-transition:leave="transition ease-in duration-200"
-    x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0">
-    <div class="absolute inset-0 bg-black/50 backdrop-blur-sm" @click="showBrowserGuide = false"></div>
-    <div class="relative bg-white rounded-3xl p-6 max-w-sm w-full shadow-2xl mb-4"
-        x-transition:enter="transition ease-out duration-300 delay-100"
-        x-transition:enter-start="opacity-0 translate-y-8" x-transition:enter-end="opacity-100 translate-y-0">
+<div id="pwa-browser-guide" class="fixed inset-0 z-[10000] items-end justify-center p-4"
+    style="display:none;">
+    <div class="absolute inset-0 bg-black/50 backdrop-blur-sm" data-pwa-close-guide></div>
+    <div class="relative bg-white rounded-3xl p-6 max-w-sm w-full shadow-2xl mb-4">
         <div class="text-center mb-6">
             <div class="w-16 h-16 bg-primary-50 rounded-2xl flex items-center justify-center mx-auto mb-3">
                 <img src="/icons/icon-96x96.png" alt="Kajian Walsan" class="w-10 h-10 rounded-lg">
@@ -99,7 +89,7 @@
                 <p class="text-sm text-gray-700">Tekan <strong>Install</strong>, lalu buka dari ikon di layar HP.</p>
             </div>
         </div>
-        <button @click="showBrowserGuide = false" type="button"
+        <button type="button" data-pwa-close-guide
             class="w-full py-3 rounded-2xl bg-primary-500 text-white font-bold text-sm hover:bg-primary-600 transition-colors">
             Mengerti
         </button>
@@ -107,15 +97,10 @@
 </div>
 
 {{-- iOS Install Guide Modal --}}
-<div x-data="{ showIosGuide: false }" @show-ios-guide.window="showIosGuide = true" x-show="showIosGuide" x-cloak
-    class="fixed inset-0 z-[10000] flex items-end justify-center p-4"
-    x-transition:enter="transition ease-out duration-300" x-transition:enter-start="opacity-0"
-    x-transition:enter-end="opacity-100" x-transition:leave="transition ease-in duration-200"
-    x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0">
-    <div class="absolute inset-0 bg-black/50 backdrop-blur-sm" @click="showIosGuide = false"></div>
-    <div class="relative bg-white rounded-3xl p-6 max-w-sm w-full shadow-2xl mb-4"
-        x-transition:enter="transition ease-out duration-300 delay-100"
-        x-transition:enter-start="opacity-0 translate-y-8" x-transition:enter-end="opacity-100 translate-y-0">
+<div id="pwa-ios-guide" class="fixed inset-0 z-[10000] items-end justify-center p-4"
+    style="display:none;">
+    <div class="absolute inset-0 bg-black/50 backdrop-blur-sm" data-pwa-close-ios></div>
+    <div class="relative bg-white rounded-3xl p-6 max-w-sm w-full shadow-2xl mb-4">
         <div class="text-center mb-6">
             <div class="w-16 h-16 bg-primary-50 rounded-2xl flex items-center justify-center mx-auto mb-3">
                 <img src="/icons/icon-96x96.png" alt="Kajian Walsan" class="w-10 h-10 rounded-lg">
@@ -143,103 +128,139 @@
                 <p class="text-sm text-gray-700">Tekan <strong>Add</strong> untuk menginstall.</p>
             </div>
         </div>
-        <button @click="showIosGuide = false" type="button"
+        <button type="button" data-pwa-close-ios
             class="w-full py-3 rounded-2xl bg-primary-500 text-white font-bold text-sm hover:bg-primary-600 transition-colors">
             Mengerti
         </button>
     </div>
 </div>
 
-{{-- Global beforeinstallprompt handler --}}
 <script>
     window.pwaDeferredPrompt = null;
-    window.addEventListener('beforeinstallprompt', (e) => {
-        e.preventDefault();
-        window.pwaDeferredPrompt = e;
+    window.addEventListener('beforeinstallprompt', (event) => {
+        event.preventDefault();
+        window.pwaDeferredPrompt = event;
         window.dispatchEvent(new CustomEvent('pwa-prompt-available'));
     });
-</script>
 
-{{-- Service Worker Registration & PWA Install Logic --}}
-<script>
-    if ('serviceWorker' in navigator) {
-        window.addEventListener('load', () => {
-            navigator.serviceWorker.register('/sw.js')
-                .then((registration) => {
-                    console.log('[PWA] Service Worker registered:', registration.scope);
-                    setInterval(() => {
-                        registration.update();
-                    }, 60 * 60 * 1000);
-                })
-                .catch((error) => {
-                    console.log('[PWA] Service Worker registration failed:', error);
-                });
-        });
-    }
+    (function () {
+        const dismissedKey = 'pwa-install-dismissed-v3';
 
-    function pwaInstall() {
-        return {
-            showBanner: false,
-            isIos: false,
-            isInstalled: false,
+        function isInstalled() {
+            return window.matchMedia('(display-mode: standalone)').matches
+                || window.navigator.standalone === true;
+        }
 
-            init() {
-                this.isInstalled = window.matchMedia('(display-mode: standalone)').matches
-                    || window.navigator.standalone === true;
+        function isIos() {
+            return /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+        }
 
-                if (this.isInstalled) return;
+        function wasDismissedRecently() {
+            const dismissed = localStorage.getItem(dismissedKey);
+            if (!dismissed) return false;
 
-                const dismissed = localStorage.getItem('pwa-install-dismissed-v2');
-                if (dismissed) {
-                    const dismissedAt = parseInt(dismissed);
-                    const twelveHours = 12 * 60 * 60 * 1000;
-                    if (Date.now() - dismissedAt < twelveHours) return;
-                }
+            const dismissedAt = parseInt(dismissed, 10);
+            const twelveHours = 12 * 60 * 60 * 1000;
+            return Number.isFinite(dismissedAt) && Date.now() - dismissedAt < twelveHours;
+        }
 
-                this.isIos = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+        function showBanner() {
+            const banner = document.getElementById('pwa-install-banner');
+            if (!banner || isInstalled() || wasDismissedRecently()) return;
 
-                setTimeout(() => {
-                    this.showBanner = true;
-                }, 1200);
+            banner.style.display = 'block';
+            requestAnimationFrame(() => {
+                banner.style.opacity = '1';
+                banner.style.transform = 'translate(-50%, 0)';
+            });
+        }
 
-                window.addEventListener('pwa-prompt-available', () => {
-                    this.showBanner = true;
-                });
+        function hideBanner() {
+            const banner = document.getElementById('pwa-install-banner');
+            if (!banner) return;
 
-                window.addEventListener('appinstalled', () => {
-                    this.showBanner = false;
-                    window.pwaDeferredPrompt = null;
-                    localStorage.removeItem('pwa-install-dismissed-v2');
-                    console.log('[PWA] App installed successfully');
-                });
-            },
+            banner.style.opacity = '0';
+            banner.style.transform = 'translate(-50%, 24px)';
+            setTimeout(() => {
+                banner.style.display = 'none';
+            }, 350);
+        }
 
-            async installPwa() {
-                if (this.isIos) {
-                    window.dispatchEvent(new CustomEvent('show-ios-guide'));
-                    this.showBanner = false;
-                    return;
-                }
+        function showModal(id) {
+            const modal = document.getElementById(id);
+            if (!modal) return;
+            modal.style.display = 'flex';
+        }
 
-                if (window.pwaDeferredPrompt) {
-                    window.pwaDeferredPrompt.prompt();
-                    const { outcome } = await window.pwaDeferredPrompt.userChoice;
-                    console.log('[PWA] Install outcome:', outcome);
-                    if (outcome === 'accepted') {
-                        this.showBanner = false;
-                    }
-                    window.pwaDeferredPrompt = null;
-                    return;
-                }
+        function hideModal(id) {
+            const modal = document.getElementById(id);
+            if (!modal) return;
+            modal.style.display = 'none';
+        }
 
-                window.dispatchEvent(new CustomEvent('show-browser-install-guide'));
-                this.showBanner = false;
-            },
-
-            dismissBanner() {
-                this.showBanner = false;
-                localStorage.setItem('pwa-install-dismissed-v2', Date.now().toString());
+        async function installPwa() {
+            if (isIos()) {
+                hideBanner();
+                showModal('pwa-ios-guide');
+                return;
             }
-        };
-    }
+
+            if (window.pwaDeferredPrompt) {
+                window.pwaDeferredPrompt.prompt();
+                const choice = await window.pwaDeferredPrompt.userChoice;
+                window.pwaDeferredPrompt = null;
+                if (choice.outcome === 'accepted') {
+                    hideBanner();
+                }
+                return;
+            }
+
+            hideBanner();
+            showModal('pwa-browser-guide');
+        }
+
+        function initPwaInstall() {
+            if ('serviceWorker' in navigator) {
+                navigator.serviceWorker.register('/sw.js')
+                    .then((registration) => {
+                        console.log('[PWA] Service Worker registered:', registration.scope);
+                        setInterval(() => registration.update(), 60 * 60 * 1000);
+                    })
+                    .catch((error) => {
+                        console.log('[PWA] Service Worker registration failed:', error);
+                    });
+            }
+
+            document.getElementById('pwa-install-button')?.addEventListener('click', installPwa);
+            document.getElementById('pwa-dismiss-button')?.addEventListener('click', () => {
+                hideBanner();
+                localStorage.setItem(dismissedKey, Date.now().toString());
+            });
+            document.getElementById('pwa-later-button')?.addEventListener('click', () => {
+                hideBanner();
+                localStorage.setItem(dismissedKey, Date.now().toString());
+            });
+
+            document.querySelectorAll('[data-pwa-close-guide]').forEach((element) => {
+                element.addEventListener('click', () => hideModal('pwa-browser-guide'));
+            });
+            document.querySelectorAll('[data-pwa-close-ios]').forEach((element) => {
+                element.addEventListener('click', () => hideModal('pwa-ios-guide'));
+            });
+
+            setTimeout(showBanner, 1200);
+            window.addEventListener('pwa-prompt-available', showBanner);
+            window.addEventListener('appinstalled', () => {
+                hideBanner();
+                window.pwaDeferredPrompt = null;
+                localStorage.removeItem(dismissedKey);
+            });
+        }
+
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', initPwaInstall);
+        } else {
+            initPwaInstall();
+        }
+    })();
 </script>
