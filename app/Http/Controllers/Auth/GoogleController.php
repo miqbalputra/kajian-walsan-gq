@@ -7,6 +7,8 @@ use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Str;
 use Laravel\Socialite\Facades\Socialite;
 
 class GoogleController extends Controller
@@ -28,40 +30,41 @@ class GoogleController extends Controller
     {
         try {
             $googleUser = Socialite::driver('google')->user();
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             Log::error('[Google Login] Callback failed', ['error' => $e->getMessage()]);
             return redirect()->route('login')->withErrors(['google' => 'Gagal login dengan Google. Silakan coba lagi.']);
         }
 
-        $googleEmail = strtolower((string) $googleUser->getEmail());
+        $googleEmail = Str::lower(trim((string) $googleUser->getEmail()));
 
-        // Cari user berdasarkan google_id
-        $user = User::where('google_id', $googleUser->getId())->first();
-
-        if (!$user) {
-            // Supabase-style: jika email Google sama dengan email akun yang tersimpan,
-            // akun langsung ditautkan dan user boleh masuk dengan Google.
-            $userByEmail = User::whereRaw('LOWER(email) = ?', [$googleEmail])->first();
-
-            if ($userByEmail) {
-                // Link akun yang sudah ada dengan Google
-                $userByEmail->update([
-                    'google_id'    => $googleUser->getId(),
-                    'google_token' => $googleUser->token,
-                ]);
-                $user = $userByEmail;
-            } else {
-                // Akun Google belum terdaftar & email tidak cocok - tolak
-                return redirect()->route('login')->withErrors([
-                    'google' => 'Email Google ini belum terdaftar di aplikasi. Pastikan email Gmail sudah disimpan di akun wali santri.'
-                ]);
-            }
+        if ($googleEmail === '') {
+            return redirect()->route('login')->withErrors([
+                'google' => 'Akun Google tidak mengirim alamat email. Pastikan izin email aktif di Google OAuth.',
+            ]);
         }
 
-        // Cek apakah akun aktif
+        try {
+            $user = $this->findLoginUser($googleUser->getId(), $googleEmail, $googleUser->token);
+        } catch (\Throwable $e) {
+            Log::error('[Google Login] User lookup failed', [
+                'error' => $e->getMessage(),
+                'email' => $googleEmail,
+            ]);
+
+            return redirect()->route('login')->withErrors([
+                'google' => 'Login Google belum bisa diproses. Jalankan migration database lalu coba lagi.',
+            ]);
+        }
+
+        if (!$user) {
+            return redirect()->route('login')->withErrors([
+                'google' => 'Email Google ini belum terdaftar di aplikasi. Pastikan email Gmail sudah disimpan di akun wali santri.',
+            ]);
+        }
+
         if (!$user->is_active) {
             return redirect()->route('login')->withErrors([
-                'google' => 'Akun Anda tidak aktif. Hubungi administrator.'
+                'google' => 'Akun Anda tidak aktif. Hubungi administrator.',
             ]);
         }
 
@@ -69,6 +72,51 @@ class GoogleController extends Controller
         request()->session()->regenerate();
 
         return redirect()->intended(route('dashboard'));
+    }
+
+    private function findLoginUser(string $googleId, string $googleEmail, ?string $googleToken): ?User
+    {
+        $hasGoogleColumns = $this->hasGoogleColumns();
+
+        if ($hasGoogleColumns) {
+            $user = User::where('google_id', $googleId)->first();
+            if ($user) {
+                return $user;
+            }
+        }
+
+        $user = User::whereRaw('LOWER(email) = ?', [$googleEmail])->first();
+        if (!$user) {
+            return null;
+        }
+
+        if (!$hasGoogleColumns) {
+            Log::warning('[Google Login] google_id/google_token columns are missing; logged in by email only', [
+                'user_id' => $user->id,
+            ]);
+
+            return $user;
+        }
+
+        if ($user->google_id && $user->google_id !== $googleId) {
+            Log::warning('[Google Login] Email matched but google_id is different', [
+                'user_id' => $user->id,
+            ]);
+
+            return null;
+        }
+
+        $user->update([
+            'google_id' => $googleId,
+            'google_token' => $googleToken,
+        ]);
+
+        return $user;
+    }
+
+    private function hasGoogleColumns(): bool
+    {
+        return Schema::hasColumn('users', 'google_id') && Schema::hasColumn('users', 'google_token');
     }
 
     /**

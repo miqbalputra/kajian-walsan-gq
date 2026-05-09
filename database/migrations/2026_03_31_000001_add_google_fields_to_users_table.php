@@ -8,16 +8,31 @@ return new class extends Migration
 {
     public function up(): void
     {
-        Schema::table('users', function (Blueprint $table) {
-            $table->string('google_id')->nullable()->unique()->after('avatar');
-            $table->string('google_token')->nullable()->after('google_id');
-        });
+        if (!Schema::hasColumn('users', 'google_id')) {
+            Schema::table('users', function (Blueprint $table) {
+                $table->string('google_id')->nullable()->unique()->after('avatar');
+            });
+        }
+
+        if (!Schema::hasColumn('users', 'google_token')) {
+            Schema::table('users', function (Blueprint $table) {
+                $table->string('google_token')->nullable()->after('google_id');
+            });
+        }
     }
 
     public function down(): void
     {
-        Schema::table('users', function (Blueprint $table) {
-            $table->dropColumn(['google_id', 'google_token']);
-        });
+        if (Schema::hasColumn('users', 'google_token')) {
+            Schema::table('users', function (Blueprint $table) {
+                $table->dropColumn('google_token');
+            });
+        }
+
+        if (Schema::hasColumn('users', 'google_id')) {
+            Schema::table('users', function (Blueprint $table) {
+                $table->dropColumn('google_id');
+            });
+        }
     }
 };
