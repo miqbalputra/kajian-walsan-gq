@@ -2,8 +2,14 @@
     "name": "Presensi Kajian Wali Santri",
     "short_name": "Kajian Walsan",
     "description": "Sistem Presensi Kajian Rutin Wali Santri dengan Scan QR Code",
+    "id": "/",
     "start_url": "/",
+    "scope": "/",
     "display": "standalone",
+    "display_override": [
+        "standalone",
+        "minimal-ui"
+    ],
     "orientation": "portrait",
     "background_color": "#ffffff",
     "theme_color": "#10B981",

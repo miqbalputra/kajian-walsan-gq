@@ -25,7 +25,11 @@ class InjectPwaInstallPrompt
             return $response;
         }
 
-        $response->setContent(str_replace('</body>', $this->html() . '</body>', $content));
+        if (!str_contains($content, 'rel="manifest"')) {
+            $content = str_replace('</head>', $this->headHtml() . '</head>', $content);
+        }
+
+        $response->setContent(str_replace('</body>', $this->bodyHtml() . '</body>', $content));
 
         return $response;
     }
@@ -45,7 +49,27 @@ class InjectPwaInstallPrompt
         return str_contains($contentType, 'text/html') || $contentType === '';
     }
 
-    private function html(): string
+    private function headHtml(): string
+    {
+        return <<<'HTML'
+<link rel="manifest" href="/manifest.json">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Kajian Walsan">
+<link rel="apple-touch-icon" href="/icons/icon-192x192.png">
+<script>
+window.pwaDeferredPrompt = window.pwaDeferredPrompt || null;
+window.addEventListener('beforeinstallprompt', function(event) {
+    event.preventDefault();
+    window.pwaDeferredPrompt = event;
+    window.dispatchEvent(new CustomEvent('kajian-pwa-ready-to-install'));
+});
+</script>
+HTML;
+    }
+
+    private function bodyHtml(): string
     {
         return <<<'HTML'
 <div id="kajian-pwa-install-middleware" style="position:fixed;left:16px;right:16px;bottom:16px;z-index:2147483647;max-width:430px;margin:0 auto;font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif">
@@ -72,18 +96,24 @@ class InjectPwaInstallPrompt
     var key = 'kajian-pwa-install-dismissed-v1';
     var promptEvent = window.pwaDeferredPrompt || null;
     var box = document.getElementById('kajian-pwa-install-middleware');
+    var installButton = document.querySelector('[data-kajian-pwa-install]');
     function installed(){ return window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true; }
     function dismissed(){ var value = localStorage.getItem(key); return value && Date.now() - parseInt(value, 10) < 12 * 60 * 60 * 1000; }
     function hide(){ if (box) box.style.display = 'none'; }
+    function setReady(){
+        promptEvent = window.pwaDeferredPrompt || promptEvent;
+        if (installButton && promptEvent) installButton.textContent = 'Install Sekarang';
+    }
     if (installed() || dismissed()) hide();
-    window.addEventListener('beforeinstallprompt', function(event){ event.preventDefault(); promptEvent = event; window.pwaDeferredPrompt = event; });
+    window.addEventListener('beforeinstallprompt', function(event){ event.preventDefault(); promptEvent = event; window.pwaDeferredPrompt = event; setReady(); });
+    window.addEventListener('kajian-pwa-ready-to-install', setReady);
     window.addEventListener('appinstalled', function(){ localStorage.removeItem(key); hide(); });
     document.querySelectorAll('[data-kajian-pwa-close],[data-kajian-pwa-later]').forEach(function(button){
         button.addEventListener('click', function(){ localStorage.setItem(key, Date.now().toString()); hide(); });
     });
-    var install = document.querySelector('[data-kajian-pwa-install]');
-    if (install) install.addEventListener('click', async function(){
+    if (installButton) installButton.addEventListener('click', async function(){
         var ios = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+        promptEvent = window.pwaDeferredPrompt || promptEvent;
         if (promptEvent) {
             promptEvent.prompt();
             await promptEvent.userChoice;
@@ -95,6 +125,7 @@ class InjectPwaInstallPrompt
         else alert('Untuk install aplikasi: buka menu browser titik tiga, lalu pilih Install app atau Add to Home screen.');
     });
     if ('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js').catch(function(){});
+    setReady();
 })();
 </script>
 HTML;
