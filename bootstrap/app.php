@@ -17,6 +17,11 @@ return Application::configure(basePath: dirname(__DIR__))
         // Without this, Livewire upload CSRF fails with 419 in production
         $middleware->trustProxies(at: '*');
 
+        // Inject PWA install prompt at response level so it still appears if a Blade view is stale.
+        $middleware->web(append: [
+            \App\Http\Middleware\InjectPwaInstallPrompt::class,
+        ]);
+
         // Register CheckRole middleware alias for RBAC
         $middleware->alias([
             'role' => \App\Http\Middleware\CheckRole::class,
