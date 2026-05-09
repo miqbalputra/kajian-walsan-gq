@@ -9,6 +9,13 @@ fi
 # Masuk ke direktori app
 cd /var/www/html
 
+# Paksa bersihkan cache lama dari image/container sebelumnya.
+# Ini penting di deploy VPS agar Blade terbaru dari GitHub tidak kalah oleh compiled view lama.
+rm -f /var/www/html/bootstrap/cache/*.php 2>/dev/null || true
+rm -f /var/www/html/storage/framework/views/*.php 2>/dev/null || true
+php -r "if (function_exists('opcache_reset')) { opcache_reset(); }" 2>/dev/null || true
+php artisan optimize:clear --no-interaction || true
+
 # Generate key jika belum ada
 php artisan key:generate --no-interaction --force
 
@@ -18,8 +25,8 @@ php artisan migrate --force --no-interaction
 # Publish Pulse config & dashboard (jika belum ada)
 php artisan vendor:publish --provider="Laravel\Pulse\PulseServiceProvider" --no-interaction 2>/dev/null || true
 
-# Hapus compiled views agar Blaze bisa compile ulang dengan optimasi
-php artisan view:clear
+# Hapus compiled views agar Blade/Blaze compile ulang dari source terbaru
+php artisan view:clear --no-interaction
 
 # Cache config untuk production
 php artisan config:cache

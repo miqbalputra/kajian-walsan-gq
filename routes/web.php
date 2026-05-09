@@ -24,6 +24,15 @@ use Illuminate\Support\Facades\Route;
 */
 
 // Public routes
+Route::get('/__deploy-version', function () {
+    return response()->json([
+        'version' => '2026-05-09-pwa-inline-install-ff1db75',
+        'commit_hint' => 'ff1db75',
+        'pwa_inline_install' => view()->exists('components.pwa-inline-install'),
+        'timestamp' => now()->toISOString(),
+    ])->header('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0');
+})->name('deploy.version');
+
 Route::get('/', [HomeController::class, 'index'])->name('home');
 
 // QR Code Login Routes (Guest only)
