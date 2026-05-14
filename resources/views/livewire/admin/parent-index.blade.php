@@ -1290,26 +1290,61 @@
                 <link rel="stylesheet" href="${adminPrintStylesheetUrl}">
                 <style>
                     * { margin: 0; padding: 0; box-sizing: border-box; }
+                    html,
+                    body {
+                        width: 90mm;
+                        height: 58mm;
+                        margin: 0;
+                        padding: 0;
+                        overflow: hidden;
+                        background: white;
+                    }
                     body { 
                         font-family: 'Inter', sans-serif; 
                         display: flex;
                         align-items: center;
                         justify-content: center;
-                        min-height: 100vh;
-                        background: white;
+                        padding: 2mm;
+                        -webkit-print-color-adjust: exact;
+                        print-color-adjust: exact;
                     }
-                    @page { 
-                        size: 85.6mm 53.98mm; 
-                        margin: 0; 
+                    @page {
+                        size: 90mm 58mm;
+                        margin: 0;
                     }
                     #id-card-element {
                         width: 85.6mm !important;
                         height: 53.98mm !important;
+                        min-width: 85.6mm !important;
+                        min-height: 53.98mm !important;
+                        max-width: 85.6mm !important;
+                        max-height: 53.98mm !important;
                         position: relative;
                         overflow: hidden;
                         background: white;
+                        border-radius: 2mm !important;
+                        box-shadow: none !important;
                         -webkit-print-color-adjust: exact;
                         print-color-adjust: exact;
+                    }
+                    #id-card-element *,
+                    #id-card-element *::before,
+                    #id-card-element *::after {
+                        -webkit-print-color-adjust: exact;
+                        print-color-adjust: exact;
+                    }
+                    .shadow-2xl,
+                    .shadow-lg,
+                    .shadow-md,
+                    .shadow-sm {
+                        box-shadow: none !important;
+                    }
+                    @media print {
+                        html,
+                        body {
+                            width: 90mm;
+                            height: 58mm;
+                        }
                     }
                     svg { width: 100% !important; height: 100% !important; display: block; }
                     .material-symbols-rounded { font-family: 'Material Symbols Rounded'; }
