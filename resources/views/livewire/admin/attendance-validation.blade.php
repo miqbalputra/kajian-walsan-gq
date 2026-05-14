@@ -5,6 +5,13 @@
             <h1 class="text-2xl font-bold text-gray-900 dark:text-white">Validasi Presensi</h1>
             <p class="text-gray-500 dark:text-gray-400">Review dan validasi presensi online, izin, dan catatan guru</p>
         </div>
+        <button type="button" wire:click="reviewPendingWithAi"
+            wire:loading.attr="disabled" wire:target="reviewPendingWithAi"
+            class="px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-bold inline-flex items-center justify-center gap-2 transition-colors disabled:opacity-70">
+            <span class="material-symbols-rounded" wire:loading.remove wire:target="reviewPendingWithAi">auto_awesome</span>
+            <span class="material-symbols-rounded animate-spin" wire:loading wire:target="reviewPendingWithAi">progress_activity</span>
+            Cek Pending dengan AI
+        </button>
     </div>
 
     <!-- Filters -->
@@ -90,6 +97,15 @@
                                     @elseif($attendance->status === 'hadir_fisik') Hadir Fisik (QR)
                                     @else Izin @endif
                                 </span>
+                                @if($attendance->ai_validation_status)
+                                    <div class="mt-2 text-[11px] text-indigo-600 font-semibold flex items-center gap-1">
+                                        <span class="material-symbols-rounded text-sm">psychology</span>
+                                        AI: {{ str_replace('_', ' ', $attendance->ai_validation_status) }}
+                                        @if($attendance->ai_validation_confidence)
+                                            ({{ $attendance->ai_validation_confidence }}%)
+                                        @endif
+                                    </div>
+                                @endif
                             </td>
                             <td class="px-6 py-4 text-sm text-gray-500">
                                 {{ $attendance->created_at->format('d/m/Y H:i') }}
@@ -104,6 +120,12 @@
                             <td class="px-6 py-4">
                                 <div class="flex items-center justify-end gap-2">
                                     @if($attendance->validation_status === 'pending')
+                                        <button wire:click="reviewWithAi({{ $attendance->id }})"
+                                            wire:loading.attr="disabled" wire:target="reviewWithAi({{ $attendance->id }})"
+                                            class="p-2 text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"
+                                            title="Cek dengan AI">
+                                            <span class="material-symbols-rounded">auto_awesome</span>
+                                        </button>
                                         <button wire:click="approve({{ $attendance->id }})"
                                             class="p-2 text-green-600 hover:bg-green-50 rounded-lg transition-colors"
                                             title="Setujui">
@@ -199,11 +221,30 @@
                         </div>
                     @endif
 
+                    @if($selectedAttendance->ai_validation_status)
+                        <div class="mt-4 p-4 bg-indigo-50 rounded-xl border border-indigo-100">
+                            <p class="text-xs font-bold text-indigo-700 uppercase tracking-wider mb-1">Hasil Review AI:</p>
+                            <p class="text-sm text-indigo-800 font-semibold">
+                                {{ str_replace('_', ' ', $selectedAttendance->ai_validation_status) }}
+                                @if($selectedAttendance->ai_validation_confidence)
+                                    ({{ $selectedAttendance->ai_validation_confidence }}%)
+                                @endif
+                            </p>
+                            @if($selectedAttendance->ai_validation_reason)
+                                <p class="text-sm text-gray-700 mt-1">{{ $selectedAttendance->ai_validation_reason }}</p>
+                            @endif
+                        </div>
+                    @endif
+
                     @if($selectedAttendance->validation_status === 'pending')
                         <div class="mt-6 flex gap-3">
                             <button wire:click="openRejectModal({{ $selectedAttendance->id }})"
                                 class="flex-1 px-4 py-3 border border-red-200 text-red-600 rounded-xl font-medium hover:bg-red-50 transition-colors">
                                 Tolak Pengajuan
+                            </button>
+                            <button wire:click="reviewWithAi({{ $selectedAttendance->id }})"
+                                class="flex-1 px-4 py-3 bg-indigo-600 text-white rounded-xl font-medium hover:bg-indigo-700 transition-colors shadow-lg shadow-indigo-600/20">
+                                Cek AI
                             </button>
                             <button wire:click="approve({{ $selectedAttendance->id }})"
                                 class="flex-1 px-4 py-3 bg-green-600 text-white rounded-xl font-medium hover:bg-green-700 transition-colors shadow-lg shadow-green-600/20">

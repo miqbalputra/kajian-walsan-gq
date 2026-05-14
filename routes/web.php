@@ -7,6 +7,7 @@ use App\Http\Controllers\HomeController;
 use App\Http\Controllers\PanitiaAttendanceScanController;
 use App\Livewire\Admin\AnnouncementIndex;
 use App\Livewire\Admin\AttendanceValidation;
+use App\Livewire\Admin\ChatAi;
 use App\Livewire\Admin\ClassIndex;
 use App\Livewire\Admin\Dashboard;
 use App\Livewire\Admin\KajianIndex;
@@ -96,6 +97,7 @@ Route::middleware('auth')->group(function () {
         })->name('parents.kartu.download');
         Route::get('/kajian', KajianIndex::class)->name('kajian.index');
         Route::get('/announcements', AnnouncementIndex::class)->name('announcements.index');
+        Route::get('/chat-ai', ChatAi::class)->name('chat-ai');
         Route::get('/classes', ClassIndex::class)->name('classes.index');
         Route::get('/reports', ReportIndex::class)->name('reports.index');
         Route::get('/validation', AttendanceValidation::class)->name('validation.index');

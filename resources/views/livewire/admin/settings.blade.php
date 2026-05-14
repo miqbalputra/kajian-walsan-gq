@@ -121,6 +121,102 @@
             </div>
         </div>
 
+        <!-- AI Settings Card -->
+        <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+            <div class="px-6 py-4 bg-gradient-to-r from-indigo-600 to-violet-600">
+                <div class="flex items-center gap-3">
+                    <span class="material-symbols-rounded text-white text-2xl">psychology</span>
+                    <div>
+                        <h2 class="text-lg font-bold text-white">Pengaturan AI</h2>
+                        <p class="text-indigo-100 text-sm">Konfigurasi LLM untuk validasi bukti dan Chat AI</p>
+                    </div>
+                </div>
+            </div>
+            <div class="p-6 space-y-5">
+                <label class="flex items-center justify-between gap-4 p-4 bg-indigo-50 border border-indigo-100 rounded-xl">
+                    <div>
+                        <p class="font-bold text-gray-900">Aktifkan AI Review Otomatis</p>
+                        <p class="text-xs text-gray-500 mt-1">Jika aktif, upload catatan kajian dan surat izin akan dicek AI. AI hanya auto-approve jika yakin.</p>
+                    </div>
+                    <input type="checkbox" wire:model="ai_enabled"
+                        class="w-5 h-5 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500">
+                </label>
+
+                <div>
+                    <label for="ai_endpoint_url" class="block text-sm font-bold text-gray-700 mb-2">
+                        URL Endpoint AI
+                    </label>
+                    <input type="url" id="ai_endpoint_url" wire:model="ai_endpoint_url"
+                        class="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 transition-all outline-none text-gray-900 font-medium"
+                        placeholder="https://api.openai.com/v1">
+                    <p class="text-gray-500 text-xs mt-2">Gunakan endpoint OpenAI-compatible. Contoh: https://api.openai.com/v1 atau endpoint provider LLM lain.</p>
+                    @error('ai_endpoint_url')
+                        <p class="text-red-500 text-xs mt-2 font-medium">{{ $message }}</p>
+                    @enderror
+                </div>
+
+                <div>
+                    <label for="ai_api_key" class="block text-sm font-bold text-gray-700 mb-2">
+                        API Key AI
+                    </label>
+                    <input type="password" id="ai_api_key" wire:model="ai_api_key"
+                        class="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 transition-all outline-none text-gray-900 font-medium"
+                        placeholder="{{ $has_ai_api_key ? 'API key sudah tersimpan. Isi untuk mengganti.' : 'Masukkan API key' }}">
+                    <p class="text-gray-500 text-xs mt-2">
+                        API key disimpan terenkripsi dan tidak akan ditampilkan ulang.
+                    </p>
+                    @error('ai_api_key')
+                        <p class="text-red-500 text-xs mt-2 font-medium">{{ $message }}</p>
+                    @enderror
+                </div>
+
+                <div class="flex flex-col sm:flex-row gap-3">
+                    <button type="button" wire:click="loadAiModels"
+                        class="px-5 py-3 bg-slate-900 text-white rounded-xl font-bold hover:bg-black transition-all inline-flex items-center justify-center gap-2"
+                        wire:loading.attr="disabled" wire:target="loadAiModels">
+                        <span class="material-symbols-rounded" wire:loading.remove wire:target="loadAiModels">sync</span>
+                        <span class="material-symbols-rounded animate-spin" wire:loading wire:target="loadAiModels">progress_activity</span>
+                        Muat List Model
+                    </button>
+                    <div class="flex-1">
+                        <label for="ai_model" class="sr-only">Model AI</label>
+                        @if(count($ai_models) > 0)
+                            <select id="ai_model" wire:model="ai_model"
+                                class="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 transition-all outline-none text-gray-900 font-medium">
+                                @foreach($ai_models as $model)
+                                    <option value="{{ $model }}">{{ $model }}</option>
+                                @endforeach
+                            </select>
+                        @else
+                            <input type="text" id="ai_model" wire:model="ai_model"
+                                class="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 transition-all outline-none text-gray-900 font-medium"
+                                placeholder="Nama model, contoh: gpt-4o-mini">
+                        @endif
+                    </div>
+                </div>
+                @if($aiModelMessage)
+                    <p class="text-xs {{ str_contains(strtolower($aiModelMessage), 'berhasil') ? 'text-green-600' : 'text-amber-600' }} font-medium">
+                        {{ $aiModelMessage }}
+                    </p>
+                @endif
+                @error('ai_model')
+                    <p class="text-red-500 text-xs mt-2 font-medium">{{ $message }}</p>
+                @enderror
+
+                <div>
+                    <label for="ai_auto_approve_min_confidence" class="block text-sm font-bold text-gray-700 mb-2">
+                        Ambang Auto-Approve AI: {{ $ai_auto_approve_min_confidence }}%
+                    </label>
+                    <input type="range" id="ai_auto_approve_min_confidence" wire:model.live="ai_auto_approve_min_confidence"
+                        min="50" max="100" step="5" class="w-full accent-indigo-600">
+                    <p class="text-gray-500 text-xs mt-2">Rekomendasi: 80-90%. Jika AI di bawah ambang ini, presensi tetap pending untuk dicek admin.</p>
+                    @error('ai_auto_approve_min_confidence')
+                        <p class="text-red-500 text-xs mt-2 font-medium">{{ $message }}</p>
+                    @enderror
+                </div>
+            </div>
+        </div>
+
         <!-- Save Button -->
         <div class="flex justify-end">
             <button type="submit"

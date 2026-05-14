@@ -5,12 +5,14 @@ namespace App\Livewire\WaliSantri;
 use App\Models\Attendance;
 use App\Models\KajianEvent;
 use App\Models\ParentModel;
+use App\Services\AiProviderService;
 use App\Services\CloudinaryService;
 use BaconQrCode\Renderer\Image\SvgImageBackEnd;
 use BaconQrCode\Renderer\ImageRenderer;
 use BaconQrCode\Renderer\RendererStyle\RendererStyle;
 use BaconQrCode\Writer;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Log;
 use Livewire\Component;
 use Livewire\WithFileUploads;
 
@@ -188,7 +190,7 @@ class Dashboard extends Component
         $path = $result['url'];
 
         // Create attendance
-        Attendance::create([
+        $attendance = Attendance::create([
             'kajian_event_id' => $this->activeEvent->id,
             'parent_id' => $this->parent->id,
             'student_id' => $this->parent->students()->first()?->id,
@@ -199,9 +201,13 @@ class Dashboard extends Component
             'notes' => $this->notes,
         ]);
 
+        $this->runAiReview($attendance);
+
         $this->showOnlineModal = false;
         $this->reset(['proofPhoto', 'notes']);
-        session()->flash('message', 'Presensi online berhasil dikirim. Menunggu validasi.');
+        session()->flash('message', $attendance->fresh()->validation_status === 'approved'
+            ? 'Presensi online berhasil dikirim dan disetujui AI.'
+            : 'Presensi online berhasil dikirim. Menunggu validasi.');
     }
 
     public function submitIzin()
@@ -229,7 +235,7 @@ class Dashboard extends Component
         $path = $result['url'];
 
         // Create attendance with izin status
-        Attendance::create([
+        $attendance = Attendance::create([
             'kajian_event_id' => $this->activeEvent->id,
             'parent_id' => $this->parent->id,
             'student_id' => $this->parent->students()->first()?->id,
@@ -240,9 +246,13 @@ class Dashboard extends Component
             'notes' => $this->notes,
         ]);
 
+        $this->runAiReview($attendance);
+
         $this->showIzinModal = false;
         $this->reset(['izinDocument', 'notes']);
-        session()->flash('message', 'Izin berhasil dikirim. Menunggu validasi.');
+        session()->flash('message', $attendance->fresh()->validation_status === 'approved'
+            ? 'Izin berhasil dikirim dan disetujui AI.'
+            : 'Izin berhasil dikirim. Menunggu validasi.');
     }
 
     /**
@@ -301,6 +311,8 @@ class Dashboard extends Component
             'validated_at'     => null,
         ]);
 
+        $this->runAiReview($attendance->fresh());
+
         $this->showReuploadModal = false;
         $this->reset(['reuploadFile', 'reuploadAttendanceId', 'reuploadIsPendingReplace']);
 
@@ -308,6 +320,18 @@ class Dashboard extends Component
             ? 'Foto bukti berhasil diganti. Menunggu validasi admin.'
             : 'Bukti berhasil diupload ulang. Menunggu validasi admin.';
         session()->flash('message', $message);
+    }
+
+    protected function runAiReview(Attendance $attendance): void
+    {
+        try {
+            app(AiProviderService::class)->autoReviewAttendance($attendance);
+        } catch (\Throwable $exception) {
+            Log::warning('[AI] Attendance auto review failed', [
+                'attendance_id' => $attendance->id,
+                'error' => $exception->getMessage(),
+            ]);
+        }
     }
 
     /**

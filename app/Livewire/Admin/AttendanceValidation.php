@@ -3,8 +3,9 @@
 namespace App\Livewire\Admin;
 
 use App\Models\Attendance;
+use App\Services\AiProviderService;
 use App\Services\WhatsAppNotificationService;
-use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Log;
 use Livewire\Component;
 use Livewire\WithPagination;
 
@@ -102,6 +103,90 @@ class AttendanceValidation extends Component
         ]);
 
         $this->dispatch('notify', ['type' => 'info', 'message' => 'Status presensi dikembalikan ke pending.']);
+    }
+
+    public function reviewWithAi($id)
+    {
+        if (! app(AiProviderService::class)->configured()) {
+            $this->dispatch('notify', [
+                'type' => 'warning',
+                'message' => 'AI belum aktif atau belum lengkap di Pengaturan.',
+            ]);
+            return;
+        }
+
+        $attendance = Attendance::with(['parent.user', 'parent.students.classRoom', 'kajianEvent'])->findOrFail($id);
+
+        try {
+            $result = app(AiProviderService::class)->autoReviewAttendance($attendance);
+            $fresh = $attendance->fresh();
+
+            if ($fresh->validation_status === Attendance::VALIDATION_APPROVED) {
+                try {
+                    app(WhatsAppNotificationService::class)->sendApprovalNotification($fresh->load(['parent.user', 'kajianEvent']));
+                } catch (\Throwable $exception) {
+                    Log::warning('[AI] WhatsApp notification after AI approval failed', [
+                        'attendance_id' => $fresh->id,
+                        'error' => $exception->getMessage(),
+                    ]);
+                }
+            }
+
+            $message = $fresh->validation_status === Attendance::VALIDATION_APPROVED
+                ? "AI menyetujui presensi ({$result['confidence']}%)."
+                : "AI sudah mengecek ({$result['confidence']}%), tetap perlu review admin.";
+
+            $this->dispatch('notify', [
+                'type' => $fresh->validation_status === Attendance::VALIDATION_APPROVED ? 'success' : 'warning',
+                'message' => $message,
+            ]);
+        } catch (\Throwable $exception) {
+            $this->dispatch('notify', [
+                'type' => 'error',
+                'message' => 'AI gagal mengecek: ' . $exception->getMessage(),
+            ]);
+        }
+    }
+
+    public function reviewPendingWithAi()
+    {
+        if (! app(AiProviderService::class)->configured()) {
+            $this->dispatch('notify', [
+                'type' => 'warning',
+                'message' => 'AI belum aktif atau belum lengkap di Pengaturan.',
+            ]);
+            return;
+        }
+
+        $attendances = Attendance::where('method', 'upload')
+            ->where('validation_status', Attendance::VALIDATION_PENDING)
+            ->whereNotNull('proof_file')
+            ->oldest()
+            ->limit(20)
+            ->get();
+
+        $approved = 0;
+        $needsReview = 0;
+        $failed = 0;
+
+        foreach ($attendances as $attendance) {
+            try {
+                app(AiProviderService::class)->autoReviewAttendance($attendance);
+                $attendance->refresh();
+                $attendance->validation_status === Attendance::VALIDATION_APPROVED ? $approved++ : $needsReview++;
+            } catch (\Throwable $exception) {
+                $failed++;
+                Log::warning('[AI] Batch attendance review failed', [
+                    'attendance_id' => $attendance->id,
+                    'error' => $exception->getMessage(),
+                ]);
+            }
+        }
+
+        $this->dispatch('notify', [
+            'type' => $failed > 0 ? 'warning' : 'success',
+            'message' => "AI selesai: {$approved} disetujui, {$needsReview} tetap pending, {$failed} gagal.",
+        ]);
     }
 
     public function render()

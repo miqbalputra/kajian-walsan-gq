@@ -23,6 +23,12 @@ class Attendance extends Model
         'validated_by',
         'validated_at',
         'rejection_reason',
+        'ai_validation_status',
+        'ai_validation_confidence',
+        'ai_validation_reason',
+        'ai_validation_model',
+        'ai_validation_payload',
+        'ai_validated_at',
         'scanned_at',
         'scan_location',
         'device_info',
@@ -30,6 +36,8 @@ class Attendance extends Model
 
     protected $casts = [
         'validated_at' => 'datetime',
+        'ai_validated_at' => 'datetime',
+        'ai_validation_payload' => 'array',
         'scanned_at' => 'datetime',
     ];
 
