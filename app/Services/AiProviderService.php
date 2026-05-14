@@ -213,25 +213,51 @@ class AiProviderService
         return $result;
     }
 
-    public function chatWithDatabase(string $question): string
+    public function chatWithDatabase(string $question, array $conversation = []): string
     {
         $context = $this->buildDatabaseContext($question);
+        $history = collect($conversation)
+            ->filter(fn ($message) => in_array($message['role'] ?? '', ['user', 'assistant'], true))
+            ->take(-12)
+            ->map(fn ($message) => [
+                'role' => $message['role'],
+                'content' => Str::limit((string) ($message['content'] ?? ''), 1200, ''),
+            ])
+            ->values()
+            ->all();
 
-        return $this->chat([
+        $messages = [
             [
                 'role' => 'system',
-                'content' => 'Anda adalah asisten admin Kajian Walsan. Jawab dalam Bahasa Indonesia. Gunakan hanya konteks data yang diberikan. Jika user meminta foto/file, berikan link bukti yang tersedia. Jangan mengklaim melihat gambar kecuali isi gambar disediakan.',
+                'content' => implode(' ', [
+                    'Anda adalah asisten admin Kajian Walsan.',
+                    'Jawab dalam Bahasa Indonesia.',
+                    'Akurasi wajib berbasis DATA_JSON yang diberikan, bukan asumsi.',
+                    'Jika data tidak ada di konteks, katakan data tidak tersedia dan minta filter yang lebih spesifik.',
+                    'Untuk angka, hitung dari DATA_JSON atau gunakan total eksplisit yang tersedia.',
+                    'Jika user meminta foto/file/catatan/surat, tampilkan URL bukti yang tersedia.',
+                    'Jangan mengklaim melihat isi gambar kecuali gambar memang dikirim sebagai input visual.',
+                ]),
             ],
-            [
-                'role' => 'user',
-                'content' => "Pertanyaan admin:\n{$question}\n\nKonteks database saat ini:\n{$context}",
-            ],
-        ], temperature: 0.2);
+        ];
+
+        $messages = array_merge($messages, $history);
+        $messages[] = [
+            'role' => 'user',
+            'content' => "Pertanyaan admin:\n{$question}\n\nDATA_JSON dari database saat ini:\n{$context}",
+        ];
+
+        return $this->chat($messages, temperature: 0);
     }
 
     protected function buildDatabaseContext(string $question): string
     {
-        $includeProofs = Str::contains(Str::lower($question), ['foto', 'bukti', 'catatan', 'surat', 'gambar', 'file']);
+        $lowerQuestion = Str::lower($question);
+        $includeProofs = Str::contains($lowerQuestion, ['foto', 'bukti', 'catatan', 'surat', 'gambar', 'file']);
+        $wantsComplete = Str::contains($lowerQuestion, ['lengkap', 'semua', 'detail', '100%', 'seluruh']);
+        $attendanceLimit = $wantsComplete ? 500 : ($includeProofs ? 150 : 80);
+        $peopleLimit = $wantsComplete ? 400 : 120;
+        $eventLimit = $wantsComplete ? 200 : 80;
 
         $attendanceSummary = Attendance::query()
             ->selectRaw('status, validation_status, count(*) as total')
@@ -240,10 +266,9 @@ class AiProviderService
             ->map(fn ($row) => "{$row->status}/{$row->validation_status}: {$row->total}")
             ->implode('; ');
 
-        $recentUploads = Attendance::with(['parent.user', 'parent.students.classRoom', 'kajianEvent'])
-            ->whereNotNull('proof_file')
+        $attendances = Attendance::with(['parent.user', 'parent.students.classRoom', 'kajianEvent', 'validator'])
             ->orderByDesc('created_at')
-            ->limit($includeProofs ? 30 : 12)
+            ->limit($attendanceLimit)
             ->get()
             ->map(function (Attendance $attendance) {
                 $student = $attendance->parent?->students?->first();
@@ -254,9 +279,12 @@ class AiProviderService
                     'kelas' => $student?->classRoom?->name,
                     'kajian' => $attendance->kajianEvent?->title,
                     'tanggal' => optional($attendance->kajianEvent?->date)->format('d/m/Y'),
+                    'waktu_kirim' => optional($attendance->created_at)->format('d/m/Y H:i'),
                     'status' => $attendance->status,
                     'validasi' => $attendance->validation_status,
+                    'validator' => $attendance->validator?->name,
                     'catatan' => $attendance->notes,
+                    'alasan_ditolak' => $attendance->rejection_reason,
                     'ai' => trim(($attendance->ai_validation_status ?? '-') . ' ' . ($attendance->ai_validation_confidence ? "({$attendance->ai_validation_confidence}%)" : '')),
                     'bukti_url' => CloudinaryService::getDisplayUrl($attendance->proof_file),
                 ];
@@ -264,14 +292,68 @@ class AiProviderService
             ->values()
             ->toJson(JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
 
-        return implode("\n", [
-            'Jumlah user: ' . User::count(),
-            'Jumlah wali/guru parent profile: ' . ParentModel::count(),
-            'Jumlah santri: ' . Student::count(),
-            'Jumlah kajian: ' . KajianEvent::count(),
-            'Ringkasan presensi: ' . ($attendanceSummary ?: '-'),
-            'Upload bukti terbaru JSON: ' . $recentUploads,
-        ]);
+        $parents = ParentModel::with(['user', 'students.classRoom'])
+            ->orderBy('id')
+            ->limit($peopleLimit)
+            ->get()
+            ->map(fn (ParentModel $parent) => [
+                'id' => $parent->id,
+                'nama' => $parent->user?->name,
+                'username' => $parent->user?->username,
+                'email' => $parent->user?->email,
+                'tipe' => $parent->type,
+                'tipe_display' => $parent->type_display,
+                'qr_code' => $parent->qr_code_string,
+                'anak' => $parent->students->map(fn (Student $student) => [
+                    'id' => $student->id,
+                    'nama' => $student->name,
+                    'nis' => $student->nis,
+                    'kelas' => $student->classRoom?->name,
+                ])->values()->all(),
+            ])
+            ->values()
+            ->toJson(JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+
+        $events = KajianEvent::query()
+            ->orderByDesc('date')
+            ->orderByDesc('time_start')
+            ->limit($eventLimit)
+            ->get()
+            ->map(fn (KajianEvent $event) => [
+                'id' => $event->id,
+                'judul' => $event->title,
+                'tanggal' => optional($event->date)->format('d/m/Y'),
+                'jam_mulai' => optional($event->time_start)->format('H:i'),
+                'jam_selesai' => optional($event->time_end)->format('H:i'),
+                'pemateri' => $event->speaker,
+                'status' => $event->status,
+                'jumlah_presensi' => $event->attendance_count,
+            ])
+            ->values()
+            ->toJson(JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+
+        return json_encode([
+            'meta' => [
+                'generated_at' => now()->format('d/m/Y H:i:s'),
+                'question' => $question,
+                'limits' => [
+                    'attendances_sent' => $attendanceLimit,
+                    'parents_sent' => $peopleLimit,
+                    'events_sent' => $eventLimit,
+                ],
+                'totals' => [
+                    'users' => User::count(),
+                    'parents_and_teachers' => ParentModel::count(),
+                    'students' => Student::count(),
+                    'kajian_events' => KajianEvent::count(),
+                    'attendances' => Attendance::count(),
+                ],
+                'attendance_summary' => $attendanceSummary ?: '-',
+            ],
+            'kajian_events' => json_decode($events, true),
+            'parents_and_teachers' => json_decode($parents, true),
+            'attendances' => json_decode($attendances, true),
+        ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
     }
 
     protected function chatUrl(string $endpoint): string
