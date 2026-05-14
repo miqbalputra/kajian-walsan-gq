@@ -255,20 +255,11 @@
 
         /* ===== Print ===== */
         @media print {
-            html,
-            body {
-                width: 90mm;
-                height: 58mm;
-                margin: 0;
-                overflow: hidden;
-            }
             body {
                 background: white;
-                padding: 2mm;
+                padding: 0;
                 min-height: unset;
-                display: flex;
-                align-items: center;
-                justify-content: center;
+                display: block;
                 -webkit-print-color-adjust: exact;
                 print-color-adjust: exact;
             }
@@ -282,18 +273,15 @@
             }
             .id-card {
                 box-shadow: none;
-                border-radius: 2mm;
+                border-radius: 0;
+                border: none;
                 width: 85.6mm !important;
                 height: 53.98mm !important;
                 min-width: 85.6mm !important;
                 min-height: 53.98mm !important;
-                max-width: 85.6mm !important;
-                max-height: 53.98mm !important;
-                -webkit-print-color-adjust: exact;
-                print-color-adjust: exact;
             }
             @page {
-                size: 90mm 58mm;
+                size: 85.6mm 53.98mm landscape;
                 margin: 0;
             }
         }

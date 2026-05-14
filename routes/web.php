@@ -78,6 +78,22 @@ Route::middleware('auth')->group(function () {
         Route::get('/', Dashboard::class)->name('dashboard');
         Route::get('/students', StudentIndex::class)->name('students.index');
         Route::get('/parents', ParentIndex::class)->name('parents.index');
+        Route::get('/parents/{parent}/kartu/download', function (\App\Models\ParentModel $parent) {
+            $parent->loadMissing('user', 'students');
+
+            $renderer = new \BaconQrCode\Renderer\ImageRenderer(
+                new \BaconQrCode\Renderer\RendererStyle\RendererStyle(300),
+                new \BaconQrCode\Renderer\Image\SvgImageBackEnd()
+            );
+            $writer = new \BaconQrCode\Writer($renderer);
+            $qrSvg = $writer->writeString($parent->qr_code_string);
+
+            return view('pdf.kartu-identitas', [
+                'parent'   => $parent,
+                'qrSvg'    => $qrSvg,
+                'isMother' => $parent->type === 'mother',
+            ]);
+        })->name('parents.kartu.download');
         Route::get('/kajian', KajianIndex::class)->name('kajian.index');
         Route::get('/announcements', AnnouncementIndex::class)->name('announcements.index');
         Route::get('/classes', ClassIndex::class)->name('classes.index');

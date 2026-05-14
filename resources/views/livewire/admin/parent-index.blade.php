@@ -484,11 +484,11 @@
                                 class="flex-1 px-4 py-3 border border-gray-200 rounded-xl font-semibold text-gray-700 hover:bg-gray-50 transition-colors">
                                 Tutup
                             </button>
-                            <button onclick="printSingleCard()"
+                            <a href="{{ route('admin.parents.kartu.download', $cardParent) }}" target="_blank"
                                 class="flex-1 px-4 py-3 bg-gradient-to-r {{ $isMother ? 'from-rose-500 to-pink-600' : ($isTeacher ? 'from-indigo-600 to-violet-600' : 'from-emerald-600 to-teal-600') }} text-white rounded-xl font-semibold hover:opacity-90 transition-all inline-flex items-center justify-center gap-2 shadow-lg {{ $isMother ? 'shadow-rose-500/25' : ($isTeacher ? 'shadow-indigo-500/25' : 'shadow-emerald-500/25') }}">
-                                <span class="material-symbols-rounded text-xl">print</span>
-                                Cetak Kartu
-                            </button>
+                                <span class="material-symbols-rounded text-xl">download</span>
+                                Download Kartu
+                            </a>
                         </div>
                     </div>
                 </div>
@@ -1265,112 +1265,6 @@
     <script>
         (() => {
         const adminPrintStylesheetUrl = @js(Vite::asset('resources/css/app.css'));
-
-        window.printSingleCard = function() {
-            const cardElement = document.getElementById('id-card-element');
-            if (!cardElement) {
-                alert('Elemen kartu tidak ditemukan!');
-                return;
-            }
-
-            const printWindow = window.open('', '_blank');
-            if (!printWindow) {
-                alert('Pop-up terblokir! Mohon izinkan pop-up untuk mencetak kartu.');
-                return;
-            }
-
-            const title = document.querySelector('#id-card-element p.text-slate-800')?.innerText || 'Wali Santri';
-
-            printWindow.document.write(`
-            <!DOCTYPE html>
-            <html>
-            <head>
-                <title>Cetak Kartu - ${title}</title>
-                <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
-                <link rel="stylesheet" href="${adminPrintStylesheetUrl}">
-                <style>
-                    * { margin: 0; padding: 0; box-sizing: border-box; }
-                    html,
-                    body {
-                        width: 90mm;
-                        height: 58mm;
-                        margin: 0;
-                        padding: 0;
-                        overflow: hidden;
-                        background: white;
-                    }
-                    body { 
-                        font-family: 'Inter', sans-serif; 
-                        display: flex;
-                        align-items: center;
-                        justify-content: center;
-                        padding: 2mm;
-                        -webkit-print-color-adjust: exact;
-                        print-color-adjust: exact;
-                    }
-                    @page {
-                        size: 90mm 58mm;
-                        margin: 0;
-                    }
-                    #id-card-element {
-                        width: 85.6mm !important;
-                        height: 53.98mm !important;
-                        min-width: 85.6mm !important;
-                        min-height: 53.98mm !important;
-                        max-width: 85.6mm !important;
-                        max-height: 53.98mm !important;
-                        position: relative;
-                        overflow: hidden;
-                        background: white;
-                        border-radius: 2mm !important;
-                        box-shadow: none !important;
-                        -webkit-print-color-adjust: exact;
-                        print-color-adjust: exact;
-                    }
-                    #id-card-element *,
-                    #id-card-element *::before,
-                    #id-card-element *::after {
-                        -webkit-print-color-adjust: exact;
-                        print-color-adjust: exact;
-                    }
-                    .shadow-2xl,
-                    .shadow-lg,
-                    .shadow-md,
-                    .shadow-sm {
-                        box-shadow: none !important;
-                    }
-                    @media print {
-                        html,
-                        body {
-                            width: 90mm;
-                            height: 58mm;
-                        }
-                    }
-                    svg { width: 100% !important; height: 100% !important; display: block; }
-                    .material-symbols-rounded { font-family: 'Material Symbols Rounded'; }
-                </style>
-                <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" />
-            </head>
-
-            <body>
-                <div id="id-card-element" class="relative overflow-hidden shadow-none border border-gray-100">
-                    ${cardElement.innerHTML}
-                </div>
-            </body>
-
-            </html>
-            `);
-
-    printWindow.document.close();
-
-    // Wait for fonts and Tailwind to load
-    setTimeout(() => {
-    printWindow.print();
-    printWindow.onafterprint = function() {
-    printWindow.close();
-    };
-    }, 800);
-    };
 
     window.printBatchCards = function() {
     const printArea = document.getElementById('batch-print-area');
