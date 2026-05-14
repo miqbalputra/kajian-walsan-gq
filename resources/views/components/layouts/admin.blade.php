@@ -153,7 +153,7 @@
         </aside>
 
         <!-- Main Content -->
-        <div class="flex-1 flex flex-col min-h-screen">
+        <div class="flex-1 flex flex-col min-h-screen min-w-0">
             <!-- Top Header -->
             <header
                 class="h-16 bg-white dark:bg-slate-900 border-b border-gray-200 dark:border-slate-800 flex items-center justify-between px-4 lg:px-6 sticky top-0 z-40 transition-colors">
@@ -182,7 +182,7 @@
             </header>
 
             <!-- Page Content -->
-            <main class="flex-1 p-4 lg:p-6">
+            <main class="flex-1 min-w-0 overflow-x-hidden p-4 lg:p-6">
                 {{ $slot }}
             </main>
         </div>

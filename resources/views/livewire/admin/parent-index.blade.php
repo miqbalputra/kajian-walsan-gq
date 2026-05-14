@@ -1,18 +1,18 @@
-<div>
+<div class="min-w-0">
     <!-- Header -->
     <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
         <div>
             <h1 class="text-2xl font-bold text-gray-900">{{ request()->get('typeFilter') === 'teacher' ? 'Data Guru' : 'Manajemen Orang Tua' }}</h1>
             <p class="text-gray-500">{{ request()->get('typeFilter') === 'teacher' ? 'Kelola data guru dan pengajar' : 'Kelola data wali santri dan generate kartu ID' }}</p>
         </div>
-        <div class="flex gap-3">
+        <div class="flex flex-wrap gap-3 sm:justify-end">
             <button wire:click="$set('showImportModal', true)"
-                class="inline-flex items-center justify-center gap-2 px-4 py-3 bg-white border border-gray-200 text-gray-700 rounded-xl font-semibold hover:bg-gray-50 transition-colors">
+                class="inline-flex shrink-0 items-center justify-center gap-2 px-4 py-3 bg-white border border-gray-200 text-gray-700 rounded-xl font-semibold hover:bg-gray-50 transition-colors">
                 <span class="material-symbols-rounded">upload_file</span>
                 Import
             </button>
             <button wire:click="openCreateModal"
-                class="inline-flex items-center justify-center gap-2 px-6 py-3 bg-primary-500 text-white rounded-xl font-semibold hover:bg-primary-600 transition-colors shadow-lg shadow-primary-500/25">
+                class="inline-flex shrink-0 items-center justify-center gap-2 px-6 py-3 bg-primary-500 text-white rounded-xl font-semibold hover:bg-primary-600 transition-colors shadow-lg shadow-primary-500/25">
                 <span class="material-symbols-rounded">add</span>
                 {{ request()->get('typeFilter') === 'teacher' ? 'Tambah Guru' : 'Tambah Orang Tua' }}
             </button>
@@ -29,8 +29,8 @@
 
     <!-- Filters -->
     <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 mb-6">
-        <div class="flex flex-col sm:flex-row gap-4">
-            <div class="flex-1">
+        <div class="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-[minmax(260px,1fr)_minmax(150px,180px)_minmax(150px,180px)_minmax(130px,160px)_auto] xl:items-center">
+            <div class="min-w-0">
                 <div class="relative">
                     <span
                         class="material-symbols-rounded absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">search</span>
@@ -39,7 +39,7 @@
                         class="w-full pl-10 pr-4 py-2.5 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-transparent">
                 </div>
             </div>
-            <div class="sm:w-40">
+            <div class="min-w-0">
                 <select wire:model.live="typeFilter"
                     class="w-full px-4 py-2.5 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-transparent">
                     <option value="">Semua Tipe</option>
@@ -48,7 +48,7 @@
                     <option value="teacher">Guru</option>
                 </select>
             </div>
-            <div class="sm:w-40">
+            <div class="min-w-0">
                 <select wire:model.live="classFilter"
                     class="w-full px-4 py-2.5 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-transparent">
                     <option value="">Semua Kelas</option>
@@ -57,7 +57,7 @@
                     @endforeach
                 </select>
             </div>
-            <div class="sm:w-36">
+            <div class="min-w-0">
                 <select wire:model.live="perPage"
                     class="w-full px-4 py-2.5 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-transparent">
                     <option value="10">10 / hal</option>
@@ -68,7 +68,7 @@
                 </select>
             </div>
             <button wire:click="openBatchPrintModal"
-                class="inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-secondary-500 text-white rounded-xl font-semibold hover:bg-secondary-600 transition-colors shadow-lg shadow-secondary-500/25">
+                class="inline-flex shrink-0 items-center justify-center gap-2 px-4 py-2.5 bg-secondary-500 text-white rounded-xl font-semibold hover:bg-secondary-600 transition-colors shadow-lg shadow-secondary-500/25">
                 <span class="material-symbols-rounded">print</span>
                 Cetak Kartu
             </button>
@@ -78,18 +78,18 @@
     <!-- Table -->
     <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
         <div class="overflow-x-auto">
-            <table class="w-full">
+            <table class="w-full min-w-[1260px] table-fixed">
                 <thead class="bg-gray-50 border-b border-gray-100">
                     <tr>
-                        <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                        <th class="w-[30%] px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
                             Orang Tua</th>
-                        <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                        <th class="w-[10%] px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
                             Tipe</th>
-                        <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                        <th class="w-[31%] px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
                             Anak</th>
-                        <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">QR
+                        <th class="w-[12%] px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">QR
                             Code</th>
-                        <th class="px-6 py-4 text-right text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                        <th class="w-[17%] px-6 py-4 text-right text-xs font-semibold text-gray-600 uppercase tracking-wider">
                             Aksi</th>
                     </tr>
                 </thead>
@@ -97,19 +97,19 @@
                     @forelse($parents as $parent)
                         <tr class="hover:bg-gray-50 transition-colors">
                             <td class="px-6 py-4">
-                                <div class="flex items-center gap-3">
+                                <div class="flex min-w-0 items-center gap-3">
                                     <div
-                                        class="w-10 h-10 bg-{{ $parent->type === 'father' ? 'blue-100 dark:bg-blue-900/40' : ($parent->type === 'mother' ? 'pink-100 dark:bg-pink-900/40' : 'indigo-100 dark:bg-indigo-900/40') }} rounded-full flex items-center justify-center transition-colors">
+                                        class="w-10 h-10 shrink-0 bg-{{ $parent->type === 'father' ? 'blue-100 dark:bg-blue-900/40' : ($parent->type === 'mother' ? 'pink-100 dark:bg-pink-900/40' : 'indigo-100 dark:bg-indigo-900/40') }} rounded-full flex items-center justify-center transition-colors">
                                         <span
                                             class="material-symbols-rounded text-{{ $parent->type === 'father' ? 'blue-600 dark:text-blue-400' : ($parent->type === 'mother' ? 'pink-600 dark:text-pink-400' : 'indigo-600 dark:text-indigo-400') }}">{{ $parent->type === 'father' ? 'man' : ($parent->type === 'mother' ? 'woman' : 'person_book') }}</span>
                                     </div>
-                                    <div>
-                                        <p class="font-medium text-gray-900">{{ $parent->user?->name }}</p>
-                                        <p class="text-xs text-primary-600 font-semibold mb-1">@
+                                    <div class="min-w-0">
+                                        <p class="truncate font-medium text-gray-900">{{ $parent->user?->name }}</p>
+                                        <p class="truncate text-xs text-primary-600 font-semibold mb-1">@
                                             {{ $parent->user?->username }}
                                         </p>
-                                        <div class="flex items-center gap-2">
-                                            <p class="text-sm text-gray-500">{{ $parent->user?->email }}</p>
+                                        <div class="flex min-w-0 flex-wrap items-center gap-2">
+                                            <p class="min-w-0 truncate text-sm text-gray-500">{{ $parent->user?->email }}</p>
                                             @if($phone = $parent->user?->phone)
                                                 @php
                                                     $waUrl = 'https://wa.me/' . preg_replace('/^0/', '62', preg_replace('/[^0-9]/', '', $phone));
@@ -127,7 +127,7 @@
                             <td class="px-6 py-4">
                                 <div class="flex flex-col gap-1">
                                     <span
-                                        class="px-2 py-1 rounded-lg text-xs font-medium {{ $parent->type === 'father' ? 'bg-blue-100 text-blue-700' : ($parent->type === 'mother' ? 'bg-pink-100 text-pink-700' : 'bg-indigo-100 text-indigo-700') }}">
+                                        class="w-fit px-2 py-1 rounded-lg text-xs font-medium {{ $parent->type === 'father' ? 'bg-blue-100 text-blue-700' : ($parent->type === 'mother' ? 'bg-pink-100 text-pink-700' : 'bg-indigo-100 text-indigo-700') }}">
                                         {{ $parent->type_display }}
                                     </span>
                                     @if($parent->is_single_parent)
@@ -140,21 +140,21 @@
                                 </div>
                             </td>
                             <td class="px-6 py-4">
-                                <div class="flex flex-wrap gap-1">
+                                <div class="flex min-w-0 flex-wrap gap-1">
                                     @forelse($parent->students as $student)
                                         <span
-                                            class="px-2 py-1 bg-gray-100 text-gray-700 rounded-lg text-xs">{{ $student->name }}
+                                            class="max-w-full truncate px-2 py-1 bg-gray-100 text-gray-700 rounded-lg text-xs">{{ $student->name }}
                                             <span class="text-gray-400">({{ $student->classRoom?->name ?? '-' }})</span></span>
                                     @empty
                                         <span class="text-gray-400 text-sm">-</span>
                                     @endforelse
                                 </div>
                             </td>
-                            <td class="px-6 py-4 font-mono text-xs text-gray-600">
+                            <td class="px-6 py-4 font-mono text-xs text-gray-600 break-all">
                                 {{ Str::limit($parent->qr_code_string, 15) }}
                             </td>
                             <td class="px-6 py-4">
-                                <div class="flex items-center justify-end gap-2">
+                                <div class="flex flex-nowrap items-center justify-end gap-1">
                                     <button wire:click="showCard({{ $parent->id }})"
                                         class="p-2 text-gray-600 hover:text-secondary-600 hover:bg-secondary-50 rounded-lg transition-colors"
                                         title="Generate Kartu">

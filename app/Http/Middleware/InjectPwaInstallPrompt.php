@@ -43,6 +43,8 @@ class InjectPwaInstallPrompt
         if (
             $request->expectsJson() ||
             $request->is('__deploy-version') ||
+            $request->is('admin') ||
+            $request->is('admin/*') ||
             $request->is('livewire/*') ||
             $request->headers->has('X-Livewire') ||
             $request->headers->has('X-Livewire-Navigate')
