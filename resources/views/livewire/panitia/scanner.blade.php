@@ -327,21 +327,31 @@
                     hasCamera: true,
                     scanner: null,
                     isProcessing: false,
-                    // Selalu mulai dengan kamera depan tanpa fallback otomatis dari localStorage jika tidak diinginkan
-                    // Jika preferensi adalah belakang, bisa dibaca dari localStorage. Tapi default kita adalah 'user'
-                    facingMode: localStorage.getItem('scanner_camera_pref') || 'user',
+                    facingMode: localStorage.getItem('scanner_camera_pref') || 'environment',
                     isFullscreen: false,
                     zoomValue: 1,
                     minZoom: 1,
                     maxZoom: 5,
                     hasZoom: false,
                     track: null,
+                    scanEndpoint: @js(route('panitia.scan.store')),
+                    scanCooldownMs: 250,
+                    successDisplayMs: 2200,
+                    fullscreenListenerBound: false,
 
                     init() {
                         this.startScanner();
 
+                        if (!this.fullscreenListenerBound) {
+                            document.addEventListener('fullscreenchange', () => {
+                                this.isFullscreen = !!document.fullscreenElement;
+                            });
+                            this.fullscreenListenerBound = true;
+                        }
+
                         Livewire.on('scan-success', (data) => {
                             this.showSuccessAlert(data[0]);
+                            window.Livewire?.dispatch('refreshScannerData');
                         });
 
                         Livewire.on('scan-error', (data) => {
@@ -357,7 +367,7 @@
                                 toast: true,
                                 position: 'top'
                             }).then(() => {
-                                this.isProcessing = false;
+                                this.releaseProcessingLock();
                             });
                         });
 
@@ -366,13 +376,13 @@
                                 icon: 'warning',
                                 title: 'Sudah Tercatat Sebelumnya',
                                 text: data.message,
-                                showConfirmButton: false, // Auto close!
-                                timer: 3000,
+                                showConfirmButton: false,
+                                timer: 1800,
                                 timerProgressBar: true,
                                 background: '#fffbeb',
                                 color: '#b45309'
                             }).then(() => {
-                                this.isProcessing = false;
+                                this.releaseProcessingLock();
                             });
                         });
                     },
@@ -390,27 +400,45 @@
                                 this.scanner = new Html5Qrcode("qr-reader");
                             }
 
-                            // Konfigurasi optimal untuk HP (Android/iOS)
+                            const formats = window.Html5QrcodeSupportedFormats
+                                ? [window.Html5QrcodeSupportedFormats.QR_CODE]
+                                : undefined;
+
                             const config = { 
-                                fps: 20, 
+                                fps: 12, 
                                 qrbox: (viewfinderWidth, viewfinderHeight) => {
                                     const minEdge = Math.min(viewfinderWidth, viewfinderHeight);
-                                    // Perkecil sedikit margin agar area scan lebih luas (85%)
-                                    const qrboxSize = Math.floor(minEdge * 0.85);
+                                    const qrboxSize = Math.floor(minEdge * 0.72);
                                     return { width: qrboxSize, height: qrboxSize };
                                 },
-                                // Fitur eksperimental untuk kecepatan maksimal (Native Barcode API)
                                 experimentalFeatures: {
                                     useBarCodeDetectorIfSupported: true
-                                }
+                                },
+                                formatsToSupport: formats
                             };
 
-                            await this.scanner.start(
-                                { facingMode: this.facingMode },
-                                config,
-                                (decodedText) => this.onScanSuccess(decodedText),
-                                (error) => { } 
-                            );
+                            try {
+                                await this.scanner.start(
+                                    { facingMode: { exact: this.facingMode } },
+                                    config,
+                                    (decodedText) => this.onScanSuccess(decodedText),
+                                    () => {}
+                                );
+                            } catch (primaryError) {
+                                const cameras = await window.Html5Qrcode.getCameras();
+                                const fallbackCameraId = cameras[0]?.id;
+
+                                if (!fallbackCameraId) {
+                                    throw primaryError;
+                                }
+
+                                await this.scanner.start(
+                                    fallbackCameraId,
+                                    config,
+                                    (decodedText) => this.onScanSuccess(decodedText),
+                                    () => {}
+                                );
+                            }
 
                             this.scanning = true;
                             this.hasCamera = true;
@@ -480,10 +508,6 @@
                             this.isFullscreen = false;
                         }
 
-                        // Listen for Escape key or manual exit via browser UI
-                        document.addEventListener('fullscreenchange', () => {
-                            this.isFullscreen = !!document.fullscreenElement;
-                        });
                     },
 
                     async stopScanner() {
@@ -515,11 +539,84 @@
                         }
                     },
 
-                    onScanSuccess(qrCode) {
+                    async onScanSuccess(qrCode) {
                         if (this.isProcessing) return;
                         this.isProcessing = true;
+                        await this.processScanRequest(qrCode);
+                    },
 
-                        @this.processQrCode(qrCode);
+                    async processScanRequest(qrCode) {
+                        try {
+                            const response = await fetch(this.scanEndpoint, {
+                                method: 'POST',
+                                headers: {
+                                    'Content-Type': 'application/json',
+                                    'Accept': 'application/json',
+                                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content || '',
+                                    'X-Requested-With': 'XMLHttpRequest'
+                                },
+                                body: JSON.stringify({ qr_code: qrCode })
+                            });
+
+                            const result = await response.json();
+
+                            if (result.status === 'success') {
+                                this.showSuccessAlert(result.payload);
+                                window.Livewire?.dispatch('refreshScannerData');
+                                return;
+                            }
+
+                            if (result.status === 'warning') {
+                                Swal.fire({
+                                    icon: 'warning',
+                                    title: 'Sudah Tercatat Sebelumnya',
+                                    text: result.message,
+                                    showConfirmButton: false,
+                                    timer: 1800,
+                                    timerProgressBar: true,
+                                    background: '#fffbeb',
+                                    color: '#b45309'
+                                }).then(() => {
+                                    this.releaseProcessingLock();
+                                });
+                                return;
+                            }
+
+                            Swal.fire({
+                                icon: 'error',
+                                title: 'Barcode Tidak Dikenali',
+                                text: result.message || 'QR Code tidak bisa diproses.',
+                                showConfirmButton: false,
+                                timer: 2000,
+                                timerProgressBar: true,
+                                background: '#fef2f2',
+                                color: '#991b1b',
+                                toast: true,
+                                position: 'top'
+                            }).then(() => {
+                                this.releaseProcessingLock();
+                            });
+                        } catch (error) {
+                            console.error('Scan request failed', error);
+                            Swal.fire({
+                                icon: 'error',
+                                title: 'Koneksi Terganggu',
+                                text: 'Permintaan scan belum sampai ke server. Coba arahkan ulang QR setelah koneksi stabil.',
+                                showConfirmButton: false,
+                                timer: 2200,
+                                timerProgressBar: true,
+                                background: '#fef2f2',
+                                color: '#991b1b'
+                            }).then(() => {
+                                this.releaseProcessingLock();
+                            });
+                        }
+                    },
+
+                    releaseProcessingLock() {
+                        window.setTimeout(() => {
+                            this.isProcessing = false;
+                        }, this.scanCooldownMs);
                     },
 
                     showSuccessAlert(data) {
@@ -529,7 +626,7 @@
                             html: `
                                 <div class="text-center py-2">
                                     <div class="w-24 h-24 bg-green-100 rounded-3xl flex items-center justify-center mx-auto mb-5 shadow-inner border-4 border-white">
-                                        <span style="font-size: 56px;">✅</span>
+                                        <span style="font-size: 56px;">OK</span>
                                     </div>
                                     <p class="text-2xl font-black text-gray-900 mb-1">${data.parentType} ${data.parentName}</p>
                                     <div class="inline-block px-4 py-2 bg-white rounded-xl shadow-sm border border-green-100 mt-2">
@@ -538,10 +635,10 @@
                                     </div>
                                 </div>
                             `,
-                            showConfirmButton: false, // Menghilangkan tombol konfirmasi (Orang tidak perlu tap)
-                            timer: 4000, // Tutup otomatis 4 detik
+                            showConfirmButton: false,
+                            timer: this.successDisplayMs,
                             timerProgressBar: true,
-                            background: '#ecfdf5', // Warna hijau cerah
+                            background: '#ecfdf5',
                             color: '#047857',
                             backdrop: `rgba(0,0,0,0.6)`,
                             allowOutsideClick: false,
@@ -550,7 +647,7 @@
                                 popup: 'rounded-3xl shadow-2xl border-b-8 border-green-500'
                             }
                         }).then(() => {
-                            this.isProcessing = false;
+                            this.releaseProcessingLock();
                         });
                     }
                 }

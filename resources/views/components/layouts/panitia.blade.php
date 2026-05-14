@@ -36,7 +36,7 @@
     <!-- SweetAlert2 -->
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
-    @vite(['resources/css/app.css', 'resources/js/app.js'])
+    @vite(['resources/css/app.css', 'resources/js/app.js', 'resources/js/panitia-scanner.js'])
     @livewireStyles
 </head>
 
@@ -75,7 +75,6 @@
     </div>
 
     @livewireScripts
-    <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
     @stack('scripts')
 
     {{-- PWA Install Banner & Service Worker --}}

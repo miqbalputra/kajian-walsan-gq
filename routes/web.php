@@ -4,6 +4,7 @@ use App\Http\Controllers\Auth\GoogleController;
 use App\Http\Controllers\Auth\ForgotPasswordController;
 use App\Http\Controllers\Auth\QrLoginController;
 use App\Http\Controllers\HomeController;
+use App\Http\Controllers\PanitiaAttendanceScanController;
 use App\Livewire\Admin\AnnouncementIndex;
 use App\Livewire\Admin\AttendanceValidation;
 use App\Livewire\Admin\ClassIndex;
@@ -91,6 +92,7 @@ Route::middleware('auth')->group(function () {
     // Panitia Routes - Admin and Panitia can access
     Route::prefix('panitia')->name('panitia.')->middleware('role:admin,panitia')->group(function () {
         Route::get('/scanner', Scanner::class)->name('scanner');
+        Route::post('/scan', [PanitiaAttendanceScanController::class, 'store'])->name('scan.store');
         Route::get('/jadwal', \App\Livewire\Panitia\JadwalKajian::class)->name('jadwal');
     });
 
