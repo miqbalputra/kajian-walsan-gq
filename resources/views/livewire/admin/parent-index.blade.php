@@ -1261,7 +1261,10 @@
         </div>
     @endif
 
+    @push('scripts')
     <script>
+        const adminPrintStylesheetUrl = @js(Vite::asset('resources/css/app.css'));
+
         function printSingleCard() {
             const cardElement = document.getElementById('id-card-element');
             if (!cardElement) {
@@ -1283,6 +1286,7 @@
             <head>
                 <title>Cetak Kartu - ${title}</title>
                 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+                <link rel="stylesheet" href="${adminPrintStylesheetUrl}">
                 <style>
                     * { margin: 0; padding: 0; box-sizing: border-box; }
                     body { 
@@ -1310,7 +1314,6 @@
                     .material-symbols-rounded { font-family: 'Material Symbols Rounded'; }
                 </style>
                 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" />
-                <script src="https://cdn.tailwindcss.com"><\/script>
             </head>
 
             <body>
@@ -1354,6 +1357,7 @@
         <title>Cetak Kartu - Kelas</title>
         <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap"
             rel="stylesheet">
+        <link rel="stylesheet" href="${adminPrintStylesheetUrl}">
         <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" />
         <style>
             * {
@@ -1439,5 +1443,6 @@
     }, 800);
     }
     </script>
+    @endpush
 </div>
 
