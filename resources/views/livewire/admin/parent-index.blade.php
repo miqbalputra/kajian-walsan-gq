@@ -95,7 +95,7 @@
                 </thead>
                 <tbody class="divide-y divide-gray-100">
                     @forelse($parents as $parent)
-                        <tr class="hover:bg-gray-50 transition-colors">
+                        <tr wire:key="parent-row-{{ $parent->id }}" class="hover:bg-gray-50 transition-colors">
                             <td class="px-6 py-4">
                                 <div class="flex min-w-0 items-center gap-3">
                                     <div
@@ -155,27 +155,27 @@
                             </td>
                             <td class="px-6 py-4">
                                 <div class="flex flex-nowrap items-center justify-end gap-1">
-                                    <button wire:click="showCard({{ $parent->id }})"
-                                        class="p-2 text-gray-600 hover:text-secondary-600 hover:bg-secondary-50 rounded-lg transition-colors"
+                                    <button type="button" wire:click="showCard({{ $parent->id }})"
+                                        class="relative z-10 p-2 text-gray-600 hover:text-secondary-600 hover:bg-secondary-50 rounded-lg transition-colors"
                                         title="Generate Kartu">
                                         <span class="material-symbols-rounded text-xl">qr_code_2</span>
                                     </button>
-                                    <button wire:click="showHistory({{ $parent->id }})"
-                                        class="p-2 text-gray-600 hover:text-primary-600 hover:bg-primary-50 rounded-lg transition-colors"
+                                    <button type="button" wire:click="showHistory({{ $parent->id }})"
+                                        class="relative z-10 p-2 text-gray-600 hover:text-primary-600 hover:bg-primary-50 rounded-lg transition-colors"
                                         title="Riwayat Presensi Lengkap">
                                         <span class="material-symbols-rounded text-xl">history_edu</span>
                                     </button>
-                                    <button wire:click="openManualAttendanceModal({{ $parent->id }})"
-                                        class="p-2 text-gray-600 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors"
+                                    <button type="button" wire:click="openManualAttendanceModal({{ $parent->id }})"
+                                        class="relative z-10 p-2 text-gray-600 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors"
                                         title="Input Presensi Manual">
                                         <span class="material-symbols-rounded text-xl">person_check</span>
                                     </button>
-                                    <button wire:click="openEditModal({{ $parent->id }})"
-                                        class="p-2 text-gray-600 hover:text-primary-600 hover:bg-primary-50 rounded-lg transition-colors">
+                                    <button type="button" wire:click="openEditModal({{ $parent->id }})"
+                                        class="relative z-10 p-2 text-gray-600 hover:text-primary-600 hover:bg-primary-50 rounded-lg transition-colors">
                                         <span class="material-symbols-rounded text-xl">edit</span>
                                     </button>
-                                    <button wire:click="confirmDelete({{ $parent->id }})"
-                                        class="p-2 text-gray-600 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors">
+                                    <button type="button" wire:click="confirmDelete({{ $parent->id }})"
+                                        class="relative z-10 p-2 text-gray-600 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors">
                                         <span class="material-symbols-rounded text-xl">delete</span>
                                     </button>
                                 </div>
@@ -1263,9 +1263,10 @@
 
     @push('scripts')
     <script>
+        (() => {
         const adminPrintStylesheetUrl = @js(Vite::asset('resources/css/app.css'));
 
-        function printSingleCard() {
+        window.printSingleCard = function() {
             const cardElement = document.getElementById('id-card-element');
             if (!cardElement) {
                 alert('Elemen kartu tidak ditemukan!');
@@ -1334,9 +1335,9 @@
     printWindow.close();
     };
     }, 800);
-    }
+    };
 
-    function printBatchCards() {
+    window.printBatchCards = function() {
     const printArea = document.getElementById('batch-print-area');
     if (!printArea) {
     alert('Data cetak tidak tersedia!');
@@ -1441,7 +1442,8 @@
     printWindow.close();
     };
     }, 800);
-    }
+    };
+    })();
     </script>
     @endpush
 </div>
