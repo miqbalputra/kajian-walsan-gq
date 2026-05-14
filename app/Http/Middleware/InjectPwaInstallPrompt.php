@@ -40,7 +40,13 @@ class InjectPwaInstallPrompt
             return false;
         }
 
-        if ($request->expectsJson() || $request->is('__deploy-version')) {
+        if (
+            $request->expectsJson() ||
+            $request->is('__deploy-version') ||
+            $request->is('livewire/*') ||
+            $request->headers->has('X-Livewire') ||
+            $request->headers->has('X-Livewire-Navigate')
+        ) {
             return false;
         }
 

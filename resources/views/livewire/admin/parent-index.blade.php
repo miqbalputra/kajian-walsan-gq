@@ -1311,20 +1311,6 @@
                 </style>
                 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" />
                 <script src="https://cdn.tailwindcss.com"><\/script>
-                <script>
-                    tailwind.config = {
-                        theme: {
-                            extend: {
-                                colors: {
-                                    emerald: { 600: '#059669' },
-                                    teal: { 500: '#14b8a6' },
-                                    rose: { 500: '#f43f5e', 600: '#e11d48' },
-                                    pink: { 500: '#ec4899', 600: '#db2777' }
-                                }
-                            }
-                        }
-                    }
-                <\/script>
             </head>
 
             <body>
