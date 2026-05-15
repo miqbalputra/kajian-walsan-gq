@@ -186,7 +186,10 @@ class Dashboard extends Component
 
         // Upload via CloudinaryService (or local fallback)
         $cloudinary = app(CloudinaryService::class);
-        $result = $cloudinary->upload($this->proofPhoto, 'attendance-proofs');
+        $result = $cloudinary->upload(
+            $this->proofPhoto,
+            $this->isGuru ? 'teacher-attendance-notes' : 'attendance-proofs'
+        );
         $path = $result['url'];
 
         // Create attendance
@@ -231,7 +234,10 @@ class Dashboard extends Component
 
         // Upload via CloudinaryService (or local fallback)
         $cloudinary = app(CloudinaryService::class);
-        $result = $cloudinary->upload($this->izinDocument, 'izin-documents');
+        $result = $cloudinary->upload(
+            $this->izinDocument,
+            $this->isGuru ? 'teacher-permission-letters' : 'izin-documents'
+        );
         $path = $result['url'];
 
         // Create attendance with izin status
@@ -298,7 +304,12 @@ class Dashboard extends Component
 
         // Upload file baru via Cloudinary/local
         $cloudinary = app(CloudinaryService::class);
-        $folder = $attendance->status === 'izin' ? 'izin-documents' : 'attendance-proofs';
+        $folder = match (true) {
+            $this->isGuru && $attendance->status === 'izin' => 'teacher-permission-letters',
+            $this->isGuru => 'teacher-attendance-notes',
+            $attendance->status === 'izin' => 'izin-documents',
+            default => 'attendance-proofs',
+        };
         $result  = $cloudinary->upload($this->reuploadFile, $folder);
         $path    = $result['url'];
 

@@ -14,6 +14,7 @@ use App\Livewire\Admin\KajianIndex;
 use App\Livewire\Admin\ParentIndex;
 use App\Livewire\Admin\ReportIndex;
 use App\Livewire\Admin\StudentIndex;
+use App\Livewire\Admin\TeacherAttendanceIndex;
 use App\Livewire\Admin\UserIndex;
 use App\Livewire\Panitia\Scanner;
 use App\Livewire\WaliSantri\Dashboard as WaliSantriDashboard;
@@ -98,6 +99,7 @@ Route::middleware('auth')->group(function () {
         Route::get('/kajian', KajianIndex::class)->name('kajian.index');
         Route::get('/announcements', AnnouncementIndex::class)->name('announcements.index');
         Route::get('/chat-ai', ChatAi::class)->name('chat-ai');
+        Route::get('/teacher-attendance', TeacherAttendanceIndex::class)->name('teacher-attendance.index');
         Route::get('/classes', ClassIndex::class)->name('classes.index');
         Route::get('/reports', ReportIndex::class)->name('reports.index');
         Route::get('/validation', AttendanceValidation::class)->name('validation.index');

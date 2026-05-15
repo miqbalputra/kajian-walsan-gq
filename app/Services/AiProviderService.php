@@ -385,8 +385,27 @@ class AiProviderService
         $roster = $parents->map(function (ParentModel $parent) use ($attendances) {
             $attendance = $attendances->get($parent->id);
             $student = $parent->students->first();
+            $status = $attendance?->status ?? Attendance::STATUS_ALPHA;
+            $validation = $attendance?->validation_status;
+            $reason = null;
+
+            if ($parent->isTeacher()) {
+                if (! $attendance) {
+                    $status = Attendance::STATUS_ALPHA;
+                    $reason = 'Guru belum scan QR, belum upload catatan, dan belum mengirim izin.';
+                } elseif (! $attendance->proof_file) {
+                    $status = Attendance::STATUS_ALPHA;
+                    $reason = $attendance->status === Attendance::STATUS_HADIR_FISIK
+                        ? 'Guru sudah scan QR tetapi belum upload catatan hasil kajian.'
+                        : 'Guru belum upload dokumen wajib.';
+                } elseif ($attendance->validation_status !== Attendance::VALIDATION_APPROVED) {
+                    $status = $attendance->validation_status;
+                    $reason = 'Dokumen guru sudah ada tetapi belum disetujui.';
+                }
+            }
 
             return [
+                'audience' => $parent->isTeacher() ? 'guru' : 'wali_santri',
                 'parent_id' => $parent->id,
                 'nama' => $parent->user?->name,
                 'username' => $parent->user?->username,
@@ -394,12 +413,15 @@ class AiProviderService
                 'anak' => $student?->name,
                 'nis' => $student?->nis,
                 'kelas' => $student?->classRoom?->name,
-                'status' => $attendance?->status ?? 'alpha',
-                'validasi' => $attendance?->validation_status ?? null,
+                'status' => $status,
+                'validasi' => $validation,
+                'alasan_status' => $reason,
                 'catatan' => $attendance?->notes,
                 'bukti_url' => $attendance?->proof_file ? CloudinaryService::getDisplayUrl($attendance->proof_file) : null,
             ];
         });
+        $guardianRoster = $roster->where('audience', 'wali_santri')->values();
+        $teacherRoster = $roster->where('audience', 'guru')->values();
 
         return [
             'event' => [
@@ -411,15 +433,33 @@ class AiProviderService
             ],
             'summary' => [
                 'total_wali_guru' => $roster->count(),
+                'total_wali_santri' => $guardianRoster->count(),
+                'total_guru' => $teacherRoster->count(),
                 'hadir_fisik' => $roster->where('status', Attendance::STATUS_HADIR_FISIK)->count(),
                 'hadir_online' => $roster->where('status', Attendance::STATUS_HADIR_ONLINE)->count(),
                 'izin' => $roster->where('status', Attendance::STATUS_IZIN)->count(),
                 'alpha' => $roster->where('status', 'alpha')->count(),
+                'guru_alpha' => $teacherRoster->where('status', Attendance::STATUS_ALPHA)->count(),
+                'wali_alpha' => $guardianRoster->where('status', Attendance::STATUS_ALPHA)->count(),
             ],
             'alpha' => $roster->where('status', 'alpha')->values()->all(),
             'hadir_fisik' => $roster->where('status', Attendance::STATUS_HADIR_FISIK)->values()->all(),
             'hadir_online' => $roster->where('status', Attendance::STATUS_HADIR_ONLINE)->values()->all(),
             'izin' => $roster->where('status', Attendance::STATUS_IZIN)->values()->all(),
+            'wali_santri' => [
+                'alpha' => $guardianRoster->where('status', Attendance::STATUS_ALPHA)->values()->all(),
+                'hadir_fisik' => $guardianRoster->where('status', Attendance::STATUS_HADIR_FISIK)->values()->all(),
+                'hadir_online' => $guardianRoster->where('status', Attendance::STATUS_HADIR_ONLINE)->values()->all(),
+                'izin' => $guardianRoster->where('status', Attendance::STATUS_IZIN)->values()->all(),
+            ],
+            'guru' => [
+                'alpha' => $teacherRoster->where('status', Attendance::STATUS_ALPHA)->values()->all(),
+                'hadir_fisik' => $teacherRoster->where('status', Attendance::STATUS_HADIR_FISIK)->values()->all(),
+                'hadir_online' => $teacherRoster->where('status', Attendance::STATUS_HADIR_ONLINE)->values()->all(),
+                'izin' => $teacherRoster->where('status', Attendance::STATUS_IZIN)->values()->all(),
+                'pending' => $teacherRoster->where('status', Attendance::VALIDATION_PENDING)->values()->all(),
+                'rejected' => $teacherRoster->where('status', Attendance::VALIDATION_REJECTED)->values()->all(),
+            ],
         ];
     }
 

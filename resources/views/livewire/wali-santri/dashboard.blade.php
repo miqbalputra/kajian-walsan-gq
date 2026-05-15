@@ -251,7 +251,7 @@
                                 <button wire:click="$set('showOnlineModal', true)"
                                     class="py-3 bg-secondary-50 text-secondary-700 rounded-xl font-medium flex items-center justify-center gap-2 hover:bg-secondary-100 transition-colors">
                                     <span class="material-symbols-rounded">videocam</span>
-                                    Hadir Online
+                                    {{ $this->isGuru ? 'Menyimak Online' : 'Hadir Online' }}
                                 </button>
 
                                 <!-- Permission/Izin -->
@@ -430,10 +430,10 @@
                     <!-- Handle Bar -->
                     <div class="w-16 h-1.5 bg-slate-200 rounded-full mx-auto mb-8"></div>
 
-                    <h3 class="text-2xl font-black text-slate-900 mb-2">Hadir Online</h3>
+                    <h3 class="text-2xl font-black text-slate-900 mb-2">{{ $this->isGuru ? 'Izin Menyimak Online' : 'Hadir Online' }}</h3>
                     <p class="text-slate-500 text-sm mb-6 leading-relaxed">
                         @if($this->isGuru)
-                            Upload foto <b>catatan kajian</b> sebagai bukti kehadiran online Anda hari ini.
+                            Upload foto <b>catatan hasil kajian</b> sebagai bukti izin menyimak online hari ini.
                         @else
                             Upload foto bukti Anda menyimak kajian secara online.
                         @endif

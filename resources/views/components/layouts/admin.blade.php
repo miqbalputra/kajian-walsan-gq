@@ -79,6 +79,11 @@
                     <span class="material-symbols-rounded">person_book</span>
                     Data Guru
                 </a>
+                <a href="{{ route('admin.teacher-attendance.index') }}"
+                    class="flex items-center gap-3 px-4 py-3 rounded-xl font-medium transition-colors {{ request()->routeIs('admin.teacher-attendance.*') ? 'bg-primary-50 dark:bg-primary-900/20 text-primary-600 dark:text-primary-400' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-slate-800' }}">
+                    <span class="material-symbols-rounded">co_present</span>
+                    Presensi Guru
+                </a>
                 <a href="{{ route('admin.kajian.index') }}"
                     class="flex items-center gap-3 px-4 py-3 rounded-xl font-medium transition-colors {{ request()->routeIs('admin.kajian.*') ? 'bg-primary-50 dark:bg-primary-900/20 text-primary-600 dark:text-primary-400' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-slate-800' }}">
                     <span class="material-symbols-rounded">event</span>
@@ -114,7 +119,9 @@
                     <span class="material-symbols-rounded">verified_user</span>
                     Validasi
                     @php
-                        $pendingCount = \App\Models\Attendance::where('validation_status', 'pending')->count();
+                        $pendingCount = \App\Models\Attendance::where('validation_status', 'pending')
+                            ->whereHas('parent', fn ($query) => $query->where('type', '!=', 'teacher'))
+                            ->count();
                     @endphp
                     @if($pendingCount > 0)
                         <span

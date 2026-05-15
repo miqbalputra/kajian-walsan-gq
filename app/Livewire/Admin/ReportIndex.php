@@ -62,6 +62,9 @@ class ReportIndex extends Component
                 'kajianEvent.academicYear',
                 'student.classRoom',
             ])
+            ->whereHas('parent', function ($query) {
+                $query->where('type', '!=', 'teacher');
+            })
             ->when($this->academicYearId, function ($query) {
                 $query->whereHas('kajianEvent', function ($q) {
                     $q->where('academic_year_id', $this->academicYearId);

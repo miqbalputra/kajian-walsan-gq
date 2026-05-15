@@ -2,8 +2,8 @@
     <!-- Header -->
     <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
         <div>
-            <h1 class="text-2xl font-bold text-gray-900">Laporan Kehadiran</h1>
-            <p class="text-gray-500">Filter dan export data presensi kajian</p>
+            <h1 class="text-2xl font-bold text-gray-900">Laporan Kehadiran Wali Santri</h1>
+            <p class="text-gray-500">Filter dan export data presensi wali santri. Presensi guru ada di menu Presensi Guru.</p>
         </div>
         <div class="flex gap-2">
             <button wire:click="exportExcel"

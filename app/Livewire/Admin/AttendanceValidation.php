@@ -159,6 +159,7 @@ class AttendanceValidation extends Component
         }
 
         $attendances = Attendance::where('method', 'upload')
+            ->whereHas('parent', fn ($query) => $query->where('type', '!=', 'teacher'))
             ->where('validation_status', Attendance::VALIDATION_PENDING)
             ->whereNotNull('proof_file')
             ->oldest()
@@ -193,6 +194,7 @@ class AttendanceValidation extends Component
     {
         $attendances = Attendance::with(['parent.user', 'parent.students', 'kajianEvent'])
             ->whereIn('method', ['upload']) // Only those with uploaded proofs
+            ->whereHas('parent', fn ($query) => $query->where('type', '!=', 'teacher'))
             ->when($this->statusFilter, function ($query) {
                 $query->where('validation_status', $this->statusFilter);
             })
