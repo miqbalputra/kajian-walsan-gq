@@ -87,6 +87,8 @@ class ParentIndex extends Component
 
     protected function rules()
     {
+        $allowedTypes = $this->isTeacherMode() ? 'teacher' : 'father,mother';
+
         return [
             'name' => 'required|string|max:100',
             'username' => 'required|string|max:50',
@@ -94,12 +96,29 @@ class ParentIndex extends Component
             'nik' => 'nullable|string|max:20',
             // Phone validation: Indonesian format (optional +62/62/0 prefix, 8-13 digits)
             'phone' => ['nullable', 'string', 'max:20', 'regex:/^(\+62|62|0)?[0-9]{8,13}$/'],
-            'type' => 'required|in:father,mother,teacher',
+            'type' => 'required|in:' . $allowedTypes,
             'occupation' => 'nullable|string|max:100',
             'address' => 'nullable|string|max:500',
             'is_single_parent' => 'boolean',
             'selectedChildren' => 'array',
         ];
+    }
+
+    public function mount()
+    {
+        $this->normalizeTypeFilter();
+    }
+
+    protected function isTeacherMode(): bool
+    {
+        return $this->typeFilter === 'teacher';
+    }
+
+    protected function normalizeTypeFilter(): void
+    {
+        if (!in_array($this->typeFilter, ['', 'father', 'mother', 'teacher'], true)) {
+            $this->typeFilter = '';
+        }
     }
 
     public function updatingSearch()
@@ -109,6 +128,12 @@ class ParentIndex extends Component
 
     public function updatingPerPage()
     {
+        $this->resetPage();
+    }
+
+    public function updatedTypeFilter()
+    {
+        $this->normalizeTypeFilter();
         $this->resetPage();
     }
 
@@ -140,6 +165,10 @@ class ParentIndex extends Component
 
     public function save()
     {
+        if ($this->isTeacherMode()) {
+            $this->type = 'teacher';
+        }
+
         $this->validate();
 
         // Validate username uniqueness
@@ -380,6 +409,7 @@ class ParentIndex extends Component
 
         // Get all parents who have children in the selected class
         $parents = ParentModel::with(['user', 'students.classRoom'])
+            ->whereIn('type', ['father', 'mother'])
             ->whereHas('students', function ($query) {
                 $query->where('class_id', $this->batchPrintClassId);
             })
@@ -536,11 +566,19 @@ class ParentIndex extends Component
                         ->orWhere('username', 'like', '%' . $this->search . '%')
                         ->orWhere('email', 'like', '%' . $this->search . '%');
                 }
-            })
-            ->when($this->typeFilter, function ($query) {
+            });
+
+        if ($this->isTeacherMode()) {
+            $query->where('type', 'teacher');
+        } else {
+            $query->whereIn('type', ['father', 'mother']);
+
+            if (in_array($this->typeFilter, ['father', 'mother'], true)) {
                 $query->where('type', $this->typeFilter);
-            })
-            ->when($this->classFilter, function ($query) {
+            }
+        }
+
+        $query->when($this->classFilter, function ($query) {
                 $query->whereHas('students', function ($q) {
                     $q->where('class_id', $this->classFilter);
                 });
@@ -563,6 +601,7 @@ class ParentIndex extends Component
             'allStudents' => $allStudents,
             'allClasses' => $allClasses,
             'allKajianEvents' => $allKajianEvents,
+            'isTeacherMode' => $this->isTeacherMode(),
         ])->layout('components.layouts.admin', ['title' => 'Manajemen Orang Tua']);
     }
 }

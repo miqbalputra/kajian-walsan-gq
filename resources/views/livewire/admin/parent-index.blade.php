@@ -2,8 +2,8 @@
     <!-- Header -->
     <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
         <div>
-            <h1 class="text-2xl font-bold text-gray-900">{{ request()->get('typeFilter') === 'teacher' ? 'Data Guru' : 'Manajemen Orang Tua' }}</h1>
-            <p class="text-gray-500">{{ request()->get('typeFilter') === 'teacher' ? 'Kelola data guru dan pengajar' : 'Kelola data wali santri dan generate kartu ID' }}</p>
+            <h1 class="text-2xl font-bold text-gray-900">{{ $isTeacherMode ? 'Data Guru' : 'Manajemen Orang Tua' }}</h1>
+            <p class="text-gray-500">{{ $isTeacherMode ? 'Kelola data guru dan pengajar' : 'Kelola data wali santri dan generate kartu ID' }}</p>
         </div>
         <div class="flex flex-wrap gap-3 sm:justify-end">
             <button wire:click="$set('showImportModal', true)"
@@ -14,7 +14,7 @@
             <button wire:click="openCreateModal"
                 class="inline-flex shrink-0 items-center justify-center gap-2 px-6 py-3 bg-primary-500 text-white rounded-xl font-semibold hover:bg-primary-600 transition-colors shadow-lg shadow-primary-500/25">
                 <span class="material-symbols-rounded">add</span>
-                {{ request()->get('typeFilter') === 'teacher' ? 'Tambah Guru' : 'Tambah Orang Tua' }}
+                {{ $isTeacherMode ? 'Tambah Guru' : 'Tambah Orang Tua' }}
             </button>
         </div>
     </div>
@@ -42,10 +42,13 @@
             <div class="min-w-0">
                 <select wire:model.live="typeFilter"
                     class="w-full px-4 py-2.5 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-transparent">
-                    <option value="">Semua Tipe</option>
-                    <option value="father">Ayah</option>
-                    <option value="mother">Ibu</option>
-                    <option value="teacher">Guru</option>
+                    @if($isTeacherMode)
+                        <option value="teacher">Guru</option>
+                    @else
+                        <option value="">Semua Tipe</option>
+                        <option value="father">Ayah</option>
+                        <option value="mother">Ibu</option>
+                    @endif
                 </select>
             </div>
             <div class="min-w-0">
@@ -208,7 +211,7 @@
 
                 <div class="relative bg-white rounded-2xl shadow-xl max-w-lg w-full p-6 z-10 max-h-[90vh] overflow-y-auto">
                     <div class="flex items-center justify-between mb-6">
-                        <h3 class="text-xl font-bold text-gray-900">{{ $editMode ? 'Edit Data' : (request()->get('typeFilter') === 'teacher' ? 'Tambah Guru' : 'Tambah Orang Tua') }}
+                        <h3 class="text-xl font-bold text-gray-900">{{ $editMode ? 'Edit Data' : ($isTeacherMode ? 'Tambah Guru' : 'Tambah Orang Tua') }}
                         </h3>
                         <button wire:click="$set('showModal', false)" class="p-2 hover:bg-gray-100 rounded-full">
                             <span class="material-symbols-rounded">close</span>
@@ -269,9 +272,12 @@
                                             class="text-red-500">*</span></label>
                                     <select wire:model="type"
                                         class="w-full px-4 py-2.5 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-transparent">
-                                        <option value="father">Ayah</option>
-                                        <option value="mother">Ibu</option>
-                                        <option value="teacher">Guru</option>
+                                        @if($isTeacherMode)
+                                            <option value="teacher">Guru</option>
+                                        @else
+                                            <option value="father">Ayah</option>
+                                            <option value="mother">Ibu</option>
+                                        @endif
                                     </select>
                                 </div>
                             </div>
