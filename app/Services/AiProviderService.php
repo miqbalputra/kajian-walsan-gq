@@ -236,6 +236,8 @@ class AiProviderService
                     'Jika data tidak ada di konteks, katakan data tidak tersedia dan minta filter yang lebih spesifik.',
                     'Untuk angka, hitung dari DATA_JSON atau gunakan total eksplisit yang tersedia.',
                     'Jika user meminta foto/file/catatan/surat, tampilkan URL bukti yang tersedia.',
+                    'Jika DATA_JSON berisi latest_event_roster.alpha, gunakan daftar itu untuk menjawab siapa saja yang alfa pada kajian terakhir.',
+                    'Jika DATA_JSON berisi fuzzy_name_candidates, gunakan kandidat teratas sebagai kemungkinan nama yang dimaksud, jelaskan bahwa ini hasil pencocokan nama mirip.',
                     'Jangan mengklaim melihat isi gambar kecuali gambar memang dikirim sebagai input visual.',
                 ]),
             ],
@@ -258,6 +260,8 @@ class AiProviderService
         $attendanceLimit = $wantsComplete ? 500 : ($includeProofs ? 150 : 80);
         $peopleLimit = $wantsComplete ? 400 : 120;
         $eventLimit = $wantsComplete ? 200 : 80;
+        $latestEventRoster = $this->buildLatestEventRoster();
+        $nameCandidates = $this->buildNameCandidates($question);
 
         $attendanceSummary = Attendance::query()
             ->selectRaw('status, validation_status, count(*) as total')
@@ -353,7 +357,183 @@ class AiProviderService
             'kajian_events' => json_decode($events, true),
             'parents_and_teachers' => json_decode($parents, true),
             'attendances' => json_decode($attendances, true),
+            'latest_event_roster' => $latestEventRoster,
+            'fuzzy_name_candidates' => $nameCandidates,
         ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+    }
+
+    protected function buildLatestEventRoster(): ?array
+    {
+        $event = KajianEvent::whereDate('date', '<=', today())
+            ->orderByDesc('date')
+            ->orderByDesc('time_start')
+            ->first();
+
+        if (! $event) {
+            return null;
+        }
+
+        $attendances = Attendance::with(['parent.user', 'parent.students.classRoom'])
+            ->where('kajian_event_id', $event->id)
+            ->get()
+            ->keyBy('parent_id');
+
+        $parents = ParentModel::with(['user', 'students.classRoom'])
+            ->orderBy('id')
+            ->get();
+
+        $roster = $parents->map(function (ParentModel $parent) use ($attendances) {
+            $attendance = $attendances->get($parent->id);
+            $student = $parent->students->first();
+
+            return [
+                'parent_id' => $parent->id,
+                'nama' => $parent->user?->name,
+                'username' => $parent->user?->username,
+                'tipe' => $parent->type_display,
+                'anak' => $student?->name,
+                'nis' => $student?->nis,
+                'kelas' => $student?->classRoom?->name,
+                'status' => $attendance?->status ?? 'alpha',
+                'validasi' => $attendance?->validation_status ?? null,
+                'catatan' => $attendance?->notes,
+                'bukti_url' => $attendance?->proof_file ? CloudinaryService::getDisplayUrl($attendance->proof_file) : null,
+            ];
+        });
+
+        return [
+            'event' => [
+                'id' => $event->id,
+                'judul' => $event->title,
+                'tanggal' => optional($event->date)->format('d/m/Y'),
+                'status' => $event->status,
+                'pemateri' => $event->speaker,
+            ],
+            'summary' => [
+                'total_wali_guru' => $roster->count(),
+                'hadir_fisik' => $roster->where('status', Attendance::STATUS_HADIR_FISIK)->count(),
+                'hadir_online' => $roster->where('status', Attendance::STATUS_HADIR_ONLINE)->count(),
+                'izin' => $roster->where('status', Attendance::STATUS_IZIN)->count(),
+                'alpha' => $roster->where('status', 'alpha')->count(),
+            ],
+            'alpha' => $roster->where('status', 'alpha')->values()->all(),
+            'hadir_fisik' => $roster->where('status', Attendance::STATUS_HADIR_FISIK)->values()->all(),
+            'hadir_online' => $roster->where('status', Attendance::STATUS_HADIR_ONLINE)->values()->all(),
+            'izin' => $roster->where('status', Attendance::STATUS_IZIN)->values()->all(),
+        ];
+    }
+
+    protected function buildNameCandidates(string $question): array
+    {
+        $needle = $this->normalizeSearchText($question);
+
+        if (strlen($needle) < 4) {
+            return [];
+        }
+
+        $latestEvent = KajianEvent::whereDate('date', '<=', today())
+            ->orderByDesc('date')
+            ->orderByDesc('time_start')
+            ->first();
+
+        $parents = ParentModel::with(['user', 'students.classRoom'])
+            ->get()
+            ->map(function (ParentModel $parent) use ($needle, $latestEvent) {
+                $student = $parent->students->first();
+                $searchTargets = collect([
+                    $parent->user?->name,
+                    $parent->user?->username,
+                    $parent->user?->email,
+                    $student?->name,
+                    $student?->nis,
+                ])->filter()->map(fn ($value) => $this->normalizeSearchText((string) $value));
+
+                $score = $searchTargets
+                    ->map(fn ($target) => $this->matchScore($needle, $target))
+                    ->max() ?? 0;
+
+                $attendance = null;
+                if ($latestEvent) {
+                    $attendance = Attendance::where('kajian_event_id', $latestEvent->id)
+                        ->where('parent_id', $parent->id)
+                        ->first();
+                }
+
+                $history = Attendance::with('kajianEvent')
+                    ->where('parent_id', $parent->id)
+                    ->orderByDesc('created_at')
+                    ->limit(8)
+                    ->get()
+                    ->map(fn (Attendance $attendance) => [
+                        'kajian' => $attendance->kajianEvent?->title,
+                        'tanggal' => optional($attendance->kajianEvent?->date)->format('d/m/Y'),
+                        'status' => $attendance->status,
+                        'validasi' => $attendance->validation_status,
+                        'bukti_url' => $attendance->proof_file ? CloudinaryService::getDisplayUrl($attendance->proof_file) : null,
+                    ])
+                    ->values()
+                    ->all();
+
+                return [
+                    'score' => $score,
+                    'parent_id' => $parent->id,
+                    'nama' => $parent->user?->name,
+                    'username' => $parent->user?->username,
+                    'email' => $parent->user?->email,
+                    'tipe' => $parent->type_display,
+                    'anak' => $student?->name,
+                    'nis' => $student?->nis,
+                    'kelas' => $student?->classRoom?->name,
+                    'latest_event_status' => $attendance?->status ?? 'alpha',
+                    'latest_event_validation' => $attendance?->validation_status,
+                    'latest_event_title' => $latestEvent?->title,
+                    'latest_event_date' => optional($latestEvent?->date)->format('d/m/Y'),
+                    'history' => $history,
+                ];
+            })
+            ->filter(fn (array $candidate) => $candidate['score'] >= 35)
+            ->sortByDesc('score')
+            ->take(12)
+            ->values()
+            ->all();
+
+        return $parents;
+    }
+
+    protected function normalizeSearchText(string $value): string
+    {
+        $value = Str::lower($value);
+        $value = preg_replace('/[^a-z0-9\s]/', ' ', $value) ?? '';
+
+        $stopwords = [
+            'kajian', 'terakhir', 'siapa', 'saja', 'yang', 'alfa', 'alpha', 'hadir',
+            'atau', 'tidak', 'nama', 'namanya', 'apakah', 'status', 'presensi',
+            'wali', 'santri', 'guru', 'ustadz', 'ustaz',
+        ];
+
+        return collect(preg_split('/\s+/', trim($value)) ?: [])
+            ->filter(fn ($word) => strlen($word) > 2 && ! in_array($word, $stopwords, true))
+            ->implode(' ');
+    }
+
+    protected function matchScore(string $needle, string $target): int
+    {
+        if ($needle === '' || $target === '') {
+            return 0;
+        }
+
+        if (str_contains($target, $needle) || str_contains($needle, $target)) {
+            return 100;
+        }
+
+        similar_text($needle, $target, $percent);
+
+        $needleWords = collect(explode(' ', $needle))->filter();
+        $targetWords = collect(explode(' ', $target))->filter();
+        $overlap = $needleWords->intersect($targetWords)->count();
+        $overlapScore = $needleWords->count() > 0 ? ($overlap / $needleWords->count()) * 100 : 0;
+
+        return (int) round(max($percent, $overlapScore));
     }
 
     protected function chatUrl(string $endpoint): string
