@@ -36,6 +36,7 @@
     </script>
 
     @vite(['resources/css/app.css', 'resources/js/app.js'])
+    @include('components.pwa-push')
     @livewireStyles
 </head>
 
@@ -87,8 +88,6 @@
             </div>
         </div>
     @endif
-
-    @include('components.pwa-push')
 </body>
 
 </html>

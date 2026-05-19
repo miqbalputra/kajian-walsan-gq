@@ -68,15 +68,39 @@
                 permission: 'Notification' in window ? Notification.permission : 'unsupported',
                 loading: false,
                 message: '',
+                waitForPushScript() {
+                    return new Promise((resolve) => {
+                        if (window.initPushNotification) {
+                            resolve(true);
+                            return;
+                        }
+
+                        let attempts = 0;
+                        const timer = setInterval(() => {
+                            attempts++;
+                            if (window.initPushNotification) {
+                                clearInterval(timer);
+                                resolve(true);
+                            }
+
+                            if (attempts >= 20) {
+                                clearInterval(timer);
+                                resolve(false);
+                            }
+                        }, 100);
+                    });
+                },
                 async enablePush() {
-                    if (!window.initPushNotification) {
+                    this.loading = true;
+                    this.message = '';
+
+                    const ready = await this.waitForPushScript();
+                    if (!ready) {
                         this.message = 'Script notifikasi belum siap. Muat ulang halaman lalu coba lagi.';
+                        this.loading = false;
                         alert(this.message);
                         return;
                     }
-
-                    this.loading = true;
-                    this.message = '';
 
                     const result = await window.initPushNotification(false);
                     this.permission = 'Notification' in window ? Notification.permission : 'unsupported';
