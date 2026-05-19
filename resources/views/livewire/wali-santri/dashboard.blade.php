@@ -62,21 +62,45 @@
 
     <!-- Main Content -->
     <main class="flex-1 px-4 space-y-4">
-        <div x-data="{ supported: 'Notification' in window && 'serviceWorker' in navigator && 'PushManager' in window, permission: 'Notification' in window ? Notification.permission : 'unsupported' }"
+        <div wire:ignore
+            x-data="{ 
+                supported: 'Notification' in window && 'serviceWorker' in navigator && 'PushManager' in window,
+                permission: 'Notification' in window ? Notification.permission : 'unsupported',
+                loading: false,
+                message: '',
+                async enablePush() {
+                    if (!window.initPushNotification) {
+                        this.message = 'Script notifikasi belum siap. Muat ulang halaman lalu coba lagi.';
+                        alert(this.message);
+                        return;
+                    }
+
+                    this.loading = true;
+                    this.message = '';
+
+                    const result = await window.initPushNotification(false);
+                    this.permission = 'Notification' in window ? Notification.permission : 'unsupported';
+                    this.message = result?.message || '';
+                    this.loading = false;
+                }
+            }"
             x-show="supported && permission !== 'granted'"
             x-cloak
-            class="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-primary-100 dark:border-slate-800 p-4 flex items-center gap-4">
+            class="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-primary-100 dark:border-slate-800 p-4 flex items-center gap-4 relative z-10">
             <div class="w-12 h-12 rounded-2xl bg-primary-50 dark:bg-primary-950/30 text-primary-600 dark:text-primary-400 flex items-center justify-center shrink-0">
                 <span class="material-symbols-rounded text-2xl">notifications_active</span>
             </div>
             <div class="flex-1 min-w-0">
                 <p class="font-bold text-gray-900 dark:text-white">Aktifkan Notifikasi</p>
                 <p class="text-sm text-gray-500 dark:text-gray-400">Terima pengumuman kajian langsung di HP.</p>
+                <p x-show="message" x-text="message" class="text-xs text-amber-600 dark:text-amber-400 mt-2 leading-snug"></p>
             </div>
             <button type="button"
-                @click="initPushNotification().then(() => permission = Notification.permission)"
-                class="px-4 py-2.5 bg-primary-600 hover:bg-primary-700 text-white rounded-xl font-bold text-sm transition-colors shrink-0">
-                Aktifkan
+                @click.stop.prevent="enablePush()"
+                :disabled="loading"
+                class="px-4 py-2.5 bg-primary-600 hover:bg-primary-700 text-white rounded-xl font-bold text-sm transition-colors shrink-0 disabled:opacity-70 disabled:cursor-wait relative z-20">
+                <span x-show="!loading">Aktifkan</span>
+                <span x-show="loading" x-cloak>Memproses...</span>
             </button>
         </div>
 
