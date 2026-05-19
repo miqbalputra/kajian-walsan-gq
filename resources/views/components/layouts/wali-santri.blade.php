@@ -36,12 +36,13 @@
     </script>
 
     @vite(['resources/css/app.css', 'resources/js/app.js'])
-    @include('components.pwa-push')
     @livewireStyles
 </head>
 
 <body
     class="min-h-screen bg-gray-100 {{ $forceLight ? '' : 'dark:bg-slate-950' }} font-sans transition-colors duration-300">
+    @include('components.pwa-push')
+
     {{ $slot }}
 
     @livewireScripts
