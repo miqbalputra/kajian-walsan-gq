@@ -6,6 +6,8 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <meta name="csrf-token" content="{{ csrf_token() }}">
+    <meta name="webpush-vapid-public-key" content="{{ config('webpush.vapid_public_key') }}">
+    <meta name="pwa-push-script-url" content="{{ asset('js/pwa-push.js') }}?v=20260519-push-v4">
     <meta name="theme-color" content="#10B981">
 
     {{-- PWA Meta --}}
@@ -36,13 +38,12 @@
     </script>
 
     @vite(['resources/css/app.css', 'resources/js/app.js'])
+    @include('components.pwa-push')
     @livewireStyles
 </head>
 
 <body
     class="min-h-screen bg-gray-100 {{ $forceLight ? '' : 'dark:bg-slate-950' }} font-sans transition-colors duration-300">
-    @include('components.pwa-push')
-
     {{ $slot }}
 
     @livewireScripts

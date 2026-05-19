@@ -29,9 +29,10 @@ use Illuminate\Support\Facades\Route;
 // Public routes
 Route::get('/__deploy-version', function () {
     return response()->json([
-        'version' => '2026-05-09-pwa-middleware-install',
-        'commit_hint' => 'pwa-middleware',
+        'version' => '2026-05-19-push-notification-loader-v4',
+        'commit_hint' => 'push-notification-loader',
         'pwa_middleware_install' => class_exists(\App\Http\Middleware\InjectPwaInstallPrompt::class),
+        'pwa_push_script' => file_exists(public_path('js/pwa-push.js')),
         'timestamp' => now()->toISOString(),
     ])->header('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0');
 })->name('deploy.version');

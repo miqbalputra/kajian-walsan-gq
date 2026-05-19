@@ -1,9 +1,8 @@
-const CACHE_NAME = 'kajian-walsan-v2';
+const CACHE_NAME = 'kajian-walsan-v3-20260519';
 const OFFLINE_URL = '/offline.html';
 
 // Static assets to pre-cache (app shell)
 const PRECACHE_ASSETS = [
-    '/',
     '/offline.html',
     '/manifest.json',
     '/icons/icon-192x192.png',
@@ -57,22 +56,12 @@ self.addEventListener('fetch', (event) => {
     // Skip hot module replacement (Vite dev)
     if (url.pathname.includes('/@vite') || url.pathname.includes('/__vite') || url.port === '5173') return;
 
-    // Navigation requests - network first with offline fallback
+    // Navigation requests - always prefer network and avoid caching authenticated pages.
     if (request.mode === 'navigate') {
         event.respondWith(
             fetch(request)
-                .then((response) => {
-                    // Cache successful navigation responses
-                    const responseClone = response.clone();
-                    caches.open(CACHE_NAME).then((cache) => {
-                        cache.put(request, responseClone);
-                    });
-                    return response;
-                })
                 .catch(() => {
-                    // Try cache first, then offline page
-                    return caches.match(request)
-                        .then((cached) => cached || caches.match(OFFLINE_URL));
+                    return caches.match(OFFLINE_URL);
                 })
         );
         return;

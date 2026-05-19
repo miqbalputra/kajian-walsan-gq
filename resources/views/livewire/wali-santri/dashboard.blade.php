@@ -70,22 +70,38 @@
                 message: '',
                 waitForPushScript() {
                     return new Promise((resolve) => {
-                        if (window.initPushNotification) {
+                        const hasPushScript = () => typeof window.initPushNotification === 'function';
+
+                        if (hasPushScript()) {
                             resolve(true);
                             return;
                         }
 
+                        const scriptUrl = document.querySelector('meta[name=pwa-push-script-url]')?.content || '/js/pwa-push.js?v=20260519-push-v4';
+                        let script = document.querySelector('script[data-pwa-push-script]');
+
+                        if (!script) {
+                            script = document.createElement('script');
+                            script.src = scriptUrl;
+                            script.defer = true;
+                            script.dataset.pwaPushScript = 'true';
+                            document.head.appendChild(script);
+                        }
+
+                        script.addEventListener('load', () => resolve(hasPushScript()), { once: true });
+                        script.addEventListener('error', () => resolve(false), { once: true });
+
                         let attempts = 0;
                         const timer = setInterval(() => {
                             attempts++;
-                            if (window.initPushNotification) {
+                            if (hasPushScript()) {
                                 clearInterval(timer);
                                 resolve(true);
                             }
 
-                            if (attempts >= 20) {
+                            if (attempts >= 50) {
                                 clearInterval(timer);
-                                resolve(false);
+                                resolve(hasPushScript());
                             }
                         }, 100);
                     });
@@ -96,7 +112,7 @@
 
                     const ready = await this.waitForPushScript();
                     if (!ready) {
-                        this.message = 'Script notifikasi belum siap. Muat ulang halaman lalu coba lagi.';
+                        this.message = 'Script notifikasi gagal dimuat. Muat ulang browser lalu coba lagi.';
                         this.loading = false;
                         alert(this.message);
                         return;
