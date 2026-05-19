@@ -1,6 +1,6 @@
 <x-layouts.app title="Selamat Datang" :force-light="true">
     <div class="relative min-h-screen overflow-hidden bg-slate-50 font-sans selection:bg-primary-500 selection:text-white"
-        x-data="{ showInfo: false, showGuide: false }">
+        x-data="{ showInfo: false, showGuide: false, showUpdatesGuide: false }">
 
         <!-- Animated Background (Matching login page) -->
         <div class="fixed inset-0 w-full h-full bg-gradient-to-br from-primary-600 via-primary-700 to-secondary-700">
@@ -250,47 +250,62 @@
             </button>
 
             <!-- Action Buttons Grid -->
-            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 w-full mb-8">
+            <div class="grid grid-cols-2 gap-3 w-full mb-5">
                 <!-- Login Panitia Button -->
                 <a href="{{ route('login') }}"
-                    class="group relative overflow-hidden bg-white hover:bg-primary-50 p-6 rounded-3xl shadow-xl transition-all duration-300 hover:shadow-2xl hover:-translate-y-1">
-                    <div class="relative z-10 flex flex-col items-center text-center gap-3">
+                    class="group relative overflow-hidden bg-gradient-to-br from-white via-emerald-50 to-cyan-50 p-4 rounded-3xl shadow-2xl border border-white/70 transition-all duration-300 hover:shadow-emerald-500/25 hover:-translate-y-1 min-h-[164px]">
+                    <div class="absolute inset-x-0 bottom-0 h-1.5 bg-gradient-to-r from-emerald-500 to-cyan-400"></div>
+                    <div class="relative z-10 flex h-full flex-col justify-between gap-4">
                         <div
-                            class="w-14 h-14 rounded-2xl bg-gradient-to-br from-primary-500 to-primary-600 text-white flex items-center justify-center shadow-lg shadow-primary-500/30 group-hover:scale-110 transition-transform duration-300">
+                            class="w-13 h-13 rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-600 text-white flex items-center justify-center shadow-lg shadow-emerald-500/30 group-hover:scale-110 transition-transform duration-300 shrink-0">
                             <span class="material-symbols-rounded text-3xl">admin_panel_settings</span>
                         </div>
-                        <div>
-                            <h3 class="font-bold text-gray-900 text-lg mb-1 group-hover:text-primary-700">Masuk Akun
-                            </h3>
-                            <p class="text-gray-500 text-xs">Panitia / Admin</p>
+                        <div class="min-w-0 text-left">
+                            <p class="text-[10px] font-black uppercase tracking-widest text-emerald-700 mb-1">Petugas</p>
+                            <h3 class="font-black text-slate-900 text-[15px] leading-tight group-hover:text-emerald-700">Masuk Admin</h3>
+                            <p class="text-slate-500 text-[11px] leading-snug mt-1">Panitia dan pengelola kajian</p>
                         </div>
-                    </div>
-                    <!-- Hover Effect -->
-                    <div
-                        class="absolute inset-0 border-2 border-transparent group-hover:border-primary-200 rounded-3xl transition-colors">
+                        <span class="absolute top-5 right-4 material-symbols-rounded text-emerald-500">arrow_forward_ios</span>
                     </div>
                 </a>
 
                 <!-- Login Wali Santri Button -->
                 <a href="{{ route('login') }}"
-                    class="group relative overflow-hidden bg-white hover:bg-secondary-50 p-6 rounded-3xl shadow-xl transition-all duration-300 hover:shadow-2xl hover:-translate-y-1">
-                    <div class="relative z-10 flex flex-col items-center text-center gap-3">
+                    class="group relative overflow-hidden bg-gradient-to-br from-amber-50 via-white to-sky-50 p-4 rounded-3xl shadow-2xl border border-white/70 transition-all duration-300 hover:shadow-amber-500/25 hover:-translate-y-1 min-h-[164px]">
+                    <div class="absolute inset-x-0 bottom-0 h-1.5 bg-gradient-to-r from-amber-400 to-sky-500"></div>
+                    <div class="relative z-10 flex h-full flex-col justify-between gap-4">
                         <div
-                            class="w-14 h-14 rounded-2xl bg-gradient-to-br from-secondary-500 to-secondary-600 text-white flex items-center justify-center shadow-lg shadow-secondary-500/30 group-hover:scale-110 transition-transform duration-300">
+                            class="w-13 h-13 rounded-2xl bg-gradient-to-br from-amber-400 to-sky-500 text-white flex items-center justify-center shadow-lg shadow-sky-500/25 group-hover:scale-110 transition-transform duration-300 shrink-0">
                             <span class="material-symbols-rounded text-3xl">family_restroom</span>
                         </div>
-                        <div>
-                            <h3 class="font-bold text-gray-900 text-lg mb-1 group-hover:text-secondary-700">Masuk Akun
-                            </h3>
-                            <p class="text-gray-500 text-xs">Wali Santri</p>
+                        <div class="min-w-0 text-left">
+                            <p class="text-[10px] font-black uppercase tracking-widest text-sky-700 mb-1">Wali Santri</p>
+                            <h3 class="font-black text-slate-900 text-[15px] leading-tight group-hover:text-sky-700">Masuk Akun</h3>
+                            <p class="text-slate-500 text-[11px] leading-snug mt-1">QR, jadwal, riwayat, dan izin</p>
                         </div>
-                    </div>
-                    <!-- Hover Effect -->
-                    <div
-                        class="absolute inset-0 border-2 border-transparent group-hover:border-secondary-200 rounded-3xl transition-colors">
+                        <span class="absolute top-5 right-4 material-symbols-rounded text-sky-500">arrow_forward_ios</span>
                     </div>
                 </a>
             </div>
+
+            <!-- Compact Feature Updates Trigger -->
+            <button @click="showUpdatesGuide = true"
+                class="w-full mb-8 group relative overflow-hidden rounded-2xl bg-white/12 hover:bg-white/18 border border-white/20 backdrop-blur-md p-4 text-left transition-all duration-300 hover:-translate-y-0.5">
+                <div class="flex items-center gap-3">
+                    <div class="w-11 h-11 rounded-xl bg-white/15 text-white flex items-center justify-center border border-white/20 shrink-0 group-hover:scale-105 transition-transform">
+                        <span class="material-symbols-rounded text-2xl">new_releases</span>
+                    </div>
+                    <div class="min-w-0 flex-1">
+                        <div class="flex items-center gap-2 mb-1">
+                            <span class="text-[10px] font-black uppercase tracking-widest text-emerald-100">Update Fitur</span>
+                            <span class="h-1 w-1 rounded-full bg-white/40"></span>
+                            <span class="text-[10px] font-bold uppercase tracking-wider text-white/60">Panduan</span>
+                        </div>
+                        <p class="text-sm font-black text-white leading-tight">Install aplikasi, login Google, dan fitur wali santri</p>
+                    </div>
+                    <span class="material-symbols-rounded text-white/70">arrow_forward_ios</span>
+                </div>
+            </button>
 
             <!-- Last Stats Mini Card -->
             @if($lastKajian)
@@ -476,6 +491,153 @@
                             <p class="text-[9px] text-slate-300 mt-6 font-medium">&copy; {{ date('Y') }} • Kajian Walsan
                                 Digital Ecosystem v2.0</p>
                         </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Feature Updates Guide Modal -->
+        <div x-cloak x-show="showUpdatesGuide" x-transition:enter="transition-opacity ease-out duration-300"
+            x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100"
+            x-transition:leave="transition-opacity ease-in duration-200" x-transition:leave-start="opacity-100"
+            x-transition:leave-end="opacity-0" class="fixed inset-0 z-[115] overflow-y-auto bg-slate-950/70 backdrop-blur-md"
+            @click.self="showUpdatesGuide = false">
+
+            <div class="flex min-h-screen items-center justify-center p-0 sm:p-6 lg:p-8">
+                <div x-cloak x-show="showUpdatesGuide" x-transition:enter="transition ease-out duration-500"
+                    x-transition:enter-start="opacity-0 translate-y-12 scale-95" x-transition:enter-end="opacity-100 translate-y-0 scale-100"
+                    x-transition:leave="transition ease-in duration-300"
+                    x-transition:leave-start="opacity-100 translate-y-0 scale-100" x-transition:leave-end="opacity-0 translate-y-12 scale-95"
+                    class="bg-white rounded-t-[3rem] sm:rounded-[3rem] shadow-2xl w-full max-w-lg mb-0 sm:mb-8 overflow-hidden relative border border-white/20"
+                    @click.stop>
+
+                    <button @click="showUpdatesGuide = false"
+                        class="absolute top-6 right-6 w-12 h-12 bg-black/10 hover:bg-black/20 backdrop-blur-xl rounded-full flex items-center justify-center text-white transition-all z-20 border border-white/20 group">
+                        <span class="material-symbols-rounded group-hover:rotate-90 transition-transform duration-300">close</span>
+                    </button>
+
+                    <div class="relative h-56 bg-gradient-to-br from-slate-900 via-primary-800 to-emerald-700 overflow-hidden">
+                        <div class="absolute inset-0 opacity-10"
+                            style="background-image: url('data:image/svg+xml,%3Csvg width=\'80\' height=\'80\' viewBox=\'0 0 80 80\' xmlns=\'http://www.w3.org/2000/svg\'%3E%3Cg fill=\'none\' stroke=\'white\' stroke-width=\'1\'%3E%3Cpath d=\'M10 10h20v20H10zM50 10h20v20H50zM10 50h20v20H10zM50 50h20v20H50z\'/%3E%3C/g%3E%3C/svg%3E'); background-size: 44px 44px;">
+                        </div>
+                        <div class="absolute inset-0 bg-gradient-to-t from-white via-white/10 to-transparent"></div>
+                        <div class="absolute bottom-10 left-8 right-20">
+                            <span class="inline-flex items-center gap-2 px-3 py-1 bg-white/15 text-white text-[10px] font-black uppercase tracking-[0.25em] rounded-full border border-white/20 mb-3">
+                                <span class="material-symbols-rounded text-base">tips_and_updates</span>
+                                Panduan Baru
+                            </span>
+                            <h3 class="text-3xl sm:text-4xl font-black text-white tracking-tight leading-none">Update Fitur Wali Santri</h3>
+                            <p class="text-white/75 text-sm font-medium mt-2">Langkah singkat agar aplikasi lebih praktis dipakai.</p>
+                        </div>
+                    </div>
+
+                    <div class="px-6 sm:px-10 py-8 space-y-4 max-h-[62vh] sm:max-h-[54vh] overflow-y-auto overscroll-contain custom-scrollbar">
+                        <div class="group bg-slate-50 rounded-2xl p-5 border border-slate-100">
+                            <div class="flex items-start gap-5">
+                                <div class="w-12 h-12 bg-white text-emerald-600 rounded-xl flex-shrink-0 flex items-center justify-center border border-emerald-100 shadow-sm">
+                                    <span class="material-symbols-rounded text-2xl fill-1">install_mobile</span>
+                                </div>
+                                <div class="flex-1">
+                                    <h4 class="text-base font-black text-slate-900 mb-2">Install di HP atau Laptop</h4>
+                                    <ul class="space-y-2">
+                                        <li class="flex items-start gap-3 text-slate-500 text-xs leading-relaxed">
+                                            <div class="w-1 h-1 rounded-full bg-emerald-500 mt-1.5 shrink-0"></div>
+                                            <span>Di Android atau Chrome laptop, buka aplikasi lalu pilih <strong class="text-slate-800">Install Sekarang</strong> jika tombol muncul.</span>
+                                        </li>
+                                        <li class="flex items-start gap-3 text-slate-500 text-xs leading-relaxed">
+                                            <div class="w-1 h-1 rounded-full bg-emerald-500 mt-1.5 shrink-0"></div>
+                                            <span>Jika tombol belum muncul, buka menu browser titik tiga lalu pilih <strong class="text-slate-800">Install app</strong> atau <strong class="text-slate-800">Add to Home screen</strong>.</span>
+                                        </li>
+                                        <li class="flex items-start gap-3 text-slate-500 text-xs leading-relaxed">
+                                            <div class="w-1 h-1 rounded-full bg-emerald-500 mt-1.5 shrink-0"></div>
+                                            <span>Untuk iPhone, buka lewat Safari, tekan tombol Share, lalu pilih <strong class="text-slate-800">Add to Home Screen</strong>.</span>
+                                        </li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="group bg-slate-50 rounded-2xl p-5 border border-slate-100">
+                            <div class="flex items-start gap-5">
+                                <div class="w-12 h-12 bg-white text-sky-600 rounded-xl flex-shrink-0 flex items-center justify-center border border-sky-100 shadow-sm">
+                                    <span class="material-symbols-rounded text-2xl fill-1">account_circle</span>
+                                </div>
+                                <div class="flex-1">
+                                    <h4 class="text-base font-black text-slate-900 mb-2">Login dengan Google / Gmail</h4>
+                                    <ul class="space-y-2">
+                                        <li class="flex items-start gap-3 text-slate-500 text-xs leading-relaxed">
+                                            <div class="w-1 h-1 rounded-full bg-sky-500 mt-1.5 shrink-0"></div>
+                                            <span>Pastikan email Gmail wali santri sudah tersimpan di akun aplikasi.</span>
+                                        </li>
+                                        <li class="flex items-start gap-3 text-slate-500 text-xs leading-relaxed">
+                                            <div class="w-1 h-1 rounded-full bg-sky-500 mt-1.5 shrink-0"></div>
+                                            <span>Tekan tombol <strong class="text-slate-800">Masuk dengan Google</strong> di halaman login, lalu pilih akun Gmail yang sesuai.</span>
+                                        </li>
+                                        <li class="flex items-start gap-3 text-slate-500 text-xs leading-relaxed">
+                                            <div class="w-1 h-1 rounded-full bg-sky-500 mt-1.5 shrink-0"></div>
+                                            <span>Jika email cocok, akun Google akan tersambung dan login berikutnya bisa lebih cepat.</span>
+                                        </li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="group bg-slate-50 rounded-2xl p-5 border border-slate-100">
+                            <div class="flex items-start gap-5">
+                                <div class="w-12 h-12 bg-white text-amber-600 rounded-xl flex-shrink-0 flex items-center justify-center border border-amber-100 shadow-sm">
+                                    <span class="material-symbols-rounded text-2xl fill-1">notifications_active</span>
+                                </div>
+                                <div class="flex-1">
+                                    <h4 class="text-base font-black text-slate-900 mb-2">Aktifkan Pengingat Kajian</h4>
+                                    <ul class="space-y-2">
+                                        <li class="flex items-start gap-3 text-slate-500 text-xs leading-relaxed">
+                                            <div class="w-1 h-1 rounded-full bg-amber-500 mt-1.5 shrink-0"></div>
+                                            <span>Masuk ke dashboard wali santri, lalu izinkan notifikasi saat diminta oleh browser.</span>
+                                        </li>
+                                        <li class="flex items-start gap-3 text-slate-500 text-xs leading-relaxed">
+                                            <div class="w-1 h-1 rounded-full bg-amber-500 mt-1.5 shrink-0"></div>
+                                            <span>Setelah aktif, pengingat jadwal dan pengumuman penting bisa diterima langsung di HP.</span>
+                                        </li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="group bg-slate-50 rounded-2xl p-5 border border-slate-100">
+                            <div class="flex items-start gap-5">
+                                <div class="w-12 h-12 bg-white text-indigo-600 rounded-xl flex-shrink-0 flex items-center justify-center border border-indigo-100 shadow-sm">
+                                    <span class="material-symbols-rounded text-2xl fill-1">dashboard</span>
+                                </div>
+                                <div class="flex-1">
+                                    <h4 class="text-base font-black text-slate-900 mb-2">Fitur Dashboard Wali Santri</h4>
+                                    <ul class="space-y-2">
+                                        <li class="flex items-start gap-3 text-slate-500 text-xs leading-relaxed">
+                                            <div class="w-1 h-1 rounded-full bg-indigo-500 mt-1.5 shrink-0"></div>
+                                            <span>Cek jadwal kajian berikutnya, QR presensi, serta riwayat kehadiran dari dashboard.</span>
+                                        </li>
+                                        <li class="flex items-start gap-3 text-slate-500 text-xs leading-relaxed">
+                                            <div class="w-1 h-1 rounded-full bg-indigo-500 mt-1.5 shrink-0"></div>
+                                            <span>Gunakan <strong class="text-slate-800">Hadir Online</strong> untuk upload foto catatan kajian, atau <strong class="text-slate-800">Izin</strong> untuk upload dokumen keterangan.</span>
+                                        </li>
+                                        <li class="flex items-start gap-3 text-slate-500 text-xs leading-relaxed">
+                                            <div class="w-1 h-1 rounded-full bg-indigo-500 mt-1.5 shrink-0"></div>
+                                            <span>Jika bukti belum disetujui atau ditolak, wali santri bisa upload ulang dari dashboard.</span>
+                                        </li>
+                                        <li class="flex items-start gap-3 text-slate-500 text-xs leading-relaxed">
+                                            <div class="w-1 h-1 rounded-full bg-indigo-500 mt-1.5 shrink-0"></div>
+                                            <span>Setelah kajian selesai, isi rating dan masukan agar pelaksanaan berikutnya makin rapi.</span>
+                                        </li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="p-6 bg-slate-50 border-t border-slate-100">
+                        <button @click="showUpdatesGuide = false"
+                            class="w-full py-4 bg-primary-600 hover:bg-primary-700 text-white rounded-2xl font-black text-sm transition-all active:scale-95 shadow-lg shadow-primary-500/20">
+                            SAYA MENGERTI
+                        </button>
                     </div>
                 </div>
             </div>
