@@ -93,7 +93,8 @@ class Dashboard extends Component
 
     public function getIsGuruProperty()
     {
-        return auth()->check() && auth()->user()->isGuru();
+        return (bool) $this->parent?->isTeacher()
+            || (auth()->check() && auth()->user()->isGuru());
     }
 
     /**

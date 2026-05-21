@@ -21,11 +21,17 @@ class ParentModel extends Model
     protected $fillable = [
         'user_id',
         'type',
+        'is_teacher',
         'is_single_parent',
         'qr_code_string',
         'nik',
         'occupation',
         'address',
+    ];
+
+    protected $casts = [
+        'is_teacher' => 'boolean',
+        'is_single_parent' => 'boolean',
     ];
 
     /**
@@ -134,7 +140,7 @@ class ParentModel extends Model
      */
     public function isTeacher(): bool
     {
-        return $this->type === 'teacher';
+        return $this->type === 'teacher' || (bool) $this->is_teacher;
     }
 
     /**

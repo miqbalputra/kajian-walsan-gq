@@ -56,6 +56,7 @@ class ParentIndex extends Component
     public $phone = '';
     public $nik = '';
     public $type = 'father';
+    public $is_teacher = false;
     public $occupation = '';
     public $address = '';
     public $is_single_parent = false;
@@ -97,6 +98,7 @@ class ParentIndex extends Component
             // Phone validation: Indonesian format (optional +62/62/0 prefix, 8-13 digits)
             'phone' => ['nullable', 'string', 'max:20', 'regex:/^(\+62|62|0)?[0-9]{8,13}$/'],
             'type' => 'required|in:' . $allowedTypes,
+            'is_teacher' => 'boolean',
             'occupation' => 'nullable|string|max:100',
             'address' => 'nullable|string|max:500',
             'is_single_parent' => 'boolean',
@@ -139,8 +141,9 @@ class ParentIndex extends Component
 
     public function openCreateModal()
     {
-        $this->reset(['name', 'email', 'password', 'phone', 'nik', 'type', 'occupation', 'address', 'is_single_parent', 'selectedChildren', 'editMode', 'parentId']);
+        $this->reset(['name', 'username', 'email', 'password', 'phone', 'nik', 'type', 'is_teacher', 'occupation', 'address', 'is_single_parent', 'selectedChildren', 'editMode', 'parentId']);
         $this->type = $this->typeFilter === 'teacher' ? 'teacher' : 'father';
+        $this->is_teacher = $this->type === 'teacher';
         $this->showModal = true;
     }
 
@@ -154,6 +157,7 @@ class ParentIndex extends Component
         $this->phone = $parent->user->phone;
         $this->nik = $parent->nik;
         $this->type = $parent->type;
+        $this->is_teacher = $parent->isTeacher();
         $this->occupation = $parent->occupation;
         $this->address = $parent->address;
         $this->is_single_parent = $parent->is_single_parent;
@@ -167,6 +171,7 @@ class ParentIndex extends Component
     {
         if ($this->isTeacherMode()) {
             $this->type = 'teacher';
+            $this->is_teacher = true;
         }
 
         $this->validate();
@@ -211,6 +216,7 @@ class ParentIndex extends Component
             $parent->update([
                 'nik' => $this->nik,
                 'type' => $this->type,
+                'is_teacher' => $this->type === 'teacher' || (bool) $this->is_teacher,
                 'occupation' => $this->occupation,
                 'address' => $this->address,
                 'is_single_parent' => $this->is_single_parent,
@@ -239,6 +245,7 @@ class ParentIndex extends Component
                 'user_id' => $user->id,
                 'nik' => $this->nik,
                 'type' => $this->type,
+                'is_teacher' => $this->type === 'teacher' || (bool) $this->is_teacher,
                 'occupation' => $this->occupation,
                 'address' => $this->address,
                 'is_single_parent' => $this->is_single_parent,
@@ -256,7 +263,7 @@ class ParentIndex extends Component
         }
 
         $this->showModal = false;
-        $this->reset(['name', 'username', 'email', 'password', 'phone', 'nik', 'type', 'occupation', 'address', 'is_single_parent', 'selectedChildren', 'editMode', 'parentId']);
+        $this->reset(['name', 'username', 'email', 'password', 'phone', 'nik', 'type', 'is_teacher', 'occupation', 'address', 'is_single_parent', 'selectedChildren', 'editMode', 'parentId']);
     }
 
     public function confirmDelete($id)
@@ -348,9 +355,9 @@ class ParentIndex extends Component
             'method' => 'manual',
             'proof_file' => $proofPath,
             'notes' => $this->manualNotes,
-            'validation_status' => 'approved',
-            'validated_by' => auth()->id(),
-            'validated_at' => now(),
+            'validation_status' => $this->manualParent?->isTeacher() ? 'pending' : 'approved',
+            'validated_by' => $this->manualParent?->isTeacher() ? null : auth()->id(),
+            'validated_at' => $this->manualParent?->isTeacher() ? null : now(),
         ]);
 
         // Update kajian attendance count

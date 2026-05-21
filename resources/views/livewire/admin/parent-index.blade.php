@@ -140,6 +140,13 @@
                                             Single Parent
                                         </span>
                                     @endif
+                                    @if($parent->isTeacher())
+                                        <span
+                                            class="px-2 py-1 bg-indigo-100 text-indigo-700 rounded-lg text-xs font-medium inline-flex items-center gap-1">
+                                            <span class="material-symbols-rounded text-[14px]">person_book</span>
+                                            Guru
+                                        </span>
+                                    @endif
                                 </div>
                             </td>
                             <td class="px-6 py-4">
@@ -292,6 +299,18 @@
                                     </div>
                                 </label>
                             </div>
+                            @if(!$isTeacherMode)
+                                <div class="bg-indigo-50 border border-indigo-100 p-4 rounded-xl">
+                                    <label class="flex items-center gap-3 cursor-pointer">
+                                        <input type="checkbox" wire:model="is_teacher"
+                                            class="w-5 h-5 rounded border-indigo-300 text-indigo-600 focus:ring-indigo-500">
+                                        <div>
+                                            <p class="font-semibold text-indigo-950">Wali ini juga Guru/Pengajar</p>
+                                            <p class="text-sm text-indigo-700">Satu scan QR tetap dipakai, lalu wajib upload catatan kajian.</p>
+                                        </div>
+                                    </label>
+                                </div>
+                            @endif
                             <div>
                                 <label class="block text-sm font-medium text-gray-700 mb-1">Pekerjaan</label>
                                 <input type="text" wire:model="occupation"
@@ -389,7 +408,7 @@
 
                              @php
                                 $isMother = $cardParent->type === 'mother';
-                                $isTeacher = $cardParent->type === 'teacher';
+                                $isTeacher = $cardParent->isTeacher();
                                 
                                 $bgHeader = $isMother ? 'from-rose-500 to-pink-500' : ($isTeacher ? 'from-indigo-600 to-violet-500' : 'from-emerald-600 to-teal-500');
                                 $textColor = $isMother ? 'text-rose-600' : ($isTeacher ? 'text-indigo-600' : 'text-teal-600');

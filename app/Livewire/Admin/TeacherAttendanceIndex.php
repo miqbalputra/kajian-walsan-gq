@@ -112,7 +112,10 @@ class TeacherAttendanceIndex extends Component
             ->keyBy('parent_id');
 
         return ParentModel::with('user')
-            ->where('type', 'teacher')
+            ->where(function ($query) {
+                $query->where('type', 'teacher')
+                    ->orWhere('is_teacher', true);
+            })
             ->orderBy('id')
             ->get()
             ->map(function (ParentModel $teacher) use ($attendances) {
@@ -210,7 +213,10 @@ class TeacherAttendanceIndex extends Component
 
     public function approveTeacherAttendance(int $attendanceId): void
     {
-        $attendance = Attendance::whereHas('parent', fn ($query) => $query->where('type', 'teacher'))
+        $attendance = Attendance::whereHas('parent', function ($query) {
+                $query->where('type', 'teacher')
+                    ->orWhere('is_teacher', true);
+            })
             ->whereKey($attendanceId)
             ->firstOrFail();
 

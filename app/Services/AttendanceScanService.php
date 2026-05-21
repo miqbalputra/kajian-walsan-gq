@@ -13,7 +13,7 @@ class AttendanceScanService
     public function process(KajianEvent $event, string $qrCode, int $userId, ?string $deviceInfo = null): array
     {
         $parent = ParentModel::query()
-            ->select(['id', 'user_id', 'type'])
+            ->select(['id', 'user_id', 'type', 'is_teacher'])
             ->with([
                 'user:id,name',
                 'students:id,name,class_room_id',
