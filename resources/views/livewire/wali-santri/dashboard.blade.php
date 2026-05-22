@@ -249,6 +249,14 @@
                                             <span class="material-symbols-rounded text-xl">upload_file</span>
                                             Upload Ulang Bukti
                                         </button>
+                                        @if($this->myAttendanceToday->method === 'upload' || ($this->myAttendanceToday->method === 'scan_qr' && $this->myAttendanceToday->proof_file))
+                                            <button wire:click="cancelSubmittedAttendance({{ $this->myAttendanceToday->id }})"
+                                                wire:confirm="Batalkan kiriman ini? File yang sudah diupload akan dihapus."
+                                                class="mt-2 w-full py-3 bg-white text-red-700 rounded-xl font-semibold flex items-center justify-center gap-2 hover:bg-red-50 transition-colors border border-red-200">
+                                                <span class="material-symbols-rounded text-xl">undo</span>
+                                                Batalkan Kiriman & Pilih Ulang
+                                            </button>
+                                        @endif
                                     </div>
                                 </div>
                             </div>
@@ -297,6 +305,22 @@
                                         </button>
                                         <p class="text-[10px] text-yellow-600 mt-1.5">Foto lama akan otomatis dihapus</p>
                                     </div>
+                                @endif
+
+                                @if(
+                                    in_array($this->myAttendanceToday->validation_status, ['pending', 'rejected'])
+                                    || ($this->myAttendanceToday->validation_status === 'approved' && is_null($this->myAttendanceToday->validated_by))
+                                )
+                                    @if($this->myAttendanceToday->method === 'upload' || ($this->myAttendanceToday->method === 'scan_qr' && $this->myAttendanceToday->proof_file))
+                                    <div class="mt-3">
+                                        <button wire:click="cancelSubmittedAttendance({{ $this->myAttendanceToday->id }})"
+                                            wire:confirm="Batalkan kiriman ini? File yang sudah diupload akan dihapus."
+                                            class="w-full py-2.5 bg-white text-red-700 rounded-xl font-semibold text-sm flex items-center justify-center gap-2 hover:bg-red-50 transition-colors border border-red-200">
+                                            <span class="material-symbols-rounded text-lg">undo</span>
+                                            Batalkan Kiriman & Pilih Ulang
+                                        </button>
+                                    </div>
+                                    @endif
                                 @endif
                             </div>
                         @endif

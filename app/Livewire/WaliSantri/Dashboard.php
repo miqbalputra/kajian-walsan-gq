@@ -467,6 +467,64 @@ class Dashboard extends Component
         session()->flash('message', $message);
     }
 
+    public function cancelSubmittedAttendance(int $attendanceId): void
+    {
+        if (!$this->parent) {
+            session()->flash('error', 'Data akun tidak ditemukan.');
+            return;
+        }
+
+        $attendance = Attendance::where('id', $attendanceId)
+            ->where('parent_id', $this->parent->id)
+            ->where(function ($query) {
+                $query->whereIn('validation_status', [
+                    Attendance::VALIDATION_PENDING,
+                    Attendance::VALIDATION_REJECTED,
+                ])->orWhere(function ($query) {
+                    $query->where('validation_status', Attendance::VALIDATION_APPROVED)
+                        ->whereNull('validated_by');
+                });
+            })
+            ->first();
+
+        if (!$attendance) {
+            session()->flash('error', 'Kiriman tidak ditemukan atau sudah divalidasi admin.');
+            return;
+        }
+
+        if ($attendance->proof_file) {
+            $this->deleteOldProofFile($attendance->proof_file);
+        }
+
+        if ($attendance->method === Attendance::METHOD_UPLOAD) {
+            $attendance->forceDelete();
+            session()->flash('message', 'Kiriman berhasil dibatalkan. Silakan pilih presensi dari awal.');
+            return;
+        }
+
+        if ($attendance->method === Attendance::METHOD_SCAN_QR && $attendance->status === Attendance::STATUS_HADIR_FISIK) {
+            $attendance->update([
+                'proof_file' => null,
+                'notes' => null,
+                'validation_status' => Attendance::VALIDATION_PENDING,
+                'rejection_reason' => null,
+                'validated_by' => null,
+                'validated_at' => null,
+                'ai_validation_status' => null,
+                'ai_validation_confidence' => null,
+                'ai_validation_reason' => null,
+                'ai_validation_model' => null,
+                'ai_validation_payload' => null,
+                'ai_validated_at' => null,
+            ]);
+
+            session()->flash('message', 'Upload catatan berhasil dibatalkan. Presensi QR tetap tercatat; silakan upload catatan yang benar.');
+            return;
+        }
+
+        session()->flash('error', 'Jenis presensi ini tidak bisa dibatalkan dari dashboard.');
+    }
+
     protected function runAiReview(Attendance $attendance): void
     {
         try {
