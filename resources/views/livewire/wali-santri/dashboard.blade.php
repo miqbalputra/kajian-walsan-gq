@@ -515,7 +515,7 @@
     @if($showPhysicalModal)
         <div class="fixed inset-0 z-[70] overflow-y-auto" aria-modal="true">
             <div class="flex items-end justify-center min-h-screen pt-10 px-0 sm:px-4">
-                <div class="fixed inset-0 bg-black/60 backdrop-blur-sm" wire:click="$set('showPhysicalModal', false)"></div>
+                <div class="fixed inset-0 bg-black/60 backdrop-blur-sm" wire:click="cancelPhysicalAttendanceSelection"></div>
 
                 <div class="relative bg-white rounded-t-[2.5rem] sm:rounded-b-[2.5rem] shadow-2xl w-full max-w-lg p-8 z-10 max-h-[95vh] overflow-y-auto pb-24 sm:pb-8">
                     <div class="w-16 h-1.5 bg-slate-200 rounded-full mx-auto mb-8"></div>
@@ -589,9 +589,9 @@
                         </div>
 
                         <div class="mt-8 flex gap-4 pb-4">
-                            <button type="button" wire:click="$set('showPhysicalModal', false)"
+                            <button type="button" wire:click="cancelPhysicalAttendanceSelection"
                                 class="flex-1 px-6 py-4 border border-slate-100 text-slate-500 rounded-2xl font-bold hover:bg-slate-50 transition-all">
-                                Batal
+                                Batalkan Pilihan
                             </button>
                             <button type="submit"
                                 class="flex-1 px-6 py-4 bg-emerald-600 text-white rounded-2xl font-bold hover:bg-emerald-700 flex items-center justify-center gap-3 shadow-xl shadow-emerald-500/20 transition-all active:scale-95"
@@ -612,7 +612,7 @@
     @if($showOnlineModal)
         <div class="fixed inset-0 z-[70] overflow-y-auto" aria-modal="true">
             <div class="flex items-end justify-center min-h-screen pt-10 px-0 sm:px-4">
-                <div class="fixed inset-0 bg-black/60 backdrop-blur-sm" wire:click="$set('showOnlineModal', false)"></div>
+                <div class="fixed inset-0 bg-black/60 backdrop-blur-sm" wire:click="cancelOnlineAttendanceSelection"></div>
 
                 <div class="relative bg-white rounded-t-[2.5rem] sm:rounded-b-[2.5rem] shadow-2xl w-full max-w-lg p-8 z-10 max-h-[95vh] overflow-y-auto pb-24 sm:pb-8">
                     <!-- Handle Bar -->
@@ -688,9 +688,9 @@
                         </div>
 
                         <div class="mt-8 flex gap-4 pb-4">
-                            <button type="button" wire:click="$set('showOnlineModal', false)"
+                            <button type="button" wire:click="cancelOnlineAttendanceSelection"
                                 class="flex-1 px-6 py-4 border border-slate-100 text-slate-500 rounded-2xl font-bold hover:bg-slate-50 transition-all">
-                                Batal
+                                Batalkan Pilihan
                             </button>
                             <button type="submit"
                                 class="flex-1 px-6 py-4 bg-primary-600 text-white rounded-2xl font-bold hover:bg-primary-700 flex items-center justify-center gap-3 shadow-xl shadow-primary-500/20 transition-all active:scale-95"
@@ -711,7 +711,7 @@
     @if($showIzinModal)
         <div class="fixed inset-0 z-[70] overflow-y-auto" aria-modal="true">
             <div class="flex items-end justify-center min-h-screen pt-10 px-0 sm:px-4">
-                <div class="fixed inset-0 bg-black/60 backdrop-blur-sm" wire:click="$set('showIzinModal', false)"></div>
+                <div class="fixed inset-0 bg-black/60 backdrop-blur-sm" wire:click="cancelIzinSelection"></div>
 
                 <div class="relative bg-white rounded-t-[2.5rem] sm:rounded-b-[2.5rem] shadow-2xl w-full max-w-lg p-8 z-10 max-h-[95vh] overflow-y-auto pb-24 sm:pb-8">
                     <!-- Handle Bar -->
@@ -789,9 +789,9 @@
                         </div>
 
                         <div class="mt-8 flex gap-4 pb-4">
-                            <button type="button" wire:click="$set('showIzinModal', false)"
+                            <button type="button" wire:click="cancelIzinSelection"
                                 class="flex-1 px-6 py-4 border border-slate-100 text-slate-500 rounded-2xl font-bold hover:bg-slate-50 transition-all">
-                                Batal
+                                Batalkan Pilihan
                             </button>
                             <button type="submit"
                                 class="flex-1 px-6 py-4 bg-amber-500 text-white rounded-2xl font-bold hover:bg-amber-600 flex items-center justify-center gap-3 shadow-xl shadow-amber-500/20 transition-all active:scale-95"
@@ -812,7 +812,7 @@
     @if($showReuploadModal)
         <div class="fixed inset-0 z-[70] overflow-y-auto" aria-modal="true">
             <div class="flex items-end justify-center min-h-screen pt-10 px-0 sm:px-4">
-                <div class="fixed inset-0 bg-black/60 backdrop-blur-sm" wire:click="$set('showReuploadModal', false)"></div>
+                <div class="fixed inset-0 bg-black/60 backdrop-blur-sm" wire:click="cancelReuploadSelection"></div>
 
                 <div class="relative bg-white rounded-t-[2.5rem] sm:rounded-b-[2.5rem] shadow-2xl w-full max-w-lg p-8 z-10 max-h-[95vh] overflow-y-auto pb-24 sm:pb-8">
                     <!-- Handle Bar -->
@@ -890,9 +890,9 @@
                         </div>
 
                         <div class="mt-8 flex gap-4 pb-4">
-                            <button type="button" wire:click="$set('showReuploadModal', false)"
+                            <button type="button" wire:click="cancelReuploadSelection"
                                 class="flex-1 px-6 py-4 border border-slate-100 text-slate-500 rounded-2xl font-bold hover:bg-slate-50 transition-all">
-                                Batal
+                                Batalkan Pilihan
                             </button>
                             <button type="submit"
                                 class="flex-1 px-6 py-4 {{ $reuploadIsPendingReplace ? 'bg-yellow-500 hover:bg-yellow-600 shadow-yellow-400/20' : 'bg-red-600 hover:bg-red-700 shadow-red-500/20' }} text-white rounded-2xl font-bold flex items-center justify-center gap-3 shadow-xl transition-all active:scale-95"

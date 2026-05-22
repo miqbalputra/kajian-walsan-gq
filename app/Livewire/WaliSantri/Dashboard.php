@@ -196,6 +196,49 @@ class Dashboard extends Component
         $this->showIzinModal = true;
     }
 
+    public function cancelPhysicalAttendanceSelection(): void
+    {
+        $this->deleteTemporaryUpload('proofPhoto');
+        $this->reset(['proofPhoto', 'notes']);
+        $this->resetErrorBag();
+        $this->showPhysicalModal = false;
+    }
+
+    public function cancelOnlineAttendanceSelection(): void
+    {
+        $this->deleteTemporaryUpload('proofPhoto');
+        $this->reset(['proofPhoto', 'notes']);
+        $this->resetErrorBag();
+        $this->showOnlineModal = false;
+    }
+
+    public function cancelIzinSelection(): void
+    {
+        $this->deleteTemporaryUpload('izinDocument');
+        $this->reset(['izinDocument', 'notes']);
+        $this->resetErrorBag();
+        $this->showIzinModal = false;
+    }
+
+    public function cancelReuploadSelection(): void
+    {
+        $this->deleteTemporaryUpload('reuploadFile');
+        $this->reset(['reuploadFile', 'reuploadAttendanceId', 'reuploadIsPendingReplace']);
+        $this->resetErrorBag();
+        $this->showReuploadModal = false;
+    }
+
+    protected function deleteTemporaryUpload(string $property): void
+    {
+        $files = collect((array) $this->{$property})->filter();
+
+        foreach ($files as $file) {
+            if (is_object($file) && method_exists($file, 'delete')) {
+                $file->delete();
+            }
+        }
+    }
+
     public function submitPhysicalAttendance()
     {
         $this->validate([
