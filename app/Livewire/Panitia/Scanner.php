@@ -204,7 +204,7 @@ class Scanner extends Component
             'cancelled_at' => now()->toDateTimeString(),
         ]);
 
-        $attendance->forceDelete();
+        $attendance->delete();
         session()->flash('message', 'Presensi berhasil dibatalkan.');
     }
 
