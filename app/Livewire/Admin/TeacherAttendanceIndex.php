@@ -6,6 +6,7 @@ use App\Models\Attendance;
 use App\Models\KajianEvent;
 use App\Models\ParentModel;
 use App\Services\CloudinaryService;
+use Carbon\Carbon;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Livewire\Attributes\Layout;
 use Livewire\Attributes\Title;
@@ -96,6 +97,7 @@ class TeacherAttendanceIndex extends Component
             'izin' => $rows->where('derived_status', Attendance::STATUS_IZIN)->count(),
             'pending' => $rows->where('derived_status', Attendance::VALIDATION_PENDING)->count(),
             'rejected' => $rows->where('derived_status', Attendance::VALIDATION_REJECTED)->count(),
+            'not_started' => $rows->where('derived_status', 'not_started')->count(),
             'alpha' => $rows->where('derived_status', Attendance::STATUS_ALPHA)->count(),
         ];
     }
@@ -105,6 +107,9 @@ class TeacherAttendanceIndex extends Component
         if (! $this->kajianId) {
             return collect();
         }
+
+        $selectedKajian = $this->selectedKajian;
+        $eventState = $selectedKajian ? $this->teacherAttendanceEventState($selectedKajian) : 'ended';
 
         $attendances = Attendance::with(['validator'])
             ->where('kajian_event_id', $this->kajianId)
@@ -118,9 +123,9 @@ class TeacherAttendanceIndex extends Component
             })
             ->orderBy('id')
             ->get()
-            ->map(function (ParentModel $teacher) use ($attendances) {
+            ->map(function (ParentModel $teacher) use ($attendances, $eventState) {
                 $attendance = $attendances->get($teacher->id);
-                $derived = $this->deriveTeacherStatus($attendance, $teacher);
+                $derived = $this->deriveTeacherStatus($attendance, $teacher, $eventState);
 
                 return [
                     'teacher_id' => $teacher->id,
@@ -143,9 +148,34 @@ class TeacherAttendanceIndex extends Component
             });
     }
 
-    protected function deriveTeacherStatus(?Attendance $attendance, ParentModel $teacher): array
+    protected function teacherAttendanceEventState(KajianEvent $event): string
+    {
+        $start = Carbon::parse($event->date->format('Y-m-d') . ' ' . Carbon::parse($event->time_start)->format('H:i:s'));
+        $end = Carbon::parse($event->date->format('Y-m-d') . ' ' . Carbon::parse($event->time_end)->format('H:i:s'));
+
+        if (now()->lt($start)) {
+            return 'not_started';
+        }
+
+        return now()->lte($end) && $event->status !== 'closed'
+            ? 'in_progress'
+            : 'ended';
+    }
+
+    protected function deriveTeacherStatus(?Attendance $attendance, ParentModel $teacher, string $eventState): array
     {
         if (! $attendance) {
+            if ($eventState !== 'ended') {
+                return [
+                    'status' => 'not_started',
+                    'label' => $eventState === 'not_started' ? 'Belum Mulai' : 'Berjalan',
+                    'badge' => 'bg-slate-100 text-slate-700',
+                    'reason' => $eventState === 'not_started'
+                        ? 'Kajian belum dimulai. Status alfa dihitung setelah kajian selesai.'
+                        : 'Kajian sedang berlangsung. Status alfa dihitung setelah kajian selesai.',
+                ];
+            }
+
             return [
                 'status' => Attendance::STATUS_ALPHA,
                 'label' => 'Alfa',
@@ -157,6 +187,17 @@ class TeacherAttendanceIndex extends Component
         }
 
         if (! $attendance->proof_file) {
+            if ($eventState !== 'ended') {
+                return [
+                    'status' => Attendance::VALIDATION_PENDING,
+                    'label' => 'Menunggu Catatan',
+                    'badge' => 'bg-amber-100 text-amber-700',
+                    'reason' => $teacher->isPureTeacher()
+                        ? 'Kajian belum selesai. Guru masih dapat upload catatan kajian.'
+                        : 'Sudah scan QR. Catatan kajian masih dapat diupload sebelum status alfa dihitung.',
+                ];
+            }
+
             return [
                 'status' => Attendance::STATUS_ALPHA,
                 'label' => 'Alfa',

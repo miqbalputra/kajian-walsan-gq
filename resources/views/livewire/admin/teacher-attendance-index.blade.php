@@ -6,7 +6,7 @@
         </div>
     </div>
 
-    <div class="grid grid-cols-2 lg:grid-cols-7 gap-4 mb-6">
+    <div class="grid grid-cols-2 lg:grid-cols-4 xl:grid-cols-8 gap-4 mb-6">
         <div class="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
             <p class="text-2xl font-bold text-gray-900">{{ $this->summary['total'] }}</p>
             <p class="text-sm text-gray-500">Total Guru</p>
@@ -30,6 +30,10 @@
         <div class="bg-rose-50 rounded-xl p-4 border border-rose-100">
             <p class="text-2xl font-bold text-rose-700">{{ $this->summary['rejected'] }}</p>
             <p class="text-sm text-rose-600">Ditolak</p>
+        </div>
+        <div class="bg-slate-50 rounded-xl p-4 border border-slate-100">
+            <p class="text-2xl font-bold text-slate-700">{{ $this->summary['not_started'] }}</p>
+            <p class="text-sm text-slate-600">Belum Mulai</p>
         </div>
         <div class="bg-red-50 rounded-xl p-4 border border-red-100">
             <p class="text-2xl font-bold text-red-700">{{ $this->summary['alpha'] }}</p>
@@ -59,6 +63,7 @@
                     <option value="izin">Izin</option>
                     <option value="pending">Pending</option>
                     <option value="rejected">Ditolak</option>
+                    <option value="not_started">Belum Mulai</option>
                     <option value="alpha">Alfa</option>
                 </select>
             </div>
