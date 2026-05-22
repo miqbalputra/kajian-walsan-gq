@@ -36,6 +36,7 @@ class Dashboard extends Component
     public $reuploadFile = null;
     public $reuploadAttendanceId = null;
     public $reuploadIsPendingReplace = false; // true jika mengganti foto pending (bukan rejected)
+    public $reuploadIsInitialTeacherNote = false;
     public $notes = '';
 
     protected $rules = [
@@ -222,7 +223,7 @@ class Dashboard extends Component
     public function cancelReuploadSelection(): void
     {
         $this->deleteTemporaryUpload('reuploadFile');
-        $this->reset(['reuploadFile', 'reuploadAttendanceId', 'reuploadIsPendingReplace']);
+        $this->reset(['reuploadFile', 'reuploadAttendanceId', 'reuploadIsPendingReplace', 'reuploadIsInitialTeacherNote']);
         $this->resetErrorBag();
         $this->showReuploadModal = false;
     }
@@ -403,11 +404,12 @@ class Dashboard extends Component
     /**
      * Buka modal re-upload untuk attendance yang ditolak.
      */
-    public function openReuploadModal($attendanceId, bool $isPendingReplace = false)
+    public function openReuploadModal($attendanceId, bool $isPendingReplace = false, bool $isInitialTeacherNote = false)
     {
         $this->reuploadAttendanceId = $attendanceId;
         $this->reuploadFile = null;
         $this->reuploadIsPendingReplace = $isPendingReplace;
+        $this->reuploadIsInitialTeacherNote = $isInitialTeacherNote;
         $this->showReuploadModal = true;
     }
 
@@ -464,11 +466,16 @@ class Dashboard extends Component
         $this->runAiReview($attendance->fresh());
 
         $this->showReuploadModal = false;
-        $this->reset(['reuploadFile', 'reuploadAttendanceId', 'reuploadIsPendingReplace']);
+        $isInitialTeacherNote = $this->reuploadIsInitialTeacherNote;
+        $isPendingReplace = $this->reuploadIsPendingReplace;
 
-        $message = $this->reuploadIsPendingReplace
+        $this->reset(['reuploadFile', 'reuploadAttendanceId', 'reuploadIsPendingReplace', 'reuploadIsInitialTeacherNote']);
+
+        $message = $isInitialTeacherNote
+            ? 'Catatan kajian berhasil dikirim. Menunggu validasi admin.'
+            : ($isPendingReplace
             ? 'Foto bukti berhasil diganti. Menunggu validasi admin.'
-            : 'Bukti berhasil diupload ulang. Menunggu validasi admin.';
+            : 'Bukti berhasil diupload ulang. Menunggu validasi admin.');
         session()->flash('message', $message);
     }
 

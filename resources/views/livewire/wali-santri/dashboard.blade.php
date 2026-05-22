@@ -278,7 +278,7 @@
                                     <div class="mt-4 p-4 bg-yellow-50 rounded-2xl border border-yellow-100 animate-pulse">
                                         <p class="text-xs font-bold text-yellow-800 uppercase tracking-widest mb-2 text-left">Langkah Terakhir:</p>
                                         <p class="text-sm text-yellow-700 text-left mb-4">Sebagai Guru, Anda wajib mengupload <b>catatan kajian</b> untuk melengkapi presensi kehadiran langsung.</p>
-                                        <button wire:click="openReuploadModal({{ $this->myAttendanceToday->id }}, true)"
+                                        <button wire:click="openReuploadModal({{ $this->myAttendanceToday->id }}, false, true)"
                                             class="w-full py-3 bg-yellow-500 text-white rounded-xl font-bold flex items-center justify-center gap-2 hover:bg-yellow-600 transition-colors shadow-lg shadow-yellow-500/20">
                                             <span class="material-symbols-rounded">upload_file</span>
                                             Upload Catatan Kajian
@@ -843,18 +843,16 @@
                     <div class="w-16 h-1.5 bg-slate-200 rounded-full mx-auto mb-8"></div>
 
                     <div class="flex items-center gap-3 mb-2">
-                        <div class="w-10 h-10 {{ $reuploadIsPendingReplace ? 'bg-yellow-100' : 'bg-red-100' }} rounded-xl flex items-center justify-center">
-                            <span class="material-symbols-rounded {{ $reuploadIsPendingReplace ? 'text-yellow-600' : 'text-red-600' }}">{{ $reuploadIsPendingReplace ? 'swap_horiz' : 'upload_file' }}</span>
+                        <div class="w-10 h-10 {{ ($reuploadIsPendingReplace || $reuploadIsInitialTeacherNote) ? 'bg-yellow-100' : 'bg-red-100' }} rounded-xl flex items-center justify-center">
+                            <span class="material-symbols-rounded {{ ($reuploadIsPendingReplace || $reuploadIsInitialTeacherNote) ? 'text-yellow-600' : 'text-red-600' }}">{{ ($reuploadIsPendingReplace && !$reuploadIsInitialTeacherNote) ? 'swap_horiz' : 'upload_file' }}</span>
                         </div>
-                        <h3 class="text-2xl font-black text-slate-900">{{ $reuploadIsPendingReplace ? ($this->isGuru ? 'Upload Catatan Kajian' : 'Ganti Foto Bukti') : 'Upload Ulang Bukti' }}</h3>
+                        <h3 class="text-2xl font-black text-slate-900">{{ ($reuploadIsPendingReplace || $reuploadIsInitialTeacherNote) ? ($this->isGuru ? 'Upload Catatan Kajian' : 'Ganti Foto Bukti') : 'Upload Ulang Bukti' }}</h3>
                     </div>
                     <p class="text-slate-500 text-sm mb-6 leading-relaxed">
-                        @if($reuploadIsPendingReplace)
-                            @if($this->isGuru)
-                                Silakan upload foto <b>catatan kajian</b> Anda untuk melengkapi presensi.
-                            @else
-                                Foto bukti lama akan dihapus dan diganti dengan foto baru. Presensi Anda tetap tercatat menunggu validasi.
-                            @endif
+                        @if($reuploadIsInitialTeacherNote)
+                            Silakan upload foto <b>catatan kajian</b> Anda untuk melengkapi presensi.
+                        @elseif($reuploadIsPendingReplace)
+                            Foto bukti lama akan dihapus dan diganti dengan foto baru. Presensi Anda tetap tercatat menunggu validasi.
                         @else
                             Bukti sebelumnya ditolak. Silakan upload file baru yang sesuai.
                         @endif
@@ -864,7 +862,7 @@
                         <div class="space-y-6">
                             <div>
                                 <label class="block text-xs font-black text-slate-400 uppercase tracking-widest mb-3">
-                                    {{ ($reuploadIsPendingReplace && $this->isGuru) ? 'Foto Catatan Kajian' : 'File Bukti Baru' }} 
+                                    {{ (($reuploadIsPendingReplace || $reuploadIsInitialTeacherNote) && $this->isGuru) ? 'Foto Catatan Kajian' : 'File Bukti Baru' }}
                                     <span class="text-red-500">*</span>
                                 </label>
                                 <div class="border-2 border-dashed border-slate-200 rounded-3xl p-8 text-center hover:border-red-500 hover:bg-red-50/30 transition-all cursor-pointer relative group"
@@ -919,11 +917,11 @@
                                 Batalkan Pilihan
                             </button>
                             <button type="submit"
-                                class="flex-1 px-6 py-4 {{ $reuploadIsPendingReplace ? 'bg-yellow-500 hover:bg-yellow-600 shadow-yellow-400/20' : 'bg-red-600 hover:bg-red-700 shadow-red-500/20' }} text-white rounded-2xl font-bold flex items-center justify-center gap-3 shadow-xl transition-all active:scale-95"
+                                class="flex-1 px-6 py-4 {{ ($reuploadIsPendingReplace || $reuploadIsInitialTeacherNote) ? 'bg-yellow-500 hover:bg-yellow-600 shadow-yellow-400/20' : 'bg-red-600 hover:bg-red-700 shadow-red-500/20' }} text-white rounded-2xl font-bold flex items-center justify-center gap-3 shadow-xl transition-all active:scale-95"
                                 wire:loading.attr="disabled">
                                 <span wire:loading wire:target="reuploadProof"
                                     class="material-symbols-rounded animate-spin text-xl">progress_activity</span>
-                                <span wire:loading.remove wire:target="reuploadProof">{{ $reuploadIsPendingReplace ? 'Ganti Foto' : 'Kirim Ulang' }}</span>
+                                <span wire:loading.remove wire:target="reuploadProof">{{ $reuploadIsInitialTeacherNote ? 'Kirim Catatan' : ($reuploadIsPendingReplace ? 'Ganti Foto' : 'Kirim Ulang') }}</span>
                                 <span wire:loading wire:target="reuploadProof">Mengirim...</span>
                             </button>
                         </div>
