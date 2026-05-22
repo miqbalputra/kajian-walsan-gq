@@ -18,6 +18,7 @@ use App\Livewire\Admin\TeacherAttendanceIndex;
 use App\Livewire\Admin\UserIndex;
 use App\Livewire\Kepsek\Dashboard as KepsekDashboard;
 use App\Livewire\Kepsek\GuardianAttendanceReport as KepsekGuardianAttendanceReport;
+use App\Livewire\Kepsek\SurveyAnalysis as KepsekSurveyAnalysis;
 use App\Livewire\Kepsek\TeacherAttendanceReport as KepsekTeacherAttendanceReport;
 use App\Livewire\Panitia\Scanner;
 use App\Livewire\WaliSantri\Dashboard as WaliSantriDashboard;
@@ -126,6 +127,7 @@ Route::middleware('auth')->group(function () {
         Route::get('/', KepsekDashboard::class)->name('dashboard');
         Route::get('/guardian-attendance', KepsekGuardianAttendanceReport::class)->name('guardian-attendance.index');
         Route::get('/teacher-attendance', KepsekTeacherAttendanceReport::class)->name('teacher-attendance.index');
+        Route::get('/surveys', KepsekSurveyAnalysis::class)->name('surveys.index');
     });
 
     // Wali Kelas Routes - Admin and Wali Kelas can access

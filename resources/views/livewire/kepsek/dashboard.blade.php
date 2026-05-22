@@ -15,6 +15,11 @@
                 <span class="material-symbols-rounded">group</span>
                 Presensi Wali Santri
             </a>
+            <a href="{{ route('kepsek.surveys.index') }}"
+                class="inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-white text-primary-700 border border-primary-100 rounded-xl font-semibold hover:bg-primary-50 transition-colors">
+                <span class="material-symbols-rounded">thumbs_up_down</span>
+                Hasil Survey
+            </a>
         </div>
     </div>
 
