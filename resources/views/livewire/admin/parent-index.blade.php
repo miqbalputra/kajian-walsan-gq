@@ -195,7 +195,7 @@
                         <tr>
                             <td colspan="5" class="px-6 py-12 text-center text-gray-500">
                                 <span class="material-symbols-rounded text-5xl text-gray-300">group</span>
-                                <p class="mt-2">Belum ada data orang tua</p>
+                                <p class="mt-2">{{ $isTeacherMode ? 'Belum ada data guru' : 'Belum ada data orang tua' }}</p>
                             </td>
                         </tr>
                     @endforelse
@@ -279,11 +279,14 @@
                                             class="text-red-500">*</span></label>
                                     <select wire:model="type"
                                         class="w-full px-4 py-2.5 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-transparent">
-                                        @if($isTeacherMode)
+                                        @if($isTeacherMode && !$editMode)
                                             <option value="teacher">Guru</option>
                                         @else
                                             <option value="father">Ayah</option>
                                             <option value="mother">Ibu</option>
+                                            @if($isTeacherMode)
+                                                <option value="teacher">Guru</option>
+                                            @endif
                                         @endif
                                     </select>
                                 </div>

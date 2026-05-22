@@ -88,7 +88,11 @@ class ParentIndex extends Component
 
     protected function rules()
     {
-        $allowedTypes = $this->isTeacherMode() ? 'teacher' : 'father,mother';
+        $allowedTypes = match (true) {
+            $this->isTeacherMode() && $this->editMode => 'father,mother,teacher',
+            $this->isTeacherMode() => 'teacher',
+            default => 'father,mother',
+        };
 
         return [
             'name' => 'required|string|max:100',
@@ -170,7 +174,10 @@ class ParentIndex extends Component
     public function save()
     {
         if ($this->isTeacherMode()) {
-            $this->type = 'teacher';
+            if (! $this->editMode) {
+                $this->type = 'teacher';
+            }
+
             $this->is_teacher = true;
         }
 
@@ -576,7 +583,10 @@ class ParentIndex extends Component
             });
 
         if ($this->isTeacherMode()) {
-            $query->where('type', 'teacher');
+            $query->where(function ($query) {
+                $query->where('type', 'teacher')
+                    ->orWhere('is_teacher', true);
+            });
         } else {
             $query->whereIn('type', ['father', 'mother']);
 
