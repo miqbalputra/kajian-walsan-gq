@@ -16,6 +16,8 @@ use App\Livewire\Admin\ReportIndex;
 use App\Livewire\Admin\StudentIndex;
 use App\Livewire\Admin\TeacherAttendanceIndex;
 use App\Livewire\Admin\UserIndex;
+use App\Livewire\Kepsek\Dashboard as KepsekDashboard;
+use App\Livewire\Kepsek\TeacherAttendanceReport as KepsekTeacherAttendanceReport;
 use App\Livewire\Panitia\Scanner;
 use App\Livewire\WaliSantri\Dashboard as WaliSantriDashboard;
 use Illuminate\Support\Facades\Route;
@@ -68,7 +70,7 @@ Route::middleware('auth')->group(function () {
         } elseif ($user->isWaliKelas()) {
             return redirect()->route('wali-kelas.dashboard');
         } elseif ($user->isKepsek()) {
-            return view('dashboard.kepsek');
+            return redirect()->route('kepsek.dashboard');
         } elseif ($user->isGuru()) {
             return redirect()->route('wali-santri.dashboard');
         } else {
@@ -116,6 +118,12 @@ Route::middleware('auth')->group(function () {
         Route::get('/scanner', Scanner::class)->name('scanner');
         Route::post('/scan', [PanitiaAttendanceScanController::class, 'store'])->name('scan.store');
         Route::get('/jadwal', \App\Livewire\Panitia\JadwalKajian::class)->name('jadwal');
+    });
+
+    // Kepala Sekolah Routes - Read-only monitoring
+    Route::prefix('kepsek')->name('kepsek.')->middleware('role:kepsek')->group(function () {
+        Route::get('/', KepsekDashboard::class)->name('dashboard');
+        Route::get('/teacher-attendance', KepsekTeacherAttendanceReport::class)->name('teacher-attendance.index');
     });
 
     // Wali Kelas Routes - Admin and Wali Kelas can access
