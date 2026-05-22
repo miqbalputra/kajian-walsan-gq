@@ -86,8 +86,7 @@ class Dashboard extends Component
             return null;
         }
 
-        return Attendance::withTrashed()
-            ->where('kajian_event_id', $this->activeEvent->id)
+        return Attendance::where('kajian_event_id', $this->activeEvent->id)
             ->where('parent_id', $this->parent->id)
             ->first();
     }
@@ -265,6 +264,8 @@ class Dashboard extends Component
             return;
         }
 
+        $this->clearDeletedAttendanceForActiveEvent();
+
         $cloudinary = app(CloudinaryService::class);
         $result = $cloudinary->upload($this->proofPhoto, 'teacher-attendance-notes');
         $path = $result['url'];
@@ -318,6 +319,8 @@ class Dashboard extends Component
             return;
         }
 
+        $this->clearDeletedAttendanceForActiveEvent();
+
         // Upload via CloudinaryService (or local fallback)
         $cloudinary = app(CloudinaryService::class);
         $result = $cloudinary->upload(
@@ -365,6 +368,8 @@ class Dashboard extends Component
             $this->showIzinModal = false;
             return;
         }
+
+        $this->clearDeletedAttendanceForActiveEvent();
 
         // Upload via CloudinaryService (or local fallback)
         $cloudinary = app(CloudinaryService::class);
@@ -535,6 +540,25 @@ class Dashboard extends Component
                 'error' => $exception->getMessage(),
             ]);
         }
+    }
+
+    protected function clearDeletedAttendanceForActiveEvent(): void
+    {
+        if (!$this->activeEvent || !$this->parent) {
+            return;
+        }
+
+        Attendance::onlyTrashed()
+            ->where('kajian_event_id', $this->activeEvent->id)
+            ->where('parent_id', $this->parent->id)
+            ->get()
+            ->each(function (Attendance $attendance) {
+                if ($attendance->proof_file) {
+                    $this->deleteOldProofFile($attendance->proof_file);
+                }
+
+                $attendance->forceDelete();
+            });
     }
 
     /**
