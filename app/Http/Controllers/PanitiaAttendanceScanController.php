@@ -58,6 +58,8 @@ class PanitiaAttendanceScanController extends Controller
         } catch (\Throwable $exception) {
             Log::error('Scanner API Error: ' . $exception->getMessage(), [
                 'user_id' => auth()->id(),
+                'exception' => $exception::class,
+                'qr_code_length' => strlen($data['qr_code']),
             ]);
 
             return response()->json([
