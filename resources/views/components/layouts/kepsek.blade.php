@@ -56,6 +56,11 @@
                     <span class="material-symbols-rounded">co_present</span>
                     Presensi Guru
                 </a>
+                <a href="{{ route('kepsek.guardian-attendance.index') }}"
+                    class="flex items-center gap-3 px-4 py-3 rounded-xl font-medium transition-colors {{ request()->routeIs('kepsek.guardian-attendance.*') ? 'bg-primary-50 dark:bg-primary-900/20 text-primary-600 dark:text-primary-400' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-slate-800' }}">
+                    <span class="material-symbols-rounded">group</span>
+                    Presensi Wali Santri
+                </a>
 
                 <div class="pt-4 mt-4 border-t border-gray-200 dark:border-slate-800">
                     <form method="POST" action="{{ route('logout') }}">

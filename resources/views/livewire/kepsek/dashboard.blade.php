@@ -4,11 +4,18 @@
             <h1 class="text-2xl font-bold text-gray-900 dark:text-white">Dashboard Kepala Sekolah</h1>
             <p class="text-gray-500 dark:text-gray-400">Monitoring presensi kajian dan performa guru secara read-only.</p>
         </div>
-        <a href="{{ route('kepsek.teacher-attendance.index') }}"
-            class="inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-primary-600 text-white rounded-xl font-semibold hover:bg-primary-700 transition-colors">
-            <span class="material-symbols-rounded">co_present</span>
-            Lihat Presensi Guru
-        </a>
+        <div class="flex flex-col sm:flex-row gap-2">
+            <a href="{{ route('kepsek.teacher-attendance.index') }}"
+                class="inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-primary-600 text-white rounded-xl font-semibold hover:bg-primary-700 transition-colors">
+                <span class="material-symbols-rounded">co_present</span>
+                Presensi Guru
+            </a>
+            <a href="{{ route('kepsek.guardian-attendance.index') }}"
+                class="inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-white text-primary-700 border border-primary-100 rounded-xl font-semibold hover:bg-primary-50 transition-colors">
+                <span class="material-symbols-rounded">group</span>
+                Presensi Wali Santri
+            </a>
+        </div>
     </div>
 
     <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
