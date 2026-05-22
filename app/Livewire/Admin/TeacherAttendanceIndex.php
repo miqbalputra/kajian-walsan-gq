@@ -233,7 +233,9 @@ class TeacherAttendanceIndex extends Component
                 'status' => Attendance::STATUS_HADIR_FISIK,
                 'label' => 'Hadir Langsung',
                 'badge' => 'bg-emerald-100 text-emerald-700',
-                'reason' => 'Scan QR dan catatan kajian sudah tervalidasi.',
+                'reason' => $teacher->isPureTeacher()
+                    ? 'Catatan kajian hadir langsung sudah tervalidasi.'
+                    : 'Scan QR dan catatan kajian sudah tervalidasi.',
             ],
             Attendance::STATUS_HADIR_ONLINE => [
                 'status' => Attendance::STATUS_HADIR_ONLINE,

@@ -312,21 +312,41 @@
                                 </button>
                             @endunless
 
-                            <div class="grid grid-cols-2 gap-3">
-                                <!-- Online Attendance -->
-                                <button wire:click="$set('showOnlineModal', true)"
-                                    class="py-3 bg-secondary-50 text-secondary-700 rounded-xl font-medium flex items-center justify-center gap-2 hover:bg-secondary-100 transition-colors">
-                                    <span class="material-symbols-rounded">videocam</span>
-                                    {{ $this->isGuru ? 'Menyimak Online' : 'Hadir Online' }}
-                                </button>
+                            @if($this->isGuru)
+                                <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                                    <button wire:click="openPhysicalAttendanceModal"
+                                        class="py-3 bg-emerald-50 text-emerald-700 rounded-xl font-medium flex items-center justify-center gap-2 hover:bg-emerald-100 transition-colors">
+                                        <span class="material-symbols-rounded">edit_note</span>
+                                        Upload Hadir Langsung
+                                    </button>
+                                    <button wire:click="openOnlineAttendanceModal"
+                                        class="py-3 bg-secondary-50 text-secondary-700 rounded-xl font-medium flex items-center justify-center gap-2 hover:bg-secondary-100 transition-colors">
+                                        <span class="material-symbols-rounded">videocam</span>
+                                        Upload Menyimak Online
+                                    </button>
+                                    <button wire:click="openIzinModal"
+                                        class="py-3 bg-yellow-50 text-yellow-700 rounded-xl font-medium flex items-center justify-center gap-2 hover:bg-yellow-100 transition-colors">
+                                        <span class="material-symbols-rounded">edit_document</span>
+                                        Upload Izin
+                                    </button>
+                                </div>
+                            @else
+                                <div class="grid grid-cols-2 gap-3">
+                                    <!-- Online Attendance -->
+                                    <button wire:click="openOnlineAttendanceModal"
+                                        class="py-3 bg-secondary-50 text-secondary-700 rounded-xl font-medium flex items-center justify-center gap-2 hover:bg-secondary-100 transition-colors">
+                                        <span class="material-symbols-rounded">videocam</span>
+                                        Hadir Online
+                                    </button>
 
-                                <!-- Permission/Izin -->
-                                <button wire:click="$set('showIzinModal', true)"
-                                    class="py-3 bg-yellow-50 text-yellow-700 rounded-xl font-medium flex items-center justify-center gap-2 hover:bg-yellow-100 transition-colors">
-                                    <span class="material-symbols-rounded">edit_document</span>
-                                    Izin
-                                </button>
-                            </div>
+                                    <!-- Permission/Izin -->
+                                    <button wire:click="openIzinModal"
+                                        class="py-3 bg-yellow-50 text-yellow-700 rounded-xl font-medium flex items-center justify-center gap-2 hover:bg-yellow-100 transition-colors">
+                                        <span class="material-symbols-rounded">edit_document</span>
+                                        Izin
+                                    </button>
+                                </div>
+                            @endif
                         </div>
                     @endif
                 </div>
@@ -359,7 +379,12 @@
                                     <p class="font-medium text-gray-900 truncate">{{ $rejected->kajianEvent?->title }}</p>
                                     <p class="text-xs text-gray-500 mt-0.5">{{ $rejected->kajianEvent?->date->translatedFormat('d M Y') }}</p>
                                     <p class="text-xs text-gray-500">
-                                        Status: {{ $rejected->status === 'hadir_online' ? 'Hadir Online' : 'Izin' }}
+                                        Status: {{ match($rejected->status) {
+                                            'hadir_fisik' => 'Hadir Langsung',
+                                            'hadir_online' => 'Menyimak Online',
+                                            'izin' => 'Izin',
+                                            default => 'Presensi',
+                                        } }}
                                     </p>
                                     @if($rejected->rejection_reason)
                                         <div class="mt-2 p-2 bg-red-50 rounded-lg border border-red-100">
@@ -427,7 +452,7 @@
                             </span>
                             @if($attendance->validation_status === 'pending')
                                 <span class="text-[10px] text-yellow-600 font-medium">Menunggu Validasi</span>
-                            @elseif($attendance->validation_status === 'approved' && in_array($attendance->method, ['upload', 'manual']))
+                            @elseif($attendance->validation_status === 'approved' && in_array($attendance->method, ['upload', 'manual', 'scan_qr']))
                                 <span class="text-[10px] text-green-600 font-medium flex items-center gap-0.5">
                                     <span class="material-symbols-rounded text-[12px]">verified</span>
                                     Divalidasi
@@ -486,6 +511,103 @@
         </div>
     @endif
 
+    <!-- Physical Attendance Notes Modal -->
+    @if($showPhysicalModal)
+        <div class="fixed inset-0 z-[70] overflow-y-auto" aria-modal="true">
+            <div class="flex items-end justify-center min-h-screen pt-10 px-0 sm:px-4">
+                <div class="fixed inset-0 bg-black/60 backdrop-blur-sm" wire:click="$set('showPhysicalModal', false)"></div>
+
+                <div class="relative bg-white rounded-t-[2.5rem] sm:rounded-b-[2.5rem] shadow-2xl w-full max-w-lg p-8 z-10 max-h-[95vh] overflow-y-auto pb-24 sm:pb-8">
+                    <div class="w-16 h-1.5 bg-slate-200 rounded-full mx-auto mb-8"></div>
+
+                    <h3 class="text-2xl font-black text-slate-900 mb-2">Upload Hadir Langsung</h3>
+                    <p class="text-slate-500 text-sm mb-6 leading-relaxed">
+                        @if($this->isWaliGuru)
+                            Upload foto <b>catatan hasil kajian</b> untuk melengkapi presensi QR di lokasi.
+                        @else
+                            Upload foto <b>catatan hasil kajian</b> sebagai bukti hadir langsung.
+                        @endif
+                    </p>
+
+                    <form wire:submit="submitPhysicalAttendance">
+                        <div class="space-y-6">
+                            <div>
+                                <label class="block text-xs font-black text-slate-400 uppercase tracking-widest mb-3">
+                                    Foto Catatan Kajian
+                                    <span class="text-emerald-500">*</span>
+                                </label>
+                                <div class="border-2 border-dashed border-slate-200 rounded-3xl p-8 text-center hover:border-emerald-500 hover:bg-emerald-50/30 transition-all cursor-pointer relative group"
+                                    x-data="{ compressing: false }" data-compress-container>
+                                    <input type="file" accept="image/jpeg,image/png"
+                                        wire:model="proofPhoto"
+                                        class="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                                        x-on:change="
+                                            const input = $event.target;
+                                            if (input.files[0] && input.files[0].type.startsWith('image/')) {
+                                                compressing = true;
+                                                const compressed = await window.ImageCompressor.compress(input.files[0]);
+                                                const dt = new DataTransfer();
+                                                dt.items.add(compressed);
+                                                input.files = dt.files;
+                                                compressing = false;
+                                            }
+                                        ">
+
+                                    @if($proofPhoto)
+                                        <div class="relative pointer-events-none">
+                                            <img src="{{ $proofPhoto->temporaryUrl() }}" class="max-h-48 mx-auto rounded-2xl shadow-lg border-4 border-white">
+                                            <div class="absolute inset-0 bg-black/40 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                                                <span class="text-white text-xs font-bold px-3 py-1 bg-white/20 backdrop-blur-md rounded-full">Ganti Foto</span>
+                                            </div>
+                                        </div>
+                                    @else
+                                        <div class="flex flex-col items-center gap-3">
+                                            <div class="w-14 h-14 bg-slate-50 rounded-2xl flex items-center justify-center text-slate-400 group-hover:bg-emerald-500 group-hover:text-white transition-all">
+                                                <span class="material-symbols-rounded text-3xl font-light">add_photo_alternate</span>
+                                            </div>
+                                            <div>
+                                                <p class="text-sm font-bold text-slate-700">Klik untuk upload foto</p>
+                                                <p class="text-[10px] text-slate-400 font-medium uppercase tracking-wider mt-1">JPG/PNG, Maks 2MB</p>
+                                            </div>
+                                        </div>
+                                    @endif
+
+                                    <div x-show="compressing" class="flex flex-col items-center gap-2 py-2">
+                                        <span class="material-symbols-rounded text-emerald-500 animate-spin text-3xl">progress_activity</span>
+                                        <p class="text-xs font-bold text-emerald-600">Mengompresi foto...</p>
+                                    </div>
+                                </div>
+                                @error('proofPhoto') <span class="text-red-500 text-xs font-bold mt-2 block">{{ $message }}</span> @enderror
+                            </div>
+
+                            <div>
+                                <label class="block text-xs font-black text-slate-400 uppercase tracking-widest mb-3">Catatan (opsional)</label>
+                                <textarea wire:model="notes" rows="3"
+                                    class="w-full px-5 py-4 bg-slate-50 border border-slate-100 rounded-2xl focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500 transition-all outline-none text-sm font-medium"
+                                    placeholder="Tulis pesan atau catatan tambahan untuk panitia..."></textarea>
+                            </div>
+                        </div>
+
+                        <div class="mt-8 flex gap-4 pb-4">
+                            <button type="button" wire:click="$set('showPhysicalModal', false)"
+                                class="flex-1 px-6 py-4 border border-slate-100 text-slate-500 rounded-2xl font-bold hover:bg-slate-50 transition-all">
+                                Batal
+                            </button>
+                            <button type="submit"
+                                class="flex-1 px-6 py-4 bg-emerald-600 text-white rounded-2xl font-bold hover:bg-emerald-700 flex items-center justify-center gap-3 shadow-xl shadow-emerald-500/20 transition-all active:scale-95"
+                                wire:loading.attr="disabled">
+                                <span wire:loading wire:target="submitPhysicalAttendance"
+                                    class="material-symbols-rounded animate-spin text-xl">progress_activity</span>
+                                <span wire:loading.remove wire:target="submitPhysicalAttendance">Kirim Catatan</span>
+                                <span wire:loading wire:target="submitPhysicalAttendance">Mengirim...</span>
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    @endif
+
     <!-- Online Attendance Modal -->
     @if($showOnlineModal)
         <div class="fixed inset-0 z-[70] overflow-y-auto" aria-modal="true">
@@ -496,10 +618,10 @@
                     <!-- Handle Bar -->
                     <div class="w-16 h-1.5 bg-slate-200 rounded-full mx-auto mb-8"></div>
 
-                    <h3 class="text-2xl font-black text-slate-900 mb-2">{{ $this->isGuru ? 'Izin Menyimak Online' : 'Hadir Online' }}</h3>
+                    <h3 class="text-2xl font-black text-slate-900 mb-2">{{ $this->isGuru ? 'Upload Menyimak Online' : 'Hadir Online' }}</h3>
                     <p class="text-slate-500 text-sm mb-6 leading-relaxed">
                         @if($this->isGuru)
-                            Upload foto <b>catatan hasil kajian</b> sebagai bukti izin menyimak online hari ini.
+                            Upload foto <b>catatan hasil kajian</b> sebagai bukti menyimak online hari ini.
                         @else
                             Upload foto bukti Anda menyimak kajian secara online.
                         @endif
@@ -595,7 +717,7 @@
                     <!-- Handle Bar -->
                     <div class="w-16 h-1.5 bg-slate-200 rounded-full mx-auto mb-8"></div>
 
-                    <h3 class="text-2xl font-black text-slate-900 mb-2">Izin / Berhalangan</h3>
+                    <h3 class="text-2xl font-black text-slate-900 mb-2">{{ $this->isGuru ? 'Upload Izin' : 'Izin / Berhalangan' }}</h3>
                     <p class="text-slate-500 text-sm mb-6 leading-relaxed">
                         @if($this->isGuru)
                             Wajib upload <b>surat pernyataan</b> berhalangan hadir.

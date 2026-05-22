@@ -21,6 +21,7 @@ class Dashboard extends Component
     use WithFileUploads;
 
     public $showQrModal = false;
+    public $showPhysicalModal = false;
     public $showOnlineModal = false;
     public $showIzinModal = false;
     public $showReuploadModal = false;
@@ -175,6 +176,85 @@ class Dashboard extends Component
             ->orderBy('date')
             ->orderBy('time_start')
             ->first();
+    }
+
+    public function openPhysicalAttendanceModal(): void
+    {
+        $this->reset(['proofPhoto', 'notes']);
+        $this->showPhysicalModal = true;
+    }
+
+    public function openOnlineAttendanceModal(): void
+    {
+        $this->reset(['proofPhoto', 'notes']);
+        $this->showOnlineModal = true;
+    }
+
+    public function openIzinModal(): void
+    {
+        $this->reset(['izinDocument', 'notes']);
+        $this->showIzinModal = true;
+    }
+
+    public function submitPhysicalAttendance()
+    {
+        $this->validate([
+            'proofPhoto' => 'required|image|mimes:jpg,jpeg,png|max:2048',
+            'notes' => 'nullable|string|max:500',
+        ]);
+
+        if (!$this->activeEvent || !$this->parent || !$this->isGuru) {
+            session()->flash('error', 'Tidak dapat mengirim catatan hadir langsung.');
+            return;
+        }
+
+        $attendance = $this->myAttendanceToday;
+
+        if ($attendance && ($attendance->status !== Attendance::STATUS_HADIR_FISIK || $attendance->proof_file)) {
+            session()->flash('error', 'Anda sudah tercatat pada kajian ini.');
+            $this->showPhysicalModal = false;
+            return;
+        }
+
+        if (!$attendance && $this->isWaliGuru) {
+            session()->flash('error', 'Silakan scan QR di lokasi terlebih dahulu, lalu upload catatan kajian.');
+            $this->showPhysicalModal = false;
+            return;
+        }
+
+        $cloudinary = app(CloudinaryService::class);
+        $result = $cloudinary->upload($this->proofPhoto, 'teacher-attendance-notes');
+        $path = $result['url'];
+
+        if ($attendance) {
+            $attendance->update([
+                'proof_file' => $path,
+                'notes' => $this->notes,
+                'validation_status' => Attendance::VALIDATION_PENDING,
+                'rejection_reason' => null,
+                'validated_by' => null,
+                'validated_at' => null,
+            ]);
+        } else {
+            $attendance = Attendance::create([
+                'kajian_event_id' => $this->activeEvent->id,
+                'parent_id' => $this->parent->id,
+                'student_id' => $this->parent->students()->first()?->id,
+                'status' => Attendance::STATUS_HADIR_FISIK,
+                'method' => Attendance::METHOD_UPLOAD,
+                'validation_status' => Attendance::VALIDATION_PENDING,
+                'proof_file' => $path,
+                'notes' => $this->notes,
+            ]);
+        }
+
+        $this->runAiReview($attendance->fresh());
+
+        $this->showPhysicalModal = false;
+        $this->reset(['proofPhoto', 'notes']);
+        session()->flash('message', $attendance->fresh()->validation_status === Attendance::VALIDATION_APPROVED
+            ? 'Catatan hadir langsung berhasil dikirim dan disetujui AI.'
+            : 'Catatan hadir langsung berhasil dikirim. Menunggu validasi.');
     }
 
     public function submitOnlineAttendance()
