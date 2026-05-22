@@ -266,7 +266,7 @@
                                     @endif
                                 </p>
 
-                                @if($this->isGuru && $this->myAttendanceToday->status === 'hadir_fisik' && !$this->myAttendanceToday->proof_file)
+                                @if($this->isWaliGuru && $this->myAttendanceToday->status === 'hadir_fisik' && !$this->myAttendanceToday->proof_file)
                                     <div class="mt-4 p-4 bg-yellow-50 rounded-2xl border border-yellow-100 animate-pulse">
                                         <p class="text-xs font-bold text-yellow-800 uppercase tracking-widest mb-2 text-left">Langkah Terakhir:</p>
                                         <p class="text-sm text-yellow-700 text-left mb-4">Sebagai Guru, Anda wajib mengupload <b>catatan kajian</b> untuk melengkapi presensi kehadiran langsung.</p>
@@ -304,11 +304,13 @@
                         <!-- Action Buttons -->
                         <div class="space-y-3">
                             <!-- Show QR Code -->
-                            <button wire:click="$set('showQrModal', true)"
-                                class="w-full py-4 bg-gradient-to-r from-primary-500 to-primary-600 text-white rounded-xl font-semibold flex items-center justify-center gap-3 shadow-lg shadow-primary-500/25">
-                                <span class="material-symbols-rounded text-2xl">qr_code_2</span>
-                                Tampilkan QR Code Saya
-                            </button>
+                            @unless($this->isPureGuru)
+                                <button wire:click="$set('showQrModal', true)"
+                                    class="w-full py-4 bg-gradient-to-r from-primary-500 to-primary-600 text-white rounded-xl font-semibold flex items-center justify-center gap-3 shadow-lg shadow-primary-500/25">
+                                    <span class="material-symbols-rounded text-2xl">qr_code_2</span>
+                                    Tampilkan QR Code Saya
+                                </button>
+                            @endunless
 
                             <div class="grid grid-cols-2 gap-3">
                                 <!-- Online Attendance -->
@@ -455,7 +457,7 @@
     </main>
 
     <!-- QR Code Modal -->
-    @if($showQrModal)
+    @if($showQrModal && !$this->isPureGuru)
         <div class="fixed inset-0 z-50 overflow-y-auto" aria-modal="true">
             <div class="flex items-center justify-center min-h-screen px-4">
                 <div class="fixed inset-0 bg-black/50" wire:click="$set('showQrModal', false)"></div>

@@ -200,7 +200,7 @@
 
 
 
-        @if($parentData)
+        @if($parentData && !$parentData->isPureTeacher())
         {{-- Kartu Identitas Card --}}
         <div
             class="bg-white dark:bg-slate-900 rounded-[2.5rem] shadow-xl shadow-slate-200/60 dark:shadow-none p-8 border border-slate-100 dark:border-slate-800 transition-all">
@@ -250,7 +250,7 @@
     </div>
 
     {{-- ID Card Modal --}}
-    @if($showCardModal && $parentData)
+    @if($showCardModal && $parentData && !$parentData->isPureTeacher())
         @php
             $isMother = $parentData->type === 'mother';
             $bgHeader = $isMother ? 'from-rose-500 to-pink-500' : 'from-emerald-600 to-teal-500';

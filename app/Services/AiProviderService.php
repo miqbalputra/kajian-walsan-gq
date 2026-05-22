@@ -392,12 +392,16 @@ class AiProviderService
             if ($parent->isTeacher()) {
                 if (! $attendance) {
                     $status = Attendance::STATUS_ALPHA;
-                    $reason = 'Guru belum scan QR, belum upload catatan, dan belum mengirim izin.';
+                    $reason = $parent->isPureTeacher()
+                        ? 'Guru belum upload catatan kajian dan belum mengirim izin.'
+                        : 'Guru belum scan QR, belum upload catatan, dan belum mengirim izin.';
                 } elseif (! $attendance->proof_file) {
                     $status = Attendance::STATUS_ALPHA;
-                    $reason = $attendance->status === Attendance::STATUS_HADIR_FISIK
-                        ? 'Guru sudah scan QR tetapi belum upload catatan hasil kajian.'
-                        : 'Guru belum upload dokumen wajib.';
+                    $reason = match (true) {
+                        $parent->isPureTeacher() => 'Guru belum upload catatan kajian atau dokumen wajib.',
+                        $attendance->status === Attendance::STATUS_HADIR_FISIK => 'Guru sudah scan QR tetapi belum upload catatan hasil kajian.',
+                        default => 'Guru belum upload dokumen wajib.',
+                    };
                 } elseif ($attendance->validation_status !== Attendance::VALIDATION_APPROVED) {
                     $status = $attendance->validation_status;
                     $reason = 'Dokumen guru sudah ada tetapi belum disetujui.';

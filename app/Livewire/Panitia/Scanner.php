@@ -113,6 +113,12 @@ class Scanner extends Component
 
         $parent = ParentModel::with('user', 'students')->findOrFail($parentId);
 
+        if ($parent->isPureTeacher()) {
+            $this->dispatch('scan-warning', message: 'Guru murni tidak perlu presensi QR/manual. Silakan upload catatan kajian dari dashboard.');
+            $this->showManualModal = false;
+            return;
+        }
+
         // Check if already checked in
         $existingAttendance = Attendance::where('kajian_event_id', $this->activeEvent->id)
             ->where('parent_id', $parent->id)
@@ -138,9 +144,9 @@ class Scanner extends Component
             'student_id' => $students->first()?->id,
             'status' => 'hadir_fisik',
             'method' => 'manual',
-            'validation_status' => $parent->isTeacher() ? 'pending' : 'approved',
-            'validated_by' => $parent->isTeacher() ? null : auth()->id(),
-            'validated_at' => $parent->isTeacher() ? null : now(),
+            'validation_status' => $parent->isWaliTeacher() ? 'pending' : 'approved',
+            'validated_by' => $parent->isWaliTeacher() ? null : auth()->id(),
+            'validated_at' => $parent->isWaliTeacher() ? null : now(),
         ]);
 
         $parentType = match($parent->type) {
@@ -154,7 +160,7 @@ class Scanner extends Component
             ? (count($childDisplayNames) . " Santri: " . implode(', ', $childDisplayNames))
             : 'Tidak ada data santri';
 
-        $message = $parent->isTeacher()
+        $message = $parent->isWaliTeacher()
             ? "Selamat Datang, {$parentType} {$parent->user->name}! Berhasil mencatat, mohon ingatkan untuk upload catatan kajian."
             : "Selamat Datang, {$parentType} {$parent->user->name}! Berhasil mencatat presensi untuk " . ($students->count() ?: 1) . " santri.";
 

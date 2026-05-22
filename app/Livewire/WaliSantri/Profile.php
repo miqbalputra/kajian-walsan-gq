@@ -134,7 +134,7 @@ class Profile extends Component
             ->where('user_id', $user->id)
             ->first();
 
-        if (!$parent) {
+        if (!$parent || $parent->isPureTeacher()) {
             return;
         }
 

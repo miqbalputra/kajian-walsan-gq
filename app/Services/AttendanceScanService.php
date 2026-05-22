@@ -29,6 +29,13 @@ class AttendanceScanService
             ];
         }
 
+        if ($parent->isPureTeacher()) {
+            return [
+                'status' => 'error',
+                'message' => 'Guru murni tidak perlu scan QR. Silakan upload catatan kajian dari dashboard.',
+            ];
+        }
+
         $students = $parent->students;
         $childDisplayNames = $students
             ->map(fn ($student) => $student->name . ($student->classRoom ? ' (' . $student->classRoom->name . ')' : ''))
@@ -47,9 +54,9 @@ class AttendanceScanService
                     'student_id' => $students->first()?->id,
                     'status' => Attendance::STATUS_HADIR_FISIK,
                     'method' => Attendance::METHOD_SCAN_QR,
-                    'validation_status' => $parent->isTeacher() ? Attendance::VALIDATION_PENDING : Attendance::VALIDATION_APPROVED,
-                    'validated_by' => $parent->isTeacher() ? null : $userId,
-                    'validated_at' => $parent->isTeacher() ? null : now(),
+                    'validation_status' => $parent->isWaliTeacher() ? Attendance::VALIDATION_PENDING : Attendance::VALIDATION_APPROVED,
+                    'validated_by' => $parent->isWaliTeacher() ? null : $userId,
+                    'validated_at' => $parent->isWaliTeacher() ? null : now(),
                     'rejection_reason' => null,
                     'scanned_at' => now(),
                     'device_info' => $deviceInfo,
@@ -72,9 +79,9 @@ class AttendanceScanService
                         'student_id' => $students->first()?->id,
                         'status' => Attendance::STATUS_HADIR_FISIK,
                         'method' => Attendance::METHOD_SCAN_QR,
-                        'validation_status' => $parent->isTeacher() ? Attendance::VALIDATION_PENDING : Attendance::VALIDATION_APPROVED,
-                        'validated_by' => $parent->isTeacher() ? null : $userId,
-                        'validated_at' => $parent->isTeacher() ? null : now(),
+                        'validation_status' => $parent->isWaliTeacher() ? Attendance::VALIDATION_PENDING : Attendance::VALIDATION_APPROVED,
+                        'validated_by' => $parent->isWaliTeacher() ? null : $userId,
+                        'validated_at' => $parent->isWaliTeacher() ? null : now(),
                         'scanned_at' => now(),
                         'device_info' => $deviceInfo,
                     ]);
@@ -105,7 +112,7 @@ class AttendanceScanService
             default => 'Peserta',
         };
 
-        $message = $parent->isTeacher()
+        $message = $parent->isWaliTeacher()
             ? "Selamat Datang, {$parentType} {$parent->user->name}. Berhasil mencatat, mohon ingatkan untuk upload catatan kajian di dashboard."
             : "Selamat Datang, {$parentType} {$parent->user->name}. Berhasil mencatat presensi untuk " . ($students->count() ?: 1) . ' santri.';
 

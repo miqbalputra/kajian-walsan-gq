@@ -306,6 +306,11 @@ class ParentIndex extends Component
     {
         $this->cardParent = ParentModel::with('user', 'students.classRoom')->findOrFail($id);
 
+        if ($this->cardParent->isPureTeacher()) {
+            $this->dispatch('notify', ['type' => 'info', 'message' => 'Guru murni tidak menggunakan kartu QR.']);
+            return;
+        }
+
         // Generate QR Code using bacon-qr-code
         $renderer = new ImageRenderer(
             new RendererStyle(400),

@@ -67,7 +67,7 @@ class Dashboard extends Component
 
     public function getQrCodeSvgProperty()
     {
-        if (!$this->parent) {
+        if (!$this->parent || $this->parent->isPureTeacher()) {
             return '';
         }
 
@@ -95,6 +95,16 @@ class Dashboard extends Component
     {
         return (bool) $this->parent?->isTeacher()
             || (auth()->check() && auth()->user()->isGuru());
+    }
+
+    public function getIsPureGuruProperty()
+    {
+        return (bool) $this->parent?->isPureTeacher();
+    }
+
+    public function getIsWaliGuruProperty()
+    {
+        return (bool) $this->parent?->isWaliTeacher();
     }
 
     /**

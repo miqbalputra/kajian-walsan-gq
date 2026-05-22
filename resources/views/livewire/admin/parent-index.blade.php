@@ -70,11 +70,13 @@
                     <option value="all">Semua</option>
                 </select>
             </div>
-            <button wire:click="openBatchPrintModal"
-                class="inline-flex shrink-0 items-center justify-center gap-2 px-4 py-2.5 bg-secondary-500 text-white rounded-xl font-semibold hover:bg-secondary-600 transition-colors shadow-lg shadow-secondary-500/25">
-                <span class="material-symbols-rounded">print</span>
-                Cetak Kartu
-            </button>
+            @unless($isTeacherMode)
+                <button wire:click="openBatchPrintModal"
+                    class="inline-flex shrink-0 items-center justify-center gap-2 px-4 py-2.5 bg-secondary-500 text-white rounded-xl font-semibold hover:bg-secondary-600 transition-colors shadow-lg shadow-secondary-500/25">
+                    <span class="material-symbols-rounded">print</span>
+                    Cetak Kartu
+                </button>
+            @endunless
         </div>
     </div>
 
@@ -161,15 +163,21 @@
                                 </div>
                             </td>
                             <td class="px-6 py-4 font-mono text-xs text-gray-600 break-all">
-                                {{ Str::limit($parent->qr_code_string, 15) }}
+                                @if($parent->isPureTeacher())
+                                    <span class="font-sans text-gray-400">Tidak pakai QR</span>
+                                @else
+                                    {{ Str::limit($parent->qr_code_string, 15) }}
+                                @endif
                             </td>
                             <td class="px-6 py-4">
                                 <div class="flex flex-nowrap items-center justify-end gap-1">
-                                    <button type="button" wire:click="showCard({{ $parent->id }})"
-                                        class="relative z-10 p-2 text-gray-600 hover:text-secondary-600 hover:bg-secondary-50 rounded-lg transition-colors"
-                                        title="Generate Kartu">
-                                        <span class="material-symbols-rounded text-xl">qr_code_2</span>
-                                    </button>
+                                    @unless($parent->isPureTeacher())
+                                        <button type="button" wire:click="showCard({{ $parent->id }})"
+                                            class="relative z-10 p-2 text-gray-600 hover:text-secondary-600 hover:bg-secondary-50 rounded-lg transition-colors"
+                                            title="Generate Kartu">
+                                            <span class="material-symbols-rounded text-xl">qr_code_2</span>
+                                        </button>
+                                    @endunless
                                     <button type="button" wire:click="showHistory({{ $parent->id }})"
                                         class="relative z-10 p-2 text-gray-600 hover:text-primary-600 hover:bg-primary-50 rounded-lg transition-colors"
                                         title="Riwayat Presensi Lengkap">

@@ -83,6 +83,7 @@ Route::middleware('auth')->group(function () {
         Route::get('/parents', ParentIndex::class)->name('parents.index');
         Route::get('/parents/{parent}/kartu/download', function (\App\Models\ParentModel $parent) {
             $parent->loadMissing('user', 'students');
+            abort_if($parent->isPureTeacher(), 404);
 
             $renderer = new \BaconQrCode\Renderer\ImageRenderer(
                 new \BaconQrCode\Renderer\RendererStyle\RendererStyle(300),
@@ -135,6 +136,7 @@ Route::middleware('auth')->group(function () {
             $parent = \App\Models\ParentModel::with('user', 'students')
                 ->where('user_id', $user->id)
                 ->firstOrFail();
+            abort_if($parent->isPureTeacher(), 404);
 
             // Generate QR SVG (same as admin approach)
             $renderer = new \BaconQrCode\Renderer\ImageRenderer(

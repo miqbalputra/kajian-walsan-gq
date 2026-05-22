@@ -120,7 +120,7 @@ class TeacherAttendanceIndex extends Component
             ->get()
             ->map(function (ParentModel $teacher) use ($attendances) {
                 $attendance = $attendances->get($teacher->id);
-                $derived = $this->deriveTeacherStatus($attendance);
+                $derived = $this->deriveTeacherStatus($attendance, $teacher);
 
                 return [
                     'teacher_id' => $teacher->id,
@@ -143,14 +143,16 @@ class TeacherAttendanceIndex extends Component
             });
     }
 
-    protected function deriveTeacherStatus(?Attendance $attendance): array
+    protected function deriveTeacherStatus(?Attendance $attendance, ParentModel $teacher): array
     {
         if (! $attendance) {
             return [
                 'status' => Attendance::STATUS_ALPHA,
                 'label' => 'Alfa',
                 'badge' => 'bg-red-100 text-red-700',
-                'reason' => 'Belum scan QR, belum upload catatan, dan belum mengirim izin.',
+                'reason' => $teacher->isPureTeacher()
+                    ? 'Belum upload catatan kajian dan belum mengirim izin.'
+                    : 'Belum scan QR, belum upload catatan, dan belum mengirim izin.',
             ];
         }
 
@@ -159,9 +161,11 @@ class TeacherAttendanceIndex extends Component
                 'status' => Attendance::STATUS_ALPHA,
                 'label' => 'Alfa',
                 'badge' => 'bg-red-100 text-red-700',
-                'reason' => $attendance->status === Attendance::STATUS_HADIR_FISIK
-                    ? 'Sudah scan QR, tetapi belum upload catatan hasil kajian.'
-                    : 'Belum upload dokumen wajib.',
+                'reason' => match (true) {
+                    $teacher->isPureTeacher() => 'Belum upload catatan kajian atau dokumen wajib.',
+                    $attendance->status === Attendance::STATUS_HADIR_FISIK => 'Sudah scan QR, tetapi belum upload catatan hasil kajian.',
+                    default => 'Belum upload dokumen wajib.',
+                },
             ];
         }
 

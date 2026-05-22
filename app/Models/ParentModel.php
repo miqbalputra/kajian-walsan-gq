@@ -144,6 +144,30 @@ class ParentModel extends Model
     }
 
     /**
+     * Check if this parent is a wali santri record.
+     */
+    public function isGuardian(): bool
+    {
+        return in_array($this->type, ['father', 'mother'], true);
+    }
+
+    /**
+     * Check if this wali santri is also a teacher.
+     */
+    public function isWaliTeacher(): bool
+    {
+        return $this->isGuardian() && (bool) $this->is_teacher;
+    }
+
+    /**
+     * Check if this is a teacher-only profile, not a wali santri.
+     */
+    public function isPureTeacher(): bool
+    {
+        return $this->type === 'teacher';
+    }
+
+    /**
      * Get the type display name.
      */
     public function getTypeDisplayAttribute(): string
