@@ -18,7 +18,7 @@ class AttendanceScanService
             ->select(['id', 'user_id', 'type', 'is_teacher'])
             ->with([
                 'user:id,name',
-                'students:id,name,class_room_id',
+                'students:id,name,class_id',
                 'students.classRoom:id,name',
             ])
             ->where('qr_code_string', trim($qrCode))

@@ -45,6 +45,8 @@ class InjectPwaInstallPrompt
             $request->is('__deploy-version') ||
             $request->is('admin') ||
             $request->is('admin/*') ||
+            $request->is('panitia') ||
+            $request->is('panitia/*') ||
             $request->is('livewire/*') ||
             $request->headers->has('X-Livewire') ||
             $request->headers->has('X-Livewire-Navigate')
