@@ -24,10 +24,8 @@ class Scanner extends Component
 
     public function mount()
     {
-        // Get active event (open status)
-        $this->activeEvent = KajianEvent::where('status', 'open')
-            ->whereDate('date', '=', today())
-            ->first();
+        // Get event opened by admin for attendance.
+        $this->activeEvent = KajianEvent::activeForAttendance();
     }
 
     public function processQrCode($qrCode)
@@ -47,7 +45,7 @@ class Scanner extends Component
             RateLimiter::hit($key, 60);
 
             if (!$this->activeEvent) {
-                $this->lastScanMessage = 'Tidak ada kajian aktif hari ini.';
+                $this->lastScanMessage = 'Tidak ada kajian yang sedang dibuka.';
                 $this->dispatch('scan-error', message: $this->lastScanMessage);
                 return;
             }

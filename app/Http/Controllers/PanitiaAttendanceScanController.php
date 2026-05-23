@@ -17,14 +17,12 @@ class PanitiaAttendanceScanController extends Controller
             'qr_code' => ['required', 'string', 'max:255'],
         ]);
 
-        $activeEvent = KajianEvent::where('status', 'open')
-            ->whereDate('date', '=', today())
-            ->first();
+        $activeEvent = KajianEvent::activeForAttendance();
 
         if (!$activeEvent) {
             return response()->json([
                 'status' => 'error',
-                'message' => 'Tidak ada kajian aktif hari ini.',
+                'message' => 'Tidak ada kajian yang sedang dibuka.',
             ], 422);
         }
 

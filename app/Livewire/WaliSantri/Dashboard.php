@@ -62,9 +62,7 @@ class Dashboard extends Component
 
     public function getActiveEventProperty()
     {
-        return KajianEvent::where('status', 'open')
-            ->whereDate('date', today())
-            ->first();
+        return KajianEvent::activeForAttendance();
     }
 
     public function getQrCodeSvgProperty()
@@ -120,6 +118,7 @@ class Dashboard extends Component
         return Attendance::with('kajianEvent')
             ->where('parent_id', $this->parent->id)
             ->where('validation_status', 'rejected')
+            ->whereHas('kajianEvent', fn ($query) => $query->where('status', 'open'))
             ->orderByDesc('updated_at')
             ->get();
     }
@@ -430,10 +429,17 @@ class Dashboard extends Component
         $attendance = Attendance::where('id', $this->reuploadAttendanceId)
             ->where('parent_id', $this->parent->id)
             ->whereIn('validation_status', ['rejected', 'pending'])
+            ->with('kajianEvent')
             ->first();
 
         if (!$attendance) {
             session()->flash('error', 'Data presensi tidak ditemukan atau sudah divalidasi.');
+            $this->showReuploadModal = false;
+            return;
+        }
+
+        if (!$attendance->kajianEvent?->isOpen()) {
+            session()->flash('error', 'Presensi kajian ini sudah ditutup.');
             $this->showReuploadModal = false;
             return;
         }
@@ -497,10 +503,16 @@ class Dashboard extends Component
                         ->whereNull('validated_by');
                 });
             })
+            ->with('kajianEvent')
             ->first();
 
         if (!$attendance) {
             session()->flash('error', 'Kiriman tidak ditemukan atau sudah divalidasi admin.');
+            return;
+        }
+
+        if (!$attendance->kajianEvent?->isOpen()) {
+            session()->flash('error', 'Presensi kajian ini sudah ditutup.');
             return;
         }
 

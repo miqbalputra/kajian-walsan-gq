@@ -7,7 +7,7 @@
                     <span class="material-symbols-rounded text-yellow-600 text-5xl">event_busy</span>
                 </div>
                 <h2 class="text-xl font-bold text-gray-900 mb-2">Tidak Ada Kajian Aktif</h2>
-                <p class="text-gray-500 mb-6">Belum ada kajian yang dibuka untuk hari ini.</p>
+                <p class="text-gray-500 mb-6">Belum ada kajian yang sedang dibuka untuk presensi.</p>
                 <a href="{{ route('panitia.jadwal') }}"
                     class="inline-flex items-center gap-2 px-6 py-3 bg-primary-500 text-white rounded-xl font-semibold hover:bg-primary-600 transition-colors">
                     <span class="material-symbols-rounded">calendar_month</span>
@@ -172,7 +172,7 @@
                     <span class="material-symbols-rounded text-primary-500">history</span>
                     Presensi Terakhir
                 </h3>
-                <span class="bg-gray-100 text-gray-600 text-xs px-2.5 py-1 rounded-lg font-medium">Hari Ini</span>
+                <span class="bg-gray-100 text-gray-600 text-xs px-2.5 py-1 rounded-lg font-medium">{{ $activeEvent->date?->format('d/m/Y') }}</span>
             </div>
 
             <div class="space-y-3">

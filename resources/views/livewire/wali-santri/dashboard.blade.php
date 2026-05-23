@@ -208,12 +208,16 @@
             <!-- Active Kajian Card -->
             <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
                 <div class="bg-gradient-to-r from-secondary-500 to-secondary-600 text-white px-4 py-3">
-                    <p class="text-white/80 text-xs font-medium uppercase tracking-wide">Kajian Hari Ini</p>
+                    <p class="text-white/80 text-xs font-medium uppercase tracking-wide">Presensi Dibuka</p>
                     <h2 class="font-bold text-lg">{{ $this->activeEvent->title }}</h2>
                 </div>
 
                 <div class="p-4">
                     <div class="flex items-center gap-4 text-sm text-gray-600 mb-4">
+                        <div class="flex items-center gap-1">
+                            <span class="material-symbols-rounded text-lg">event</span>
+                            <span>{{ $this->activeEvent->date?->translatedFormat('d F Y') }}</span>
+                        </div>
                         <div class="flex items-center gap-1">
                             <span class="material-symbols-rounded text-lg">schedule</span>
                             <span>{{ $this->activeEvent->time_range }}</span>

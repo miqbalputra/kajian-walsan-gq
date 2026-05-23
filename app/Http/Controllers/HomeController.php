@@ -17,10 +17,8 @@ class HomeController extends Controller
             ->orderBy('time_start')
             ->first();
 
-        // Get ongoing kajian (today and status open)
-        $ongoingKajian = KajianEvent::where('date', now()->toDateString())
-            ->where('status', 'open')
-            ->first();
+        // Get kajian currently opened by admin for attendance.
+        $ongoingKajian = KajianEvent::activeForAttendance();
 
         // Get last completed kajian for stats
         $lastKajian = KajianEvent::where('date', '<', now()->toDateString())

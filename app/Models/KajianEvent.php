@@ -75,6 +75,14 @@ class KajianEvent extends Model
     }
 
     /**
+     * Get the event currently accepting attendance/uploads.
+     */
+    public static function activeForAttendance(): ?self
+    {
+        return static::openForAttendance()->first();
+    }
+
+    /**
      * Check if the event is today.
      */
     public function isToday(): bool
@@ -153,6 +161,17 @@ class KajianEvent extends Model
     public function scopeOpen($query)
     {
         return $query->where('status', 'open');
+    }
+
+    /**
+     * Scope for events that admin has opened for attendance/uploads.
+     */
+    public function scopeOpenForAttendance($query)
+    {
+        return $query->where('status', 'open')
+            ->orderByDesc('date')
+            ->orderByDesc('time_start')
+            ->orderByDesc('id');
     }
 
     /**
