@@ -25,11 +25,13 @@ return Application::configure(basePath: dirname(__DIR__))
         // Register CheckRole middleware alias for RBAC
         $middleware->alias([
             'role' => \App\Http\Middleware\CheckRole::class,
+            'hermes.agent' => \App\Http\Middleware\VerifyHermesAgent::class,
         ]);
 
-        // Exclude n8n reset endpoint from CSRF
+        // Exclude internal API endpoints from CSRF
         $middleware->validateCsrfTokens(except: [
             '/internal-reset-password',
+            '/hermes-agent/*',
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
