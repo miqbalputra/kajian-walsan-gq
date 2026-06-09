@@ -33,8 +33,12 @@ Kirim field `action` untuk memilih jalur:
 overview
 attendances
 attendance_detail
+read_attendance
+create_attendance
 manual_attendance
+update_attendance
 update_proof
+delete_attendance
 ```
 
 ### 1. Cek keseluruhan data lewat satu endpoint
@@ -76,20 +80,22 @@ curl -X POST "https://kajian.griyaquran.web.id/hermes-agent" \
   -d "{\"action\":\"attendances\",\"complete\":true,\"audience\":\"guru\"}"
 ```
 
-### 3. Lihat detail presensi lewat satu endpoint
+### 3. Read: lihat detail presensi lewat satu endpoint
 
 ```json
 {
-  "action": "attendance_detail",
+  "action": "read_attendance",
   "attendance_id": 123
 }
 ```
 
-### 4. Input presensi manual lewat satu endpoint
+`attendance_detail` masih didukung sebagai alias lama untuk `read_attendance`.
+
+### 4. Create: input presensi baru lewat satu endpoint
 
 ```json
 {
-  "action": "manual_attendance",
+  "action": "create_attendance",
   "kajian_event_id": 1,
   "parent_id": 10,
   "status": "hadir_fisik",
@@ -115,7 +121,11 @@ izin
 alpha
 ```
 
-### 5. Input foto catatan hasil kajian lewat satu endpoint
+Jika presensi untuk `kajian_event_id` dan `parent_id` tersebut sudah ada, `create_attendance` akan menolak dengan HTTP 409. Gunakan `update_attendance` untuk mengubah data yang sudah ada.
+
+`manual_attendance` masih didukung sebagai mode upsert/kompatibilitas lama.
+
+### 5. Create dengan foto catatan hasil kajian lewat satu endpoint
 
 Gunakan multipart form ke endpoint yang sama:
 
@@ -126,7 +136,7 @@ POST https://kajian.griyaquran.web.id/hermes-agent
 Field:
 
 ```text
-action=manual_attendance
+action=create_attendance
 kajian_event_id=1
 parent_id=10
 status=hadir_online
@@ -140,7 +150,7 @@ Contoh:
 curl -X POST "https://kajian.griyaquran.web.id/hermes-agent" \
   -H "Accept: application/json" \
   -H "X-Hermes-Secret: <HERMES_AGENT_SECRET>" \
-  -F "action=manual_attendance" \
+  -F "action=create_attendance" \
   -F "kajian_event_id=1" \
   -F "parent_id=10" \
   -F "status=hadir_online" \
@@ -152,7 +162,7 @@ Alternatif jika Hermes sudah punya URL foto:
 
 ```json
 {
-  "action": "manual_attendance",
+  "action": "create_attendance",
   "kajian_event_id": 1,
   "parent_id": 10,
   "status": "hadir_online",
@@ -161,10 +171,24 @@ Alternatif jika Hermes sudah punya URL foto:
 }
 ```
 
-### 6. Update foto/catatan presensi lewat satu endpoint
+### 6. Update: ubah status/foto/catatan presensi lewat satu endpoint
+
+Body JSON:
+
+```json
+{
+  "action": "update_attendance",
+  "attendance_id": 123,
+  "status": "izin",
+  "notes": "Izin karena ada keperluan keluarga",
+  "proof_url": "https://example.com/surat-izin.jpg"
+}
+```
+
+Field multipart:
 
 ```text
-action=update_proof
+action=update_attendance
 attendance_id=123
 notes=Revisi catatan hasil kajian
 proof_photo=@catatan-baru.jpg
@@ -176,11 +200,35 @@ Contoh multipart:
 curl -X POST "https://kajian.griyaquran.web.id/hermes-agent" \
   -H "Accept: application/json" \
   -H "X-Hermes-Secret: <HERMES_AGENT_SECRET>" \
-  -F "action=update_proof" \
+  -F "action=update_attendance" \
   -F "attendance_id=123" \
   -F "notes=Revisi catatan hasil kajian" \
   -F "proof_photo=@catatan-baru.jpg"
 ```
+
+`update_proof` masih didukung sebagai alias lama untuk `update_attendance`.
+
+### 7. Delete: hapus presensi lewat satu endpoint
+
+```json
+{
+  "action": "delete_attendance",
+  "attendance_id": 123
+}
+```
+
+Penghapusan memakai soft delete sesuai model `Attendance`, lalu cache jumlah presensi kajian diperbarui.
+
+### Aturan Presensi Yang Dijaga API
+
+- Wali Santri `hadir_fisik`: boleh tanpa file, seperti presensi scan/manual panitia.
+- Wali Santri `hadir_online`: wajib ada `proof_photo` atau `proof_url` catatan hasil kajian.
+- Wali Santri `izin`: wajib ada `proof_photo` atau `proof_url`, dan wajib ada `notes` alasan izin.
+- Guru `hadir_fisik`: wajib ada `proof_photo` atau `proof_url` catatan hasil kajian.
+- Guru `hadir_online`: wajib ada `proof_photo` atau `proof_url` catatan hasil kajian.
+- Guru `izin`: wajib ada `proof_photo` atau `proof_url`, dan wajib ada `notes` alasan izin.
+- Jika kirim file/URL bukti, validasi default menjadi `pending` kecuali Hermes mengirim `validation_status`.
+- Gunakan `clear_proof=true` hanya jika status akhirnya tidak melanggar aturan wajib file.
 
 ## Endpoint Cadangan
 

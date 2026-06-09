@@ -27,18 +27,26 @@ class HermesAgentController extends Controller
                 'overview',
                 'attendances',
                 'attendance_detail',
+                'read_attendance',
+                'create_attendance',
                 'manual_attendance',
+                'update_attendance',
                 'update_proof',
+                'delete_attendance',
             ])],
-            'attendance_id' => ['required_if:action,attendance_detail,update_proof', 'nullable', 'integer', 'exists:attendances,id'],
+            'attendance_id' => ['required_if:action,attendance_detail,read_attendance,update_attendance,update_proof,delete_attendance', 'nullable', 'integer', 'exists:attendances,id'],
         ]);
 
         return match ($data['action']) {
             'overview' => $this->overview($request),
             'attendances' => $this->attendances($request),
             'attendance_detail' => $this->attendanceDetail(Attendance::findOrFail($data['attendance_id'])),
+            'read_attendance' => $this->attendanceDetail(Attendance::findOrFail($data['attendance_id'])),
+            'create_attendance' => $this->createAttendance($request),
             'manual_attendance' => $this->storeManualAttendance($request),
+            'update_attendance' => $this->updateAttendance($request, Attendance::findOrFail($data['attendance_id'])),
             'update_proof' => $this->updateAttendanceProof($request, Attendance::findOrFail($data['attendance_id'])),
+            'delete_attendance' => $this->deleteAttendance(Attendance::findOrFail($data['attendance_id'])),
         };
     }
 
@@ -179,6 +187,16 @@ class HermesAgentController extends Controller
 
     public function storeManualAttendance(Request $request): JsonResponse
     {
+        return $this->storeAttendance($request, allowExisting: true);
+    }
+
+    public function createAttendance(Request $request): JsonResponse
+    {
+        return $this->storeAttendance($request, allowExisting: false);
+    }
+
+    protected function storeAttendance(Request $request, bool $allowExisting): JsonResponse
+    {
         $data = $request->validate($this->attendanceMutationRules(requireStatus: true, requireTarget: true));
 
         $event = $this->resolveEvent($data['kajian_event_id'] ?? null);
@@ -215,6 +233,14 @@ class HermesAgentController extends Controller
             ->where('parent_id', $parent->id)
             ->first();
 
+        if ($attendance && ! $attendance->trashed() && ! $allowExisting) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Presensi untuk peserta dan kajian ini sudah ada. Gunakan action update_attendance untuk mengubahnya.',
+                'data' => $this->formatAttendance($attendance->load(['kajianEvent', 'parent.user', 'parent.students.classRoom', 'student.classRoom', 'validator']), detailed: true),
+            ], 409);
+        }
+
         if (! $attendance) {
             $attendance = new Attendance([
                 'kajian_event_id' => $event->id,
@@ -224,13 +250,25 @@ class HermesAgentController extends Controller
             $attendance->restore();
         }
 
+        $finalProofFile = $proofFile ?: ($data['keep_existing_proof'] ?? true ? $attendance->proof_file : null);
+        $finalNotes = $data['notes'] ?? $attendance->notes;
+        $policyErrors = $this->attendancePolicyErrors($parent, $data['status'], $finalProofFile, $finalNotes);
+
+        if ($policyErrors) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Presensi tidak memenuhi aturan aplikasi.',
+                'errors' => $policyErrors,
+            ], 422);
+        }
+
         $attendance->fill([
             'student_id' => $studentId,
             'status' => $data['status'],
             'method' => $method,
             'validation_status' => $validationStatus,
-            'proof_file' => $proofFile ?: ($data['keep_existing_proof'] ?? true ? $attendance->proof_file : null),
-            'notes' => $data['notes'] ?? $attendance->notes,
+            'proof_file' => $finalProofFile,
+            'notes' => $finalNotes,
             'validated_by' => null,
             'validated_at' => $validationStatus === Attendance::VALIDATION_APPROVED ? now() : null,
             'rejection_reason' => $validationStatus === Attendance::VALIDATION_REJECTED
@@ -253,26 +291,61 @@ class HermesAgentController extends Controller
 
     public function updateAttendanceProof(Request $request, Attendance $attendance): JsonResponse
     {
+        return $this->updateAttendance($request, $attendance);
+    }
+
+    public function updateAttendance(Request $request, Attendance $attendance): JsonResponse
+    {
         $data = $request->validate($this->attendanceMutationRules(requireStatus: false, requireTarget: false));
 
-        $attendance->loadMissing('parent');
+        $attendance->loadMissing(['parent.students']);
         $status = $data['status'] ?? $attendance->status;
         $proofFile = $this->storeProofFile($request, $attendance->parent, $status);
 
-        if (! $proofFile && ! $request->filled('notes') && ! isset($data['status']) && ! isset($data['validation_status'])) {
+        if (! $proofFile
+            && ! $request->filled('notes')
+            && ! isset($data['status'])
+            && ! isset($data['student_id'])
+            && ! isset($data['validation_status'])
+            && ! $request->boolean('clear_proof')) {
             return response()->json([
                 'success' => false,
-                'message' => 'Kirim proof_photo/proof_url, notes, status, atau validation_status untuk memperbarui presensi.',
+                'message' => 'Kirim proof_photo/proof_url, notes, status, student_id, validation_status, atau clear_proof untuk memperbarui presensi.',
+            ], 422);
+        }
+
+        $studentId = array_key_exists('student_id', $data)
+            ? $this->resolveStudentId($attendance->parent, $data['student_id'])
+            : $attendance->student_id;
+        if (($data['student_id'] ?? null) && ! $studentId) {
+            return response()->json([
+                'success' => false,
+                'message' => 'student_id tidak terhubung dengan Wali Santri/Guru tersebut.',
+            ], 422);
+        }
+
+        $finalProofFile = $request->boolean('clear_proof')
+            ? null
+            : ($proofFile ?: $attendance->proof_file);
+        $finalNotes = $request->filled('notes') ? $data['notes'] : $attendance->notes;
+        $policyErrors = $this->attendancePolicyErrors($attendance->parent, $status, $finalProofFile, $finalNotes);
+
+        if ($policyErrors) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Presensi tidak memenuhi aturan aplikasi.',
+                'errors' => $policyErrors,
             ], 422);
         }
 
         $validationStatus = $data['validation_status'] ?? ($proofFile ? Attendance::VALIDATION_PENDING : $attendance->validation_status);
 
         $attendance->update([
+            'student_id' => $studentId,
             'status' => $status,
             'method' => $proofFile ? Attendance::METHOD_UPLOAD : $attendance->method,
-            'proof_file' => $proofFile ?: $attendance->proof_file,
-            'notes' => $request->filled('notes') ? $data['notes'] : $attendance->notes,
+            'proof_file' => $finalProofFile,
+            'notes' => $finalNotes,
             'validation_status' => $validationStatus,
             'validated_by' => null,
             'validated_at' => $validationStatus === Attendance::VALIDATION_APPROVED ? now() : null,
@@ -288,6 +361,22 @@ class HermesAgentController extends Controller
             'success' => true,
             'message' => 'Foto/catatan presensi berhasil diperbarui via Hermes Agent.',
             'data' => $this->formatAttendance($attendance->fresh(['kajianEvent', 'parent.user', 'parent.students.classRoom', 'student.classRoom', 'validator']), detailed: true),
+        ]);
+    }
+
+    public function deleteAttendance(Attendance $attendance): JsonResponse
+    {
+        $attendance->loadMissing(['kajianEvent', 'parent.user', 'parent.students.classRoom', 'student.classRoom', 'validator']);
+        $event = $attendance->kajianEvent;
+        $payload = $this->formatAttendance($attendance, detailed: true);
+
+        $attendance->delete();
+        $event?->updateAttendanceCount();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Presensi berhasil dihapus via Hermes Agent.',
+            'data' => $payload,
         ]);
     }
 
@@ -318,8 +407,38 @@ class HermesAgentController extends Controller
             'notes' => ['nullable', 'string', 'max:1000'],
             'rejection_reason' => ['nullable', 'string', 'max:500'],
             'keep_existing_proof' => ['nullable', 'boolean'],
+            'clear_proof' => ['nullable', 'boolean'],
             'run_ai_review' => ['nullable', 'boolean'],
         ];
+    }
+
+    protected function attendancePolicyErrors(ParentModel $parent, string $status, ?string $proofFile, ?string $notes): array
+    {
+        $errors = [];
+        $hasProof = filled($proofFile);
+        $hasNotes = filled(is_string($notes) ? trim($notes) : $notes);
+
+        if ($status === Attendance::STATUS_HADIR_ONLINE && ! $hasProof) {
+            $errors['proof_file'][] = 'Menyimak online wajib menyertakan file/foto catatan hasil kajian.';
+        }
+
+        if ($status === Attendance::STATUS_IZIN) {
+            if (! $hasProof) {
+                $errors['proof_file'][] = 'Izin wajib menyertakan file/foto surat atau keterangan izin.';
+            }
+
+            if (! $hasNotes) {
+                $errors['notes'][] = 'Izin wajib menyertakan catatan alasan.';
+            }
+        }
+
+        if ($parent->isTeacher()
+            && $status === Attendance::STATUS_HADIR_FISIK
+            && ! $hasProof) {
+            $errors['proof_file'][] = 'Guru hadir fisik wajib menyertakan foto catatan hasil kajian.';
+        }
+
+        return $errors;
     }
 
     protected function resolveEvent(?int $eventId): ?KajianEvent
