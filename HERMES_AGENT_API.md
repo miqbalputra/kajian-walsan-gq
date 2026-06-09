@@ -40,7 +40,6 @@ update_attendance
 update_proof
 delete_attendance
 restore_attendance
-force_delete_attendance
 ```
 
 ### 1. Cek keseluruhan data lewat satu endpoint
@@ -249,17 +248,6 @@ Penghapusan memakai soft delete sesuai model `Attendance`, lalu cache jumlah pre
 
 Restore akan ditolak jika sudah ada presensi aktif lain untuk peserta dan kajian yang sama.
 
-### 9. Hapus permanen
-
-```json
-{
-  "action": "force_delete_attendance",
-  "attendance_id": 123
-}
-```
-
-Gunakan hanya untuk cleanup data yang benar-benar tidak perlu dikembalikan. Untuk salah hapus biasa, pakai `restore_attendance`.
-
 ### Aturan Presensi Yang Dijaga API
 
 - Wali Santri `hadir_fisik`: boleh tanpa file, seperti presensi scan/manual panitia.
@@ -271,6 +259,7 @@ Gunakan hanya untuk cleanup data yang benar-benar tidak perlu dikembalikan. Untu
 - Jika kirim file/URL bukti, validasi default menjadi `pending` kecuali Hermes mengirim `validation_status`.
 - Gunakan `clear_proof=true` hanya jika status akhirnya tidak melanggar aturan wajib file.
 - `delete_attendance` adalah soft delete, jadi masih bisa dikembalikan dengan `restore_attendance`.
+- Hermes tidak diberi akses hapus permanen.
 
 ## Endpoint Cadangan
 

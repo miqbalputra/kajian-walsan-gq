@@ -34,9 +34,8 @@ class HermesAgentController extends Controller
                 'update_proof',
                 'delete_attendance',
                 'restore_attendance',
-                'force_delete_attendance',
             ])],
-            'attendance_id' => ['required_if:action,attendance_detail,read_attendance,update_attendance,update_proof,delete_attendance,restore_attendance,force_delete_attendance', 'nullable', 'integer'],
+            'attendance_id' => ['required_if:action,attendance_detail,read_attendance,update_attendance,update_proof,delete_attendance,restore_attendance', 'nullable', 'integer'],
         ]);
 
         return match ($data['action']) {
@@ -50,7 +49,6 @@ class HermesAgentController extends Controller
             'update_proof' => $this->updateAttendanceProof($request, $this->findAttendanceForAction($data['attendance_id'])),
             'delete_attendance' => $this->deleteAttendance($this->findAttendanceForAction($data['attendance_id'])),
             'restore_attendance' => $this->restoreAttendance($this->findAttendanceForAction($data['attendance_id'], withTrashed: true)),
-            'force_delete_attendance' => $this->forceDeleteAttendance($this->findAttendanceForAction($data['attendance_id'], withTrashed: true)),
         };
     }
 
@@ -425,22 +423,6 @@ class HermesAgentController extends Controller
             'success' => true,
             'message' => 'Presensi berhasil direstore via Hermes Agent.',
             'data' => $this->formatAttendance($attendance->fresh(['kajianEvent', 'parent.user', 'parent.students.classRoom', 'student.classRoom', 'validator']), detailed: true),
-        ]);
-    }
-
-    public function forceDeleteAttendance(Attendance $attendance): JsonResponse
-    {
-        $attendance->loadMissing(['kajianEvent', 'parent.user', 'parent.students.classRoom', 'student.classRoom', 'validator']);
-        $event = $attendance->kajianEvent;
-        $payload = $this->formatAttendance($attendance, detailed: true);
-
-        $attendance->forceDelete();
-        $event?->updateAttendanceCount();
-
-        return response()->json([
-            'success' => true,
-            'message' => 'Presensi berhasil dihapus permanen via Hermes Agent.',
-            'data' => $payload,
         ]);
     }
 
