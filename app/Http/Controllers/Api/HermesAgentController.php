@@ -33,20 +33,24 @@ class HermesAgentController extends Controller
                 'update_attendance',
                 'update_proof',
                 'delete_attendance',
+                'restore_attendance',
+                'force_delete_attendance',
             ])],
-            'attendance_id' => ['required_if:action,attendance_detail,read_attendance,update_attendance,update_proof,delete_attendance', 'nullable', 'integer', 'exists:attendances,id'],
+            'attendance_id' => ['required_if:action,attendance_detail,read_attendance,update_attendance,update_proof,delete_attendance,restore_attendance,force_delete_attendance', 'nullable', 'integer'],
         ]);
 
         return match ($data['action']) {
             'overview' => $this->overview($request),
             'attendances' => $this->attendances($request),
-            'attendance_detail' => $this->attendanceDetail(Attendance::findOrFail($data['attendance_id'])),
-            'read_attendance' => $this->attendanceDetail(Attendance::findOrFail($data['attendance_id'])),
+            'attendance_detail' => $this->attendanceDetail($this->findAttendanceForAction($data['attendance_id'], withTrashed: true)),
+            'read_attendance' => $this->attendanceDetail($this->findAttendanceForAction($data['attendance_id'], withTrashed: true)),
             'create_attendance' => $this->createAttendance($request),
             'manual_attendance' => $this->storeManualAttendance($request),
-            'update_attendance' => $this->updateAttendance($request, Attendance::findOrFail($data['attendance_id'])),
-            'update_proof' => $this->updateAttendanceProof($request, Attendance::findOrFail($data['attendance_id'])),
-            'delete_attendance' => $this->deleteAttendance(Attendance::findOrFail($data['attendance_id'])),
+            'update_attendance' => $this->updateAttendance($request, $this->findAttendanceForAction($data['attendance_id'])),
+            'update_proof' => $this->updateAttendanceProof($request, $this->findAttendanceForAction($data['attendance_id'])),
+            'delete_attendance' => $this->deleteAttendance($this->findAttendanceForAction($data['attendance_id'])),
+            'restore_attendance' => $this->restoreAttendance($this->findAttendanceForAction($data['attendance_id'], withTrashed: true)),
+            'force_delete_attendance' => $this->forceDeleteAttendance($this->findAttendanceForAction($data['attendance_id'], withTrashed: true)),
         };
     }
 
@@ -114,6 +118,7 @@ class HermesAgentController extends Controller
             ])],
             'search' => ['nullable', 'string', 'max:100'],
             'complete' => ['nullable', 'boolean'],
+            'trashed' => ['nullable', Rule::in(['without', 'with', 'only'])],
             'per_page' => ['nullable', 'integer', 'min:1', 'max:200'],
         ]);
 
@@ -147,6 +152,8 @@ class HermesAgentController extends Controller
         }
 
         $attendances = Attendance::with(['kajianEvent', 'parent.user', 'parent.students.classRoom', 'student.classRoom', 'validator'])
+            ->when(($data['trashed'] ?? 'without') === 'with', fn (Builder $query) => $query->withTrashed())
+            ->when(($data['trashed'] ?? 'without') === 'only', fn (Builder $query) => $query->onlyTrashed())
             ->when($data['kajian_event_id'] ?? null, fn (Builder $query, int $eventId) => $query->where('kajian_event_id', $eventId))
             ->when($data['status'] ?? null, fn (Builder $query, string $status) => $query->where('status', $status))
             ->when($data['validation_status'] ?? null, fn (Builder $query, string $status) => $query->where('validation_status', $status))
@@ -366,6 +373,14 @@ class HermesAgentController extends Controller
 
     public function deleteAttendance(Attendance $attendance): JsonResponse
     {
+        if ($attendance->trashed()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Presensi sudah berada di tempat sampah.',
+                'data' => $this->formatAttendance($attendance, detailed: true),
+            ], 409);
+        }
+
         $attendance->loadMissing(['kajianEvent', 'parent.user', 'parent.students.classRoom', 'student.classRoom', 'validator']);
         $event = $attendance->kajianEvent;
         $payload = $this->formatAttendance($attendance, detailed: true);
@@ -378,6 +393,66 @@ class HermesAgentController extends Controller
             'message' => 'Presensi berhasil dihapus via Hermes Agent.',
             'data' => $payload,
         ]);
+    }
+
+    public function restoreAttendance(Attendance $attendance): JsonResponse
+    {
+        if (! $attendance->trashed()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Presensi ini belum terhapus, jadi tidak perlu direstore.',
+                'data' => $this->formatAttendance($attendance, detailed: true),
+            ], 409);
+        }
+
+        $duplicateExists = Attendance::query()
+            ->where('kajian_event_id', $attendance->kajian_event_id)
+            ->where('parent_id', $attendance->parent_id)
+            ->exists();
+
+        if ($duplicateExists) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Tidak bisa restore karena sudah ada presensi aktif untuk peserta dan kajian yang sama.',
+                'data' => $this->formatAttendance($attendance, detailed: true),
+            ], 409);
+        }
+
+        $attendance->restore();
+        $attendance->kajianEvent?->updateAttendanceCount();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Presensi berhasil direstore via Hermes Agent.',
+            'data' => $this->formatAttendance($attendance->fresh(['kajianEvent', 'parent.user', 'parent.students.classRoom', 'student.classRoom', 'validator']), detailed: true),
+        ]);
+    }
+
+    public function forceDeleteAttendance(Attendance $attendance): JsonResponse
+    {
+        $attendance->loadMissing(['kajianEvent', 'parent.user', 'parent.students.classRoom', 'student.classRoom', 'validator']);
+        $event = $attendance->kajianEvent;
+        $payload = $this->formatAttendance($attendance, detailed: true);
+
+        $attendance->forceDelete();
+        $event?->updateAttendanceCount();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Presensi berhasil dihapus permanen via Hermes Agent.',
+            'data' => $payload,
+        ]);
+    }
+
+    protected function findAttendanceForAction(int $attendanceId, bool $withTrashed = false): Attendance
+    {
+        $query = Attendance::query();
+
+        if ($withTrashed) {
+            $query->withTrashed();
+        }
+
+        return $query->findOrFail($attendanceId);
     }
 
     protected function attendanceMutationRules(bool $requireStatus, bool $requireTarget): array
@@ -637,6 +712,8 @@ class HermesAgentController extends Controller
             'scanned_at' => optional($attendance->scanned_at)->toISOString(),
             'created_at' => optional($attendance->created_at)->toISOString(),
             'updated_at' => optional($attendance->updated_at)->toISOString(),
+            'deleted_at' => optional($attendance->deleted_at)->toISOString(),
+            'is_deleted' => $attendance->trashed(),
         ];
 
         if ($detailed) {

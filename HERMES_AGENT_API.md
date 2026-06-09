@@ -39,6 +39,8 @@ manual_attendance
 update_attendance
 update_proof
 delete_attendance
+restore_attendance
+force_delete_attendance
 ```
 
 ### 1. Cek keseluruhan data lewat satu endpoint
@@ -78,6 +80,23 @@ curl -X POST "https://kajian.griyaquran.web.id/hermes-agent" \
   -H "Content-Type: application/json" \
   -H "X-Hermes-Secret: <HERMES_AGENT_SECRET>" \
   -d "{\"action\":\"attendances\",\"complete\":true,\"audience\":\"guru\"}"
+```
+
+Untuk melihat presensi yang sudah dihapus soft delete:
+
+```json
+{
+  "action": "attendances",
+  "trashed": "only"
+}
+```
+
+Nilai `trashed`:
+
+```text
+without = default, hanya data aktif
+with = data aktif dan terhapus
+only = hanya data terhapus
 ```
 
 ### 3. Read: lihat detail presensi lewat satu endpoint
@@ -219,6 +238,28 @@ curl -X POST "https://kajian.griyaquran.web.id/hermes-agent" \
 
 Penghapusan memakai soft delete sesuai model `Attendance`, lalu cache jumlah presensi kajian diperbarui.
 
+### 8. Restore: kembalikan presensi yang salah hapus
+
+```json
+{
+  "action": "restore_attendance",
+  "attendance_id": 123
+}
+```
+
+Restore akan ditolak jika sudah ada presensi aktif lain untuk peserta dan kajian yang sama.
+
+### 9. Hapus permanen
+
+```json
+{
+  "action": "force_delete_attendance",
+  "attendance_id": 123
+}
+```
+
+Gunakan hanya untuk cleanup data yang benar-benar tidak perlu dikembalikan. Untuk salah hapus biasa, pakai `restore_attendance`.
+
 ### Aturan Presensi Yang Dijaga API
 
 - Wali Santri `hadir_fisik`: boleh tanpa file, seperti presensi scan/manual panitia.
@@ -229,6 +270,7 @@ Penghapusan memakai soft delete sesuai model `Attendance`, lalu cache jumlah pre
 - Guru `izin`: wajib ada `proof_photo` atau `proof_url`, dan wajib ada `notes` alasan izin.
 - Jika kirim file/URL bukti, validasi default menjadi `pending` kecuali Hermes mengirim `validation_status`.
 - Gunakan `clear_proof=true` hanya jika status akhirnya tidak melanggar aturan wajib file.
+- `delete_attendance` adalah soft delete, jadi masih bisa dikembalikan dengan `restore_attendance`.
 
 ## Endpoint Cadangan
 
