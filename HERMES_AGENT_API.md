@@ -30,6 +30,7 @@ POST https://kajian.griyaquran.web.id/hermes-agent
 Kirim field `action` untuk memilih jalur:
 
 ```text
+ping
 overview
 attendances
 attendance_detail
@@ -42,7 +43,27 @@ delete_attendance
 restore_attendance
 ```
 
+Action dari Hermes juga boleh memakai beberapa alias umum:
+
+```text
+status/check/health -> ping
+data/dashboard/summary -> overview
+attendance/presence/presensi/get-presence/rekap -> attendances
+mark-presence/input-presensi -> create_attendance
+edit-presence/update-presence -> update_attendance
+delete-presence/hapus-presensi -> delete_attendance
+restore-presence/undo-delete -> restore_attendance
+```
+
 ### 1. Cek keseluruhan data lewat satu endpoint
+
+Tes koneksi paling ringan:
+
+```json
+{
+  "action": "ping"
+}
+```
 
 ```json
 {

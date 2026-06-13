@@ -22,8 +22,13 @@ class HermesAgentController extends Controller
 {
     public function handle(Request $request): JsonResponse
     {
+        $request->merge([
+            'action' => $this->normalizeAction((string) $request->input('action', '')),
+        ]);
+
         $data = $request->validate([
             'action' => ['required', Rule::in([
+                'ping',
                 'overview',
                 'attendances',
                 'attendance_detail',
@@ -39,6 +44,7 @@ class HermesAgentController extends Controller
         ]);
 
         return match ($data['action']) {
+            'ping' => $this->ping(),
             'overview' => $this->overview($request),
             'attendances' => $this->attendances($request),
             'attendance_detail' => $this->attendanceDetail($this->findAttendanceForAction($data['attendance_id'], withTrashed: true)),
@@ -49,6 +55,46 @@ class HermesAgentController extends Controller
             'update_proof' => $this->updateAttendanceProof($request, $this->findAttendanceForAction($data['attendance_id'])),
             'delete_attendance' => $this->deleteAttendance($this->findAttendanceForAction($data['attendance_id'])),
             'restore_attendance' => $this->restoreAttendance($this->findAttendanceForAction($data['attendance_id'], withTrashed: true)),
+        };
+    }
+
+    public function ping(): JsonResponse
+    {
+        return response()->json([
+            'success' => true,
+            'message' => 'Hermes Agent API aktif.',
+            'generated_at' => now()->toISOString(),
+            'endpoint' => url('/hermes-agent'),
+            'actions' => [
+                'ping',
+                'overview',
+                'attendances',
+                'read_attendance',
+                'create_attendance',
+                'update_attendance',
+                'delete_attendance',
+                'restore_attendance',
+            ],
+        ]);
+    }
+
+    protected function normalizeAction(string $action): string
+    {
+        $action = str($action)
+            ->lower()
+            ->replace([' ', '-'], '_')
+            ->toString();
+
+        return match ($action) {
+            'status', 'health', 'check' => 'ping',
+            'data', 'dashboard', 'summary', 'overview_data' => 'overview',
+            'attendance', 'presence', 'presensi', 'get_presence', 'get_presensi', 'rekap', 'list_attendance', 'list_presence' => 'attendances',
+            'detail', 'detail_attendance', 'detail_presence', 'read_presence' => 'read_attendance',
+            'mark_presence', 'mark_attendance', 'input_presensi', 'input_attendance', 'create_presence', 'manual_presence' => 'create_attendance',
+            'edit_presence', 'edit_attendance', 'update_presence' => 'update_attendance',
+            'delete_presence', 'hapus_presensi' => 'delete_attendance',
+            'restore_presence', 'undo_delete', 'restore_presensi' => 'restore_attendance',
+            default => $action,
         };
     }
 
