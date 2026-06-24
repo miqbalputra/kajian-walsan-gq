@@ -31,3 +31,4 @@ database/database.sqlite
 ~$*.xlsx
 ~$*.xls
 ~$*.xlsm
+composer.phar
