@@ -184,5 +184,3 @@ Route::middleware('auth')->group(function () {
     })->name('logout');
 });
 
-// Jalur khusus reset password dari Chatbot n8n
-Route::post('/internal-reset-password', [App\Http\Controllers\Api\PasswordResetController::class, 'reset']);

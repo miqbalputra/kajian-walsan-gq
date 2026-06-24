@@ -32,7 +32,6 @@ return Application::configure(basePath: dirname(__DIR__))
 
         // Exclude internal API endpoints from CSRF
         $middleware->validateCsrfTokens(except: [
-            '/internal-reset-password',
             '/hermes-agent',
             '/hermes-agent/*',
         ]);
