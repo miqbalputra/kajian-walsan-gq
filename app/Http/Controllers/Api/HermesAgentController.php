@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Jobs\ReviewAttendanceProof;
 use App\Models\Attendance;
 use App\Models\KajianEvent;
 use App\Models\ParentModel;
@@ -12,9 +13,11 @@ use App\Services\AiProviderService;
 use App\Services\CloudinaryService;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\QueryException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\Rule;
 
@@ -328,7 +331,29 @@ class HermesAgentController extends Controller
             'scanned_at' => $data['status'] === Attendance::STATUS_HADIR_FISIK ? ($attendance->scanned_at ?: now()) : $attendance->scanned_at,
             'device_info' => mb_substr('Hermes Agent API', 0, 255),
         ]);
-        $attendance->save();
+
+        // FIX #1: Wrap save dalam try-catch untuk race condition.
+        // Dua request Hermes konkuren bisa lewati check withTrashed()->first()
+        // bersamaan. Unique index (kajian_event_id, parent_id) akan menangkap
+        // di level DB, tapi tanpa catch ini akan jadi 500 error ke Hermes.
+        try {
+            $attendance->save();
+        } catch (QueryException $e) {
+            if (($e->errorInfo[0] ?? null) === '23000' || ($e->errorInfo[1] ?? null) === 1062) {
+                $existing = Attendance::where('kajian_event_id', $event->id)
+                    ->where('parent_id', $parent->id)
+                    ->first();
+
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Presensi untuk peserta dan kajian ini sudah ada (terdeteksi saat penyimpanan). Gunakan action update_attendance untuk mengubahnya.',
+                    'data' => $existing
+                        ? $this->formatAttendance($existing->load(['kajianEvent', 'parent.user', 'parent.students.classRoom', 'student.classRoom', 'validator']), detailed: true)
+                        : null,
+                ], 409);
+            }
+            throw $e;
+        }
 
         $this->maybeRunAiReview($attendance->fresh(), $request->boolean('run_ai_review', (bool) $proofFile));
         $event->updateAttendanceCount();
@@ -506,7 +531,13 @@ class HermesAgentController extends Controller
                 Attendance::VALIDATION_REJECTED,
             ])],
             'proof_photo' => ['nullable', 'image', 'mimes:jpg,jpeg,png', 'max:4096'],
-            'proof_url' => ['nullable', 'url', 'max:2048'],
+            // FIX #3: proof_url hanya menerima URL Cloudinary (res.cloudinary.com)
+            // untuk mencegah phishing/SSRF via URL arbitrer yang dikirim ke AI vision model.
+            'proof_url' => ['nullable', 'url', 'max:2048', function ($attribute, $value, $fail) {
+                if (! empty($value) && ! CloudinaryService::isCloudinaryUrl($value)) {
+                    $fail('proof_url harus berupa URL Cloudinary yang valid (res.cloudinary.com).');
+                }
+            }],
             'notes' => ['nullable', 'string', 'max:1000'],
             'rejection_reason' => ['nullable', 'string', 'max:500'],
             'keep_existing_proof' => ['nullable', 'boolean'],
@@ -584,6 +615,7 @@ class HermesAgentController extends Controller
     protected function storeProofFile(Request $request, ParentModel $parent, string $status): ?string
     {
         if ($request->filled('proof_url')) {
+            // Validasi domain sudah di-handle di attendanceMutationRules (hanya Cloudinary).
             return $request->input('proof_url');
         }
 
@@ -607,14 +639,9 @@ class HermesAgentController extends Controller
             return;
         }
 
-        try {
-            app(AiProviderService::class)->autoReviewAttendance($attendance);
-        } catch (\Throwable $exception) {
-            Log::warning('[Hermes Agent] AI review failed', [
-                'attendance_id' => $attendance->id,
-                'error' => $exception->getMessage(),
-            ]);
-        }
+        // FIX #2: Dispatch ke queue agar response Hermes tidak blocking.
+        // Sebelumnya autoReviewAttendance dipanggil synchronous (bisa hang 90 detik).
+        ReviewAttendanceProof::dispatch($attendance);
     }
 
     protected function completeAttendanceRows(KajianEvent $event, ?string $audience = null, ?string $search = null): Collection
