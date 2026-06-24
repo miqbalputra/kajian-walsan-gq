@@ -12,23 +12,18 @@ services:
       - .env
     volumes:
       - storage_data:/var/www/html/storage/app
-    depends_on:
-      - redis
     restart: unless-stopped
     networks:
       - kajian-network
 
-  redis:
-    # Penyimpanan cepat untuk session, cache (rate limiter, Livewire),
-    # antrian job, dan cache Pulse. Mengurangi puluhan query DB per request.
-    image: redis:7-alpine
-    restart: unless-stopped
-    networks:
-      - kajian-network
-    command: ["redis-server", "--maxmemory", "128mb", "--maxmemory-policy", "allkeys-lru"]
-    # (Opsional) persistensi ringan kalau ingin job antri tetap ada setelah restart:
-    # volumes:
-    #   - redis_data:/data
+# ============================================================
+# Redis dijalankan SEKALI sebagai resource Coolify terpisah dan
+# dipakai bersama aplikasi lain (lihat .env.example bagian REDIS).
+# Karena itu TIDAK ada service redis di sini — aplikasi terhubung
+# ke Redis eksternal via REDIS_HOST / REDIS_PASSWORD / REDIS_DB.
+# Pastikan container app dan Redis berada di network Coolify yang
+# sama (atau pakai hostname yang Coolify sediakan untuk Redis tsb).
+# ============================================================
 
 networks:
   kajian-network:
@@ -36,4 +31,3 @@ networks:
 
 volumes:
   storage_data:
-  # redis_data:
