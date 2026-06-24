@@ -66,6 +66,9 @@ COPY docker/nginx.conf /etc/nginx/nginx.conf
 # Copy custom PHP ini (upload limits, temp dir, memory)
 COPY docker/php.ini /usr/local/etc/php/conf.d/zzz-custom.ini
 
+# Copy tuned PHP-FPM pool config (override default pm.max_children=5)
+COPY docker/www.conf /usr/local/etc/php-fpm.d/zzz-www.conf
+
 # Copy supervisor config
 COPY docker/supervisord.conf /etc/supervisor/conf.d/supervisord.conf
 

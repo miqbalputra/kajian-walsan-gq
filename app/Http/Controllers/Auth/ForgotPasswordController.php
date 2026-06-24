@@ -3,13 +3,12 @@
 namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
+use App\Jobs\SendPasswordResetWebhook;
 use App\Models\User;
 use Illuminate\Auth\Events\PasswordReset;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Facades\Http;
-use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Password;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Str;
@@ -52,13 +51,15 @@ class ForgotPasswordController extends Controller
             'email' => $user->email,
         ]);
 
-        $sent = $this->sendToN8n($user, $resetUrl, $request->identifier);
-
-        if (!$sent) {
-            Log::warning('[ForgotPassword] n8n webhook not configured or failed', [
-                'user_id' => $user->id,
-            ]);
-        }
+        // Dispatch pengiriman webhook ke queue agar request ke user langsung
+        // selesai tanpa menunggu n8n merespons (sebelumnya sinkron sampai 15s).
+        // Job punya retry otomatis (3x) + backoff 10s/30s/60s + logging gagal permanen.
+        SendPasswordResetWebhook::dispatch(
+            $user,
+            $resetUrl,
+            $request->identifier,
+            (int) config('auth.passwords.users.expire', 60),
+        );
 
         return back()->with('status', $statusMessage);
     }
@@ -130,39 +131,6 @@ class ForgotPasswordController extends Controller
             ->first();
     }
 
-    private function sendToN8n(User $user, string $resetUrl, string $identifier): bool
-    {
-        $webhookUrl = config('services.n8n.password_reset_webhook_url');
-        if (!$webhookUrl) {
-            return false;
-        }
-
-        $phone = $this->formatPhoneForWa($user->phone);
-        $preferredChannel = str_contains($identifier, '@') ? 'email' : ($phone ? 'whatsapp' : 'email');
-
-        try {
-            $response = Http::timeout(15)->post($webhookUrl, [
-                'secret' => config('services.n8n.password_reset_secret'),
-                'name' => $user->name,
-                'username' => $user->username,
-                'email' => $user->email,
-                'phone' => $phone,
-                'preferred_channel' => $preferredChannel,
-                'reset_url' => $resetUrl,
-                'expires_minutes' => config('auth.passwords.users.expire', 60),
-                'requested_at' => now()->toISOString(),
-            ]);
-
-            return $response->successful();
-        } catch (\Throwable $e) {
-            Log::error('[ForgotPassword] n8n webhook failed', [
-                'user_id' => $user->id,
-                'error' => $e->getMessage(),
-            ]);
-            return false;
-        }
-    }
-
     private function phoneCandidates(string $phone): array
     {
         $digits = preg_replace('/\D+/', '', $phone);
@@ -183,27 +151,5 @@ class ForgotPasswordController extends Controller
         }
 
         return array_values(array_unique([$digits, $local, $international]));
-    }
-
-    private function formatPhoneForWa(?string $phone): ?string
-    {
-        if (!$phone) {
-            return null;
-        }
-
-        $digits = preg_replace('/\D+/', '', $phone);
-        if (!$digits) {
-            return null;
-        }
-
-        if (str_starts_with($digits, '08')) {
-            return '62' . substr($digits, 1);
-        }
-
-        if (str_starts_with($digits, '8')) {
-            return '62' . $digits;
-        }
-
-        return str_starts_with($digits, '62') ? $digits : null;
     }
 }

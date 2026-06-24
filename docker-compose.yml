@@ -1,5 +1,3 @@
-﻿version: '3.8'
-
 services:
   app:
     build:
@@ -14,9 +12,23 @@ services:
       - .env
     volumes:
       - storage_data:/var/www/html/storage/app
+    depends_on:
+      - redis
     restart: unless-stopped
     networks:
       - kajian-network
+
+  redis:
+    # Penyimpanan cepat untuk session, cache (rate limiter, Livewire),
+    # antrian job, dan cache Pulse. Mengurangi puluhan query DB per request.
+    image: redis:7-alpine
+    restart: unless-stopped
+    networks:
+      - kajian-network
+    command: ["redis-server", "--maxmemory", "128mb", "--maxmemory-policy", "allkeys-lru"]
+    # (Opsional) persistensi ringan kalau ingin job antri tetap ada setelah restart:
+    # volumes:
+    #   - redis_data:/data
 
 networks:
   kajian-network:
@@ -24,3 +36,4 @@ networks:
 
 volumes:
   storage_data:
+  # redis_data:
