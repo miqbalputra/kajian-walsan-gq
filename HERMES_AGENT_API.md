@@ -160,7 +160,7 @@ izin
 alpha
 ```
 
-Jika presensi untuk `kajian_event_id` dan `parent_id` tersebut sudah ada, `create_attendance` akan menolak dengan HTTP 409. Gunakan `update_attendance` untuk mengubah data yang sudah ada.
+Jika presensi untuk `kajian_event_id` dan `parent_id` tersebut sudah ada, `create_attendance` akan menolak dengan HTTP 409. Gunakan `update_attendance` untuk mengubah data yang sudah ada. Race condition (dua request bersamaan) juga akan ditangani dengan 409.
 
 `manual_attendance` masih didukung sebagai mode upsert/kompatibilitas lama.
 
@@ -197,7 +197,7 @@ curl -X POST "https://kajian.griyaquran.web.id/hermes-agent" \
   -F "proof_photo=@catatan.jpg"
 ```
 
-Alternatif jika Hermes sudah punya URL foto:
+Alternatif jika Hermes sudah punya URL foto dari Cloudinary:
 
 ```json
 {
@@ -206,9 +206,11 @@ Alternatif jika Hermes sudah punya URL foto:
   "parent_id": 10,
   "status": "hadir_online",
   "notes": "Catatan hasil kajian dari Hermes",
-  "proof_url": "https://example.com/catatan.jpg"
+  "proof_url": "https://res.cloudinary.com/dt7ovpkbr/image/upload/v123/kajian-walsan/attendance-proofs/catatan.jpg"
 }
 ```
+
+> **Penting:** `proof_url` hanya menerima URL dari domain `res.cloudinary.com`. URL dari domain lain akan ditolak dengan HTTP 422.
 
 ### 6. Update: ubah status/foto/catatan presensi lewat satu endpoint
 
@@ -220,7 +222,7 @@ Body JSON:
   "attendance_id": 123,
   "status": "izin",
   "notes": "Izin karena ada keperluan keluarga",
-  "proof_url": "https://example.com/surat-izin.jpg"
+  "proof_url": "https://res.cloudinary.com/dt7ovpkbr/image/upload/v123/kajian-walsan/izin-documents/surat-izin.jpg"
 }
 ```
 
@@ -278,6 +280,7 @@ Restore akan ditolak jika sudah ada presensi aktif lain untuk peserta dan kajian
 - Guru `hadir_online`: wajib ada `proof_photo` atau `proof_url` catatan hasil kajian.
 - Guru `izin`: wajib ada `proof_photo` atau `proof_url`, dan wajib ada `notes` alasan izin.
 - Jika kirim file/URL bukti, validasi default menjadi `pending` kecuali Hermes mengirim `validation_status`.
+- `proof_url` hanya menerima URL Cloudinary (`res.cloudinary.com`). URL lain ditolak dengan HTTP 422.
 - Gunakan `clear_proof=true` hanya jika status akhirnya tidak melanggar aturan wajib file.
 - `delete_attendance` adalah soft delete, jadi masih bisa dikembalikan dengan `restore_attendance`.
 - Hermes tidak diberi akses hapus permanen.
@@ -438,7 +441,7 @@ curl -X POST "https://kajian.griyaquran.web.id/hermes-agent/attendances/manual" 
   -F "proof_photo=@catatan.jpg"
 ```
 
-Alternatif jika Hermes sudah punya URL foto:
+Alternatif jika Hermes sudah punya URL foto dari Cloudinary:
 
 ```json
 {
@@ -446,9 +449,11 @@ Alternatif jika Hermes sudah punya URL foto:
   "parent_id": 10,
   "status": "hadir_online",
   "notes": "Catatan hasil kajian dari Hermes",
-  "proof_url": "https://example.com/catatan.jpg"
+  "proof_url": "https://res.cloudinary.com/dt7ovpkbr/image/upload/v123/kajian-walsan/attendance-proofs/catatan.jpg"
 }
 ```
+
+> **Penting:** `proof_url` hanya menerima URL dari domain `res.cloudinary.com`.
 
 ### 7. Update foto/catatan presensi yang sudah ada
 
@@ -470,6 +475,9 @@ curl -X POST "https://kajian.griyaquran.web.id/hermes-agent/attendances/123/proo
 
 - File foto harus JPG/JPEG/PNG.
 - Ukuran maksimal upload API Hermes: 4 MB.
+- `proof_url` hanya menerima URL Cloudinary (`res.cloudinary.com`). URL dari domain lain akan ditolak dengan HTTP 422 dan pesan: `proof_url harus berupa URL Cloudinary yang valid (res.cloudinary.com).`
 - Kalau kirim `proof_photo` atau `proof_url`, status validasi default menjadi `pending`.
 - Tambahkan `run_ai_review=false` jika tidak ingin AI langsung mengecek foto.
+- AI review berjalan **asynchronous** di queue worker — response API langsung selesai tanpa menunggu AI. Hasil review akan muncul di field `ai_review` pada response detail presensi setelah queue worker selesai memproses (biasanya 5-30 detik).
+- Jika dua request `create_attendance` dikirim bersamaan untuk peserta yang sama, salah satu akan dapat HTTP 409 dengan data presensi yang sudah tersimpan.
 - Endpoint berlaku untuk jalur Wali Santri dan Guru melalui parameter `audience`.
