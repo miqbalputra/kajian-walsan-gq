@@ -481,3 +481,70 @@ curl -X POST "https://kajian.griyaquran.web.id/hermes-agent/attendances/123/proo
 - AI review berjalan **asynchronous** di queue worker — response API langsung selesai tanpa menunggu AI. Hasil review akan muncul di field `ai_review` pada response detail presensi setelah queue worker selesai memproses (biasanya 5-30 detik).
 - Jika dua request `create_attendance` dikirim bersamaan untuk peserta yang sama, salah satu akan dapat HTTP 409 dengan data presensi yang sudah tersimpan.
 - Endpoint berlaku untuk jalur Wali Santri dan Guru melalui parameter `audience`.
+## Kategori Kegiatan & Policy Per Event
+
+Setiap event memiliki kategori (`kajian`, `rapor`, `pertemuan`) dan aturan presensi (policy) yang bisa di-toggle per event oleh admin.
+
+### Field `category` di response event
+
+Semua response yang berisi data event sekarang include:
+
+```json
+{
+  "category": "kajian",
+  "category_display": "Kajian Wali Santri",
+  "policy": {
+    "statuses": ["hadir_fisik", "hadir_online", "izin", "alpha"],
+    "online_enabled": true,
+    "izin_requires_proof": true,
+    "izin_requires_notes": true,
+    "guru_hadir_fisik_requires_proof": true,
+    "ai_review": true
+  }
+}
+```
+
+### Filter by category
+
+`overview` dan `attendances` menerima parameter `category`:
+
+```json
+{
+  "action": "overview",
+  "category": "rapor"
+}
+```
+
+```json
+{
+  "action": "attendances",
+  "complete": true,
+  "category": "rapor"
+}
+```
+
+Nilai `category`: `kajian`, `rapor`, `pertemuan`.
+
+### Status validation per kategori
+
+API sekarang menolak status yang tidak didukung oleh event:
+
+```json
+// Untuk event rapor (online_enabled: false):
+{
+  "action": "create_attendance",
+  "status": "hadir_online"
+}
+```
+
+Response:
+
+```json
+{
+  "success": false,
+  "message": "Status 'hadir_online' tidak didukung untuk kegiatan ini.",
+  "allowed_statuses": ["hadir_fisik", "izin", "alpha"]
+}
+```
+
+Sebelum mengirim presensi, Hermes disarankan cek `policy.statuses` dari event untuk tahu status mana yang diizinkan.

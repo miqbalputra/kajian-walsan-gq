@@ -106,9 +106,11 @@ class HermesAgentController extends Controller
         $data = $request->validate([
             'audience' => ['nullable', Rule::in(['wali_santri', 'guru'])],
             'event_limit' => ['nullable', 'integer', 'min:1', 'max:100'],
+            'category' => ['nullable', 'string', 'in:kajian,rapor,pertemuan'],
         ]);
 
         $latestEvent = KajianEvent::whereDate('date', '<=', today())
+            ->when($data['category'] ?? null, fn (Builder $q, string $cat) => $q->where('category', $cat))
             ->orderByDesc('date')
             ->orderByDesc('time_start')
             ->first();
@@ -138,7 +140,8 @@ class HermesAgentController extends Controller
                 ->get(),
             'latest_event' => $latestEvent ? $this->formatEvent($latestEvent) : null,
             'latest_event_summary' => $latestEvent ? $this->summarizeRows($latestRows) : null,
-            'recent_events' => KajianEvent::orderByDesc('date')
+            'recent_events' => KajianEvent::when($data['category'] ?? null, fn (Builder $q, string $cat) => $q->where('category', $cat))
+                ->orderByDesc('date')
                 ->orderByDesc('time_start')
                 ->limit((int) ($data['event_limit'] ?? 10))
                 ->get()
@@ -165,6 +168,7 @@ class HermesAgentController extends Controller
             ])],
             'search' => ['nullable', 'string', 'max:100'],
             'complete' => ['nullable', 'boolean'],
+            'category' => ['nullable', 'string', 'in:kajian,rapor,pertemuan'],
             'trashed' => ['nullable', Rule::in(['without', 'with', 'only'])],
             'per_page' => ['nullable', 'integer', 'min:1', 'max:200'],
         ]);
@@ -173,6 +177,7 @@ class HermesAgentController extends Controller
             $event = isset($data['kajian_event_id'])
                 ? KajianEvent::findOrFail($data['kajian_event_id'])
                 : KajianEvent::whereDate('date', '<=', today())
+                    ->when($data['category'] ?? null, fn (Builder $q, string $cat) => $q->where('category', $cat))
                     ->orderByDesc('date')
                     ->orderByDesc('time_start')
                     ->first();
@@ -206,6 +211,9 @@ class HermesAgentController extends Controller
             ->when($data['validation_status'] ?? null, fn (Builder $query, string $status) => $query->where('validation_status', $status))
             ->when($data['audience'] ?? null, function (Builder $query, string $audience) {
                 $query->whereHas('parent', fn (Builder $parentQuery) => $this->applyAudienceScope($parentQuery, $audience));
+            })
+            ->when($data['category'] ?? null, function (Builder $query, string $category) {
+                $query->whereHas('kajianEvent', fn (Builder $eventQuery) => $eventQuery->where('category', $category));
             })
             ->when($data['search'] ?? null, function (Builder $query, string $search) {
                 $query->where(function (Builder $query) use ($search) {
@@ -818,6 +826,16 @@ class HermesAgentController extends Controller
             'time_range' => $event->time_range,
             'status' => $event->status,
             'attendance_count' => $event->attendance_count,
+            'category' => $event->category ?? 'kajian',
+            'category_display' => $event->category_display,
+            'policy' => [
+                'statuses' => $event->policy['statuses'] ?? ['hadir_fisik', 'hadir_online', 'izin', 'alpha'],
+                'online_enabled' => $event->policy['online_enabled'] ?? false,
+                'izin_requires_proof' => $event->policy['izin_requires_proof'] ?? true,
+                'izin_requires_notes' => $event->policy['izin_requires_notes'] ?? true,
+                'guru_hadir_fisik_requires_proof' => $event->policy['guru_hadir_fisik_requires_proof'] ?? false,
+                'ai_review' => $event->policy['ai_review'] ?? false,
+            ],
         ];
     }
 
