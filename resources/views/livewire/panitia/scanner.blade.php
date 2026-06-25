@@ -6,12 +6,12 @@
                 <div class="w-24 h-24 bg-yellow-100 rounded-full flex items-center justify-center mx-auto mb-4">
                     <span class="material-symbols-rounded text-yellow-600 text-5xl">event_busy</span>
                 </div>
-                <h2 class="text-xl font-bold text-gray-900 mb-2">Tidak Ada Kajian Aktif</h2>
+                <h2 class="text-xl font-bold text-gray-900 mb-2">Tidak Ada Kegiatan Aktif</h2>
                 <p class="text-gray-500 mb-6">Belum ada kajian yang sedang dibuka untuk presensi.</p>
                 <a href="{{ route('panitia.jadwal') }}"
                     class="inline-flex items-center gap-2 px-6 py-3 bg-primary-500 text-white rounded-xl font-semibold hover:bg-primary-600 transition-colors">
                     <span class="material-symbols-rounded">calendar_month</span>
-                    Lihat Jadwal Kajian
+                    Lihat Jadwal Kegiatan
                 </a>
             </div>
         </div>
@@ -63,7 +63,7 @@
         <div class="bg-gradient-to-r from-secondary-500 to-secondary-600 text-white px-4 py-3">
             <div class="flex items-center justify-between">
                 <div>
-                    <p class="text-white/80 text-xs font-medium uppercase tracking-wide">Kajian Aktif</p>
+                    <p class="text-white/80 text-xs font-medium uppercase tracking-wide">{{ $activeEvent->category_display }} Aktif</p>
                     <p class="font-bold truncate">{{ $activeEvent->title }}</p>
                 </div>
                 <div class="text-right">

@@ -52,13 +52,14 @@ class AttendanceScanService
         if ($attendance) {
             if ($attendance->trashed()) {
                 $attendance->restore();
+                $needsProof = $parent->isWaliTeacher() && ($event->policy['guru_hadir_fisik_requires_proof'] ?? true);
                 $attendance->update([
                     'student_id' => $students->first()?->id,
                     'status' => Attendance::STATUS_HADIR_FISIK,
                     'method' => Attendance::METHOD_SCAN_QR,
-                    'validation_status' => $parent->isWaliTeacher() ? Attendance::VALIDATION_PENDING : Attendance::VALIDATION_APPROVED,
-                    'validated_by' => $parent->isWaliTeacher() ? null : $userId,
-                    'validated_at' => $parent->isWaliTeacher() ? null : now(),
+                    'validation_status' => $needsProof ? Attendance::VALIDATION_PENDING : Attendance::VALIDATION_APPROVED,
+                    'validated_by' => $needsProof ? null : $userId,
+                    'validated_at' => $needsProof ? null : now(),
                     'rejection_reason' => null,
                     'scanned_at' => now(),
                     'device_info' => $deviceInfo,
@@ -74,16 +75,17 @@ class AttendanceScanService
             }
         } else {
             try {
-                DB::transaction(function () use ($event, $parent, $students, $userId, $deviceInfo) {
+                $needsProof = $parent->isWaliTeacher() && ($event->policy['guru_hadir_fisik_requires_proof'] ?? true);
+                DB::transaction(function () use ($event, $parent, $students, $userId, $deviceInfo, $needsProof) {
                     Attendance::create([
                         'kajian_event_id' => $event->id,
                         'parent_id' => $parent->id,
                         'student_id' => $students->first()?->id,
                         'status' => Attendance::STATUS_HADIR_FISIK,
                         'method' => Attendance::METHOD_SCAN_QR,
-                        'validation_status' => $parent->isWaliTeacher() ? Attendance::VALIDATION_PENDING : Attendance::VALIDATION_APPROVED,
-                        'validated_by' => $parent->isWaliTeacher() ? null : $userId,
-                        'validated_at' => $parent->isWaliTeacher() ? null : now(),
+                        'validation_status' => $needsProof ? Attendance::VALIDATION_PENDING : Attendance::VALIDATION_APPROVED,
+                        'validated_by' => $needsProof ? null : $userId,
+                        'validated_at' => $needsProof ? null : now(),
                         'scanned_at' => now(),
                         'device_info' => $deviceInfo,
                     ]);
@@ -114,7 +116,8 @@ class AttendanceScanService
             default => 'Peserta',
         };
 
-        $message = $parent->isWaliTeacher()
+        $needsProof = $parent->isWaliTeacher() && ($event->policy['guru_hadir_fisik_requires_proof'] ?? true);
+        $message = ($parent->isWaliTeacher() && $needsProof)
             ? "Selamat Datang, {$parentType} {$parent->user->name}. Berhasil mencatat, mohon ingatkan untuk upload catatan kajian di dashboard."
             : "Selamat Datang, {$parentType} {$parent->user->name}. Berhasil mencatat presensi untuk " . ($students->count() ?: 1) . ' santri.';
 

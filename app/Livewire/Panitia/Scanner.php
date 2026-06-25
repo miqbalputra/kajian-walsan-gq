@@ -136,15 +136,17 @@ class Scanner extends Component
         }
 
         // Record single attendance for manual check-in
+        $policy = $this->activeEvent->policy;
+        $needsProof = $parent->isWaliTeacher() && ($policy['guru_hadir_fisik_requires_proof'] ?? true);
         Attendance::create([
             'kajian_event_id' => $this->activeEvent->id,
             'parent_id' => $parent->id,
             'student_id' => $students->first()?->id,
             'status' => 'hadir_fisik',
             'method' => 'manual',
-            'validation_status' => $parent->isWaliTeacher() ? 'pending' : 'approved',
-            'validated_by' => $parent->isWaliTeacher() ? null : auth()->id(),
-            'validated_at' => $parent->isWaliTeacher() ? null : now(),
+            'validation_status' => $needsProof ? 'pending' : 'approved',
+            'validated_by' => $needsProof ? null : auth()->id(),
+            'validated_at' => $needsProof ? null : now(),
         ]);
 
         $parentType = match($parent->type) {
@@ -158,7 +160,7 @@ class Scanner extends Component
             ? (count($childDisplayNames) . " Santri: " . implode(', ', $childDisplayNames))
             : 'Tidak ada data santri';
 
-        $message = $parent->isWaliTeacher()
+        $message = ($parent->isWaliTeacher() && $needsProof)
             ? "Selamat Datang, {$parentType} {$parent->user->name}! Berhasil mencatat, mohon ingatkan untuk upload catatan kajian."
             : "Selamat Datang, {$parentType} {$parent->user->name}! Berhasil mencatat presensi untuk " . ($students->count() ?: 1) . " santri.";
 
