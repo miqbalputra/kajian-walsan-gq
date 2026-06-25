@@ -1,7 +1,7 @@
 FROM php:8.2-fpm-alpine
 
 # Install system dependencies and helper script
-ADD https://github.com/mlocati/docker-php-extension-installer/releases/latest/download/install-php-extensions /usr/local/bin/
+ADD https://github.com/mlocati/docker-php-extension-installer/releases/download/2.11.12/install-php-extensions /usr/local/bin/
 
 RUN chmod +x /usr/local/bin/install-php-extensions && \
     apk add --no-cache git curl nginx supervisor nodejs npm mariadb-client
