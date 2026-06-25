@@ -23,6 +23,7 @@ class KajianEvent extends Model
         'time_end',
         'status',
         'category',
+        'policy_overrides',
         'qr_code_image',
         'attendance_count',
         'created_by',
@@ -33,6 +34,7 @@ class KajianEvent extends Model
         'time_start' => 'datetime:H:i',
         'time_end' => 'datetime:H:i',
         'attendance_count' => 'integer',
+        'policy_overrides' => 'array',
     ];
 
     /**
@@ -210,7 +212,10 @@ class KajianEvent extends Model
      */
     public function getPolicyAttribute(): array
     {
-        return config('event_categories.' . ($this->category ?? 'kajian'), config('event_categories.kajian'));
+        $category = $this->category ?? 'kajian';
+        $defaults = config('event_categories.' . $category, config('event_categories.kajian'));
+        $overrides = $this->policy_overrides ?? [];
+        return array_merge($defaults, $overrides);
     }
 
     /**
