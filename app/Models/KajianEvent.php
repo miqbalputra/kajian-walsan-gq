@@ -22,6 +22,7 @@ class KajianEvent extends Model
         'time_start',
         'time_end',
         'status',
+        'category',
         'qr_code_image',
         'attendance_count',
         'created_by',
@@ -194,5 +195,29 @@ class KajianEvent extends Model
             return $query->where('academic_year_id', $activeYear->id);
         }
         return $query;
+    }
+
+    /**
+     * Get the category display name.
+     */
+    public function getCategoryDisplayAttribute(): string
+    {
+        return config('event_categories.' . $this->category . '.label', ucfirst($this->category ?? 'kajian'));
+    }
+
+    /**
+     * Get policy config for this event's category.
+     */
+    public function getPolicyAttribute(): array
+    {
+        return config('event_categories.' . ($this->category ?? 'kajian'), config('event_categories.kajian'));
+    }
+
+    /**
+     * Scope to filter by category.
+     */
+    public function scopeInCategory($query, string $category)
+    {
+        return $query->where('category', $category);
     }
 }

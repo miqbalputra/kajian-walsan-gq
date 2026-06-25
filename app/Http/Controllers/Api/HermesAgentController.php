@@ -261,6 +261,16 @@ class HermesAgentController extends Controller
             ], 422);
         }
 
+        $category = $event->category ?? 'kajian';
+        $allowedStatuses = config("event_categories.{$category}.statuses", []);
+        if (! empty($allowedStatuses) && ! in_array($data['status'], $allowedStatuses)) {
+            return response()->json([
+                'success' => false,
+                'message' => "Status '{$data['status']}' tidak didukung untuk kegiatan kategori '{$category}'.",
+                'allowed_statuses' => $allowedStatuses,
+            ], 422);
+        }
+
         $parent = $this->resolveParent($data);
         if (! $parent) {
             return response()->json([
@@ -277,7 +287,7 @@ class HermesAgentController extends Controller
             ], 422);
         }
 
-        $proofFile = $this->storeProofFile($request, $parent, $data['status']);
+        $proofFile = $this->storeProofFile($request, $parent, $data['status'], $category);
         $method = $proofFile ? Attendance::METHOD_UPLOAD : ($data['method'] ?? Attendance::METHOD_MANUAL);
         $validationStatus = $data['validation_status']
             ?? ($proofFile ? Attendance::VALIDATION_PENDING : Attendance::VALIDATION_APPROVED);
@@ -306,7 +316,7 @@ class HermesAgentController extends Controller
 
         $finalProofFile = $proofFile ?: ($data['keep_existing_proof'] ?? true ? $attendance->proof_file : null);
         $finalNotes = $data['notes'] ?? $attendance->notes;
-        $policyErrors = $this->attendancePolicyErrors($parent, $data['status'], $finalProofFile, $finalNotes);
+        $policyErrors = $this->attendancePolicyErrors($category, $parent, $data['status'], $finalProofFile, $finalNotes);
 
         if ($policyErrors) {
             return response()->json([
@@ -374,9 +384,10 @@ class HermesAgentController extends Controller
     {
         $data = $request->validate($this->attendanceMutationRules(requireStatus: false, requireTarget: false));
 
-        $attendance->loadMissing(['parent.students']);
+        $attendance->loadMissing(['parent.students', 'kajianEvent']);
         $status = $data['status'] ?? $attendance->status;
-        $proofFile = $this->storeProofFile($request, $attendance->parent, $status);
+        $category = $attendance->kajianEvent?->category ?? 'kajian';
+        $proofFile = $this->storeProofFile($request, $attendance->parent, $status, $category);
 
         if (! $proofFile
             && ! $request->filled('notes')
@@ -404,7 +415,7 @@ class HermesAgentController extends Controller
             ? null
             : ($proofFile ?: $attendance->proof_file);
         $finalNotes = $request->filled('notes') ? $data['notes'] : $attendance->notes;
-        $policyErrors = $this->attendancePolicyErrors($attendance->parent, $status, $finalProofFile, $finalNotes);
+        $policyErrors = $this->attendancePolicyErrors($category, $attendance->parent, $status, $finalProofFile, $finalNotes);
 
         if ($policyErrors) {
             return response()->json([
@@ -546,28 +557,32 @@ class HermesAgentController extends Controller
         ];
     }
 
-    protected function attendancePolicyErrors(ParentModel $parent, string $status, ?string $proofFile, ?string $notes): array
+    protected function attendancePolicyErrors(string $category, ParentModel $parent, string $status, ?string $proofFile, ?string $notes): array
     {
         $errors = [];
         $hasProof = filled($proofFile);
         $hasNotes = filled(is_string($notes) ? trim($notes) : $notes);
+        $policy = config("event_categories.{$category}", []);
 
-        if ($status === Attendance::STATUS_HADIR_ONLINE && ! $hasProof) {
-            $errors['proof_file'][] = 'Menyimak online wajib menyertakan file/foto catatan hasil kajian.';
+        if ($status === Attendance::STATUS_HADIR_ONLINE
+            && ($policy['online_requires_proof'] ?? true)
+            && ! $hasProof) {
+            $errors['proof_file'][] = 'Hadir online wajib menyertakan file/foto catatan hasil kajian.';
         }
 
         if ($status === Attendance::STATUS_IZIN) {
-            if (! $hasProof) {
+            if (($policy['izin_requires_proof'] ?? true) && ! $hasProof) {
                 $errors['proof_file'][] = 'Izin wajib menyertakan file/foto surat atau keterangan izin.';
             }
 
-            if (! $hasNotes) {
+            if (($policy['izin_requires_notes'] ?? true) && ! $hasNotes) {
                 $errors['notes'][] = 'Izin wajib menyertakan catatan alasan.';
             }
         }
 
         if ($parent->isTeacher()
             && $status === Attendance::STATUS_HADIR_FISIK
+            && ($policy['guru_hadir_fisik_requires_proof'] ?? true)
             && ! $hasProof) {
             $errors['proof_file'][] = 'Guru hadir fisik wajib menyertakan foto catatan hasil kajian.';
         }
@@ -612,7 +627,7 @@ class HermesAgentController extends Controller
         return $parent->students()->first()?->id;
     }
 
-    protected function storeProofFile(Request $request, ParentModel $parent, string $status): ?string
+    protected function storeProofFile(Request $request, ParentModel $parent, string $status, string $category = 'kajian'): ?string
     {
         if ($request->filled('proof_url')) {
             // Validasi domain sudah di-handle di attendanceMutationRules (hanya Cloudinary).
@@ -623,11 +638,13 @@ class HermesAgentController extends Controller
             return null;
         }
 
+        $folders = config("event_categories.{$category}.proof_folders", []);
+
         $folder = match (true) {
-            $parent->isTeacher() && $status === Attendance::STATUS_IZIN => 'teacher-permission-letters',
-            $parent->isTeacher() => 'teacher-attendance-notes',
-            $status === Attendance::STATUS_IZIN => 'izin-documents',
-            default => 'attendance-proofs',
+            $parent->isTeacher() && $status === Attendance::STATUS_IZIN => $folders['teacher_izin'] ?? 'teacher-permission-letters',
+            $parent->isTeacher() => $folders['teacher_notes'] ?? 'teacher-attendance-notes',
+            $status === Attendance::STATUS_IZIN => $folders['izin'] ?? 'izin-documents',
+            default => $folders['attendance'] ?? 'attendance-proofs',
         };
 
         return app(CloudinaryService::class)->upload($request->file('proof_photo'), $folder)['url'];
