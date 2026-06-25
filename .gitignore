@@ -32,3 +32,20 @@ database/database.sqlite
 ~$*.xls
 ~$*.xlsm
 composer.phar
+
+# File sensitif & data — JANGAN commit
+credentials_wali_santri.csv
+database_mariadb.sql
+database_postgres.sql
+data_kajian_walsan.xls.xlsx
+~$data_kajian_walsan.xls.xlsx
+import_data_kajian.sql
+import_wali_santri.sql
+import_walsan_final.sql
+generate_sql_v2.cjs
+n8n_workflow_walsan.json
+n8n-forgot-password-reset-link.json
+final-n8n-workflow-reset.json
+custom-chatbot-reset-password.json
+public/sw.js.bak
+composer.phar
