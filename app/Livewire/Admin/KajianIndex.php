@@ -31,6 +31,15 @@ class KajianIndex extends Component
     public $time_end = '';
     public $status = 'draft';
     public $academic_year_id = '';
+    public $category = 'kajian';
+
+    // Policy toggles (per-event, disimpan ke policy_overrides JSON)
+    public $online_enabled = true;
+    public $online_requires_proof = true;
+    public $izin_requires_proof = true;
+    public $izin_requires_notes = true;
+    public $guru_hadir_fisik_requires_proof = true;
+    public $ai_review = true;
 
     protected $rules = [
         'title' => 'required|string|max:200',
@@ -42,6 +51,7 @@ class KajianIndex extends Component
         'time_end' => 'required',
         'status' => 'required|in:draft,open,ongoing,closed',
         'academic_year_id' => 'required|exists:academic_years,id',
+        'category' => 'required|in:kajian,rapor,pertemuan',
     ];
 
     public function mount()
@@ -55,13 +65,32 @@ class KajianIndex extends Component
         $this->resetPage();
     }
 
+    /**
+     * Saat category berubah, pre-fill toggle dari config defaults.
+     */
+    public function updatedCategory($value)
+    {
+        $defaults = config("event_categories.{$value}", config('event_categories.kajian'));
+
+        $this->online_enabled = $defaults['online_enabled'] ?? false;
+        $this->online_requires_proof = $defaults['online_requires_proof'] ?? false;
+        $this->izin_requires_proof = $defaults['izin_requires_proof'] ?? true;
+        $this->izin_requires_notes = $defaults['izin_requires_notes'] ?? true;
+        $this->guru_hadir_fisik_requires_proof = $defaults['guru_hadir_fisik_requires_proof'] ?? false;
+        $this->ai_review = $defaults['ai_review'] ?? false;
+    }
+
     public function openCreateModal()
     {
         $this->reset(['title', 'description', 'speaker', 'location', 'date', 'time_start', 'time_end', 'status', 'editMode', 'kajianId']);
         $this->status = 'draft';
+        $this->category = 'kajian';
         $this->date = now()->format('Y-m-d');
         $this->time_start = '08:00';
         $this->time_end = '10:00';
+
+        // Pre-fill toggles from kajian defaults
+        $this->updatedCategory('kajian');
 
         $activeYear = AcademicYear::where('is_active', true)->first();
         $this->academic_year_id = $activeYear?->id ?? '';
@@ -82,6 +111,17 @@ class KajianIndex extends Component
         $this->time_end = $kajian->time_end;
         $this->status = $kajian->status;
         $this->academic_year_id = $kajian->academic_year_id;
+        $this->category = $kajian->category ?? 'kajian';
+
+        // Load policy from event (merge config defaults + overrides)
+        $policy = $kajian->policy;
+        $this->online_enabled = $policy['online_enabled'] ?? false;
+        $this->online_requires_proof = $policy['online_requires_proof'] ?? false;
+        $this->izin_requires_proof = $policy['izin_requires_proof'] ?? true;
+        $this->izin_requires_notes = $policy['izin_requires_notes'] ?? true;
+        $this->guru_hadir_fisik_requires_proof = $policy['guru_hadir_fisik_requires_proof'] ?? false;
+        $this->ai_review = $policy['ai_review'] ?? false;
+
         $this->editMode = true;
         $this->showModal = true;
     }
@@ -89,6 +129,12 @@ class KajianIndex extends Component
     public function save()
     {
         $this->validate();
+
+        // Build statuses array from toggles
+        $statuses = ['hadir_fisik', 'izin', 'alpha'];
+        if ($this->online_enabled) {
+            $statuses = ['hadir_fisik', 'hadir_online', 'izin', 'alpha'];
+        }
 
         $data = [
             'title' => $this->title,
@@ -100,31 +146,40 @@ class KajianIndex extends Component
             'time_end' => $this->time_end,
             'status' => $this->status,
             'academic_year_id' => $this->academic_year_id,
+            'category' => $this->category,
+            'policy_overrides' => [
+                'online_enabled' => (bool) $this->online_enabled,
+                'online_requires_proof' => (bool) $this->online_requires_proof,
+                'izin_requires_proof' => (bool) $this->izin_requires_proof,
+                'izin_requires_notes' => (bool) $this->izin_requires_notes,
+                'guru_hadir_fisik_requires_proof' => (bool) $this->guru_hadir_fisik_requires_proof,
+                'ai_review' => (bool) $this->ai_review,
+                'statuses' => $statuses,
+            ],
         ];
 
         if ($this->editMode) {
             $kajian = KajianEvent::findOrFail($this->kajianId);
             $kajian->update($data);
-            $this->dispatch('notify', ['type' => 'success', 'message' => 'Kajian berhasil diperbarui!']);
+            $this->dispatch('notify', ['type' => 'success', 'message' => 'Kegiatan berhasil diperbarui!']);
         } else {
             $data['created_by'] = auth()->id();
             KajianEvent::create($data);
-            $this->dispatch('notify', ['type' => 'success', 'message' => 'Kajian berhasil ditambahkan!']);
+            $this->dispatch('notify', ['type' => 'success', 'message' => 'Kegiatan berhasil ditambahkan!']);
         }
 
         $this->showModal = false;
-        $this->reset(['title', 'description', 'speaker', 'location', 'date', 'time_start', 'time_end', 'status', 'editMode', 'kajianId']);
+        $this->reset(['title', 'description', 'speaker', 'location', 'date', 'time_start', 'time_end', 'status', 'editMode', 'kajianId', 'category']);
     }
 
     public function toggleStatus($id)
     {
         $kajian = KajianEvent::findOrFail($id);
 
-        // Toggle between 'open' and 'closed'
         $newStatus = $kajian->status === 'open' ? 'closed' : 'open';
         $kajian->update(['status' => $newStatus]);
 
-        $this->dispatch('notify', ['type' => 'success', 'message' => 'Status kajian diubah menjadi ' . ucfirst($newStatus) . '!']);
+        $this->dispatch('notify', ['type' => 'success', 'message' => 'Status kegiatan diubah menjadi ' . ucfirst($newStatus) . '!']);
     }
 
     public function confirmDelete($id)
@@ -139,7 +194,7 @@ class KajianIndex extends Component
         $kajian->delete();
         $this->showDeleteModal = false;
         $this->kajianId = null;
-        $this->dispatch('notify', ['type' => 'success', 'message' => 'Kajian berhasil dihapus!']);
+        $this->dispatch('notify', ['type' => 'success', 'message' => 'Kegiatan berhasil dihapus!']);
     }
 
     public function sendReminder($id)
@@ -147,10 +202,10 @@ class KajianIndex extends Component
         $kajian = KajianEvent::findOrFail($id);
         $service = new \App\Services\WebPushService();
 
-        $title = "Kajian Rutin: " . $kajian->title;
+        $title = $kajian->category_display . ": " . $kajian->title;
         $body = "Akan dimulai pada " . $kajian->date->translatedFormat('d M Y') . " jam " . \Carbon\Carbon::parse($kajian->time_start)->format('H:i') . ". " .
                 ($kajian->speaker ? "Pemateri: " . $kajian->speaker . ". " : "") .
-                "Klik untuk melihat detail atau untuk konfirmasi kehadiran online.";
+                "Klik untuk melihat detail.";
 
         $result = $service->sendToAllWali($title, $body, '/wali-santri/schedule');
 
@@ -178,6 +233,10 @@ class KajianIndex extends Component
         return view('livewire.admin.kajian-index', [
             'kajians' => $kajians,
             'academicYears' => $academicYears,
-        ])->layout('components.layouts.admin', ['title' => 'Manajemen Kajian']);
+            'categories' => collect(config('event_categories', []))->map(fn($cfg, $key) => [
+                'value' => $key,
+                'label' => $cfg['label'] ?? ucfirst($key),
+            ])->values(),
+        ])->layout('components.layouts.admin', ['title' => 'Manajemen Kegiatan']);
     }
 }
