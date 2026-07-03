@@ -44,13 +44,7 @@ RUN npm ci
 # Copy application files
 COPY . .
 
-# Build frontend assets
-RUN npm run build
-
-# Run composer scripts after full copy
-RUN composer dump-autoload --optimize
-
-# Create necessary storage directories and set permissions
+# Create necessary storage directories FIRST (needed by package:discover)
 RUN mkdir -p storage/framework/cache/data \
     && mkdir -p storage/framework/app/cache \
     && mkdir -p storage/framework/sessions \
@@ -64,6 +58,12 @@ RUN mkdir -p storage/framework/cache/data \
     && chown -R www-data:www-data /app/storage \
     && chown -R www-data:www-data /app/bootstrap/cache \
     && chmod -R 775 /app/storage /app/bootstrap/cache
+
+# Build frontend assets
+RUN npm run build
+
+# Run composer scripts after full copy (storage dirs must exist first)
+RUN composer dump-autoload --optimize
 
 # Copy custom PHP ini (upload limits, OPcache, temp dir)
 COPY docker/php-octane.ini /usr/local/etc/php/conf.d/zzz-custom.ini
