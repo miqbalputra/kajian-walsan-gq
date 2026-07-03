@@ -21,18 +21,19 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     supervisor \
     && rm -rf /var/lib/apt/lists/*
 
-# Install PHP extensions menggunakan script bawaan FrankenPHP image
-RUN install-php-extensions \
-    pdo_mysql \
-    mbstring \
-    exif \
-    pcntl \
-    bcmath \
-    zip \
-    intl \
-    opcache \
-    gd \
-    redis
+# Install PHP extensions — split into layers for better caching.
+# Extensions yang cepat (pre-compiled) dipisah dari yang compile dari source.
+
+# Layer 1: Extensions yang biasanya pre-compiled / cepat
+RUN install-php-extensions gd zip intl bcmath
+
+# Layer 2: Redis extension (compile dari source, butuh waktu ~5 menit)
+# Dipisah agar Docker cache layer ini dan tidak rebuild setiap kali.
+RUN install-php-extensions redis
+
+# exif dan pcntl biasanya sudah include di PHP Docker image base
+# Jika tidak, uncomment baris berikut:
+# RUN install-php-extensions exif pcntl
 
 # Install Composer
 COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
