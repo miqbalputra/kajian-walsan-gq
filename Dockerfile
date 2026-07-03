@@ -27,9 +27,11 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 # Layer 1: Extensions yang pre-compiled / cepat (tanpa redis)
 # Redis tidak diinstall sebagai PHP extension — menggunakan predis (pure PHP)
 # untuk menghindari compile dari source yang menyebabkan OOM di VPS 4GB.
-RUN install-php-extensions gd zip intl bcmath
-
-# exif dan pcntl biasanya sudah include di PHP Docker image base
+#
+# pcntl     — WAJIB untuk Octane (signal handling: SIGINT, SIGTERM)
+# pdo_mysql — WAJIB untuk database MariaDB
+# exif      — dibutuhkan untuk upload foto bukti presensi
+RUN install-php-extensions pdo_mysql pcntl exif gd zip intl bcmath
 
 # Install Composer
 COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
