@@ -1,13 +1,19 @@
-FROM php:8.2-fpm-alpine
+# ============================================================
+# FrankenPHP + Laravel Octane Dockerfile
+# ============================================================
+# Mengganti PHP-FPM + Nginx + Supervisor dengan FrankenPHP
+# (Caddy + PHP dalam satu binary, Laravel app di-keep di memory).
+#
+# Hasil: response time turun drastis (no per-request bootstrap),
+# Docker image lebih kecil, proses lebih sedikit.
+# ============================================================
 
-# Install system dependencies and helper script
-ADD https://github.com/mlocati/docker-php-extension-installer/releases/download/2.11.12/install-php-extensions /usr/local/bin/
+FROM dunglas/frankenphp:latest-php8.2-alpine
 
-RUN chmod +x /usr/local/bin/install-php-extensions && \
-    apk add --no-cache git curl nginx supervisor nodejs npm mariadb-client
+# Install system dependencies
+RUN apk add --no-cache git curl nodejs npm mariadb-client supervisor
 
-# Install PHP extensions using the helper script
-# This script handles all necessary system dependencies automatically and is more memory efficient
+# Install PHP extensions menggunakan script bawaan FrankenPHP image
 RUN install-php-extensions \
     pdo_mysql \
     mbstring \
@@ -23,14 +29,12 @@ RUN install-php-extensions \
 # Install Composer
 COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 
-WORKDIR /var/www/html
+WORKDIR /app
 
-# Copy composer files first (for layer caching)
+# Copy composer files first (layer caching)
 COPY composer.json composer.lock ./
 
-# Install PHP dependencies dari lock file (cepat & ringan, tidak re-resolve).
-# composer.lock sudah di-regenerate dan committed — jangan pakai composer update
-# di Docker build karena re-resolve berat dan bisa OOM di VPS kecil.
+# Install PHP dependencies dari lock file
 RUN COMPOSER_MEMORY_LIMIT=-1 composer install --no-dev --optimize-autoloader --no-scripts --no-interaction --no-progress
 
 # Copy package files and install JS dependencies
@@ -39,6 +43,12 @@ RUN npm ci
 
 # Copy application files
 COPY . .
+
+# Build frontend assets
+RUN npm run build
+
+# Run composer scripts after full copy
+RUN composer dump-autoload --optimize
 
 # Create necessary storage directories and set permissions
 RUN mkdir -p storage/framework/cache/data \
@@ -51,31 +61,18 @@ RUN mkdir -p storage/framework/cache/data \
     && mkdir -p storage/app/public/attendance-proofs \
     && mkdir -p storage/app/public/izin-documents \
     && mkdir -p storage/app/public/reupload-proofs \
-    && chown -R www-data:www-data /var/www/html/storage \
-    && chown -R www-data:www-data /var/www/html/bootstrap/cache \
-    && chmod -R 775 /var/www/html/storage \
-    && chmod -R 775 /var/www/html/bootstrap/cache
+    && chown -R www-data:www-data /app/storage \
+    && chown -R www-data:www-data /app/bootstrap/cache \
+    && chmod -R 775 /app/storage /app/bootstrap/cache
 
-# Build frontend assets
-RUN npm run build
+# Copy custom PHP ini (upload limits, OPcache, temp dir)
+COPY docker/php-octane.ini /usr/local/etc/php/conf.d/zzz-custom.ini
 
-# Run composer scripts after full copy
-RUN composer dump-autoload --optimize
-
-# Copy nginx config
-COPY docker/nginx.conf /etc/nginx/nginx.conf
-
-# Copy custom PHP ini (upload limits, temp dir, memory)
-COPY docker/php.ini /usr/local/etc/php/conf.d/zzz-custom.ini
-
-# Copy tuned PHP-FPM pool config (override default pm.max_children=5)
-COPY docker/www.conf /usr/local/etc/php-fpm.d/zzz-www.conf
-
-# Copy supervisor config
-COPY docker/supervisord.conf /etc/supervisor/conf.d/supervisord.conf
+# Copy supervisor config (queue worker + pulse only — FrankenPHP handles web)
+COPY docker/supervisord-octane.conf /etc/supervisor/conf.d/supervisord.conf
 
 # Copy entrypoint
-COPY docker/entrypoint.sh /entrypoint.sh
+COPY docker/entrypoint-octane.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh
 
 EXPOSE 80
