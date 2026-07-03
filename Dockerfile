@@ -24,16 +24,12 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 # Install PHP extensions — split into layers for better caching.
 # Extensions yang cepat (pre-compiled) dipisah dari yang compile dari source.
 
-# Layer 1: Extensions yang biasanya pre-compiled / cepat
+# Layer 1: Extensions yang pre-compiled / cepat (tanpa redis)
+# Redis tidak diinstall sebagai PHP extension — menggunakan predis (pure PHP)
+# untuk menghindari compile dari source yang menyebabkan OOM di VPS 4GB.
 RUN install-php-extensions gd zip intl bcmath
 
-# Layer 2: Redis extension (compile dari source, butuh waktu ~5 menit)
-# Dipisah agar Docker cache layer ini dan tidak rebuild setiap kali.
-RUN install-php-extensions redis
-
 # exif dan pcntl biasanya sudah include di PHP Docker image base
-# Jika tidak, uncomment baris berikut:
-# RUN install-php-extensions exif pcntl
 
 # Install Composer
 COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
