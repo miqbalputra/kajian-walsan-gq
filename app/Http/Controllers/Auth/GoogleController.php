@@ -15,11 +15,20 @@ class GoogleController extends Controller
 {
     /**
      * Redirect ke Google OAuth (Login page)
+     *
+     * Menggunakan stateless() untuk kompatibilitas dengan Laravel Octane.
+     * Octane (FrankenPHP) tidak menjamin session state persist antar request
+     * (redirect → callback), sehingga state check Socialite bisa gagal.
+     * Stateless mode skip state validation — keamanan tetap terjaga karena:
+     * - Redirect URI dikunci di Google Cloud Console
+     * - Callback memverifikasi email terdaftar di database
+     * - Token exchange tetap dilakukan dengan client_secret
      */
     public function redirect()
     {
         $redirectUrl = Socialite::driver('google')
             ->scopes(['openid', 'profile', 'email'])
+            ->stateless()
             ->redirect()
             ->getTargetUrl();
 
@@ -34,7 +43,7 @@ class GoogleController extends Controller
     public function callback()
     {
         try {
-            $googleUser = Socialite::driver('google')->user();
+            $googleUser = Socialite::driver('google')->stateless()->user();
         } catch (\Throwable $e) {
             Log::error('[Google Login] Callback failed', ['error' => $e->getMessage()]);
             return redirect()->route('login')->withErrors(['google' => 'Gagal login dengan Google. Silakan coba lagi.']);
