@@ -4,14 +4,22 @@
 # Mengganti PHP-FPM + Nginx + Supervisor dengan FrankenPHP
 # (Caddy + PHP dalam satu binary, Laravel app di-keep di memory).
 #
-# Hasil: response time turun drastis (no per-request bootstrap),
-# Docker image lebih kecil, proses lebih sedikit.
+# Menggunakan Bookworm (Debian) variant — direkomendasikan oleh
+# FrankenPHP docs. Alpine variant tidak include binary lengkap
+# dan mendownload saat runtime (menyebabkan "no available server").
 # ============================================================
 
-FROM dunglas/frankenphp:latest-php8.2-alpine
+FROM dunglas/frankenphp:latest-php8.2-bookworm
 
-# Install system dependencies
-RUN apk add --no-cache git curl nodejs npm mariadb-client supervisor
+# Install system dependencies (Debian/Bookworm)
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    git \
+    curl \
+    nodejs \
+    npm \
+    mariadb-client \
+    supervisor \
+    && rm -rf /var/lib/apt/lists/*
 
 # Install PHP extensions menggunakan script bawaan FrankenPHP image
 RUN install-php-extensions \
