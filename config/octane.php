@@ -141,12 +141,9 @@ return [
     */
 
     'warm' => [
-        // Service providers yang berat untuk di-instantiate,
-        // di-warm saat worker boot agar cepat di request pertama.
-        // Default: warm semua loaded providers.
-        ...array_keys(
-            array_filter(app()->getLoadedProviders(), fn ($provider) => is_object($provider))
-        ),
+        // Kosong — biarkan Octane warm secara default.
+        // Jangan pakai app()->getLoadedProviders() di sini karena
+        // dapat break config:cache di environment Docker.
     ],
 
     /*
