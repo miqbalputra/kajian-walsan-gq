@@ -157,7 +157,10 @@ return [
     */
 
     'flush' => [
-        // ...bindings to flush between requests
+        // Socialite: flush agar state OAuth tidak bocor antar-request.
+        // Socialite manager adalah singleton — di Octane instance yang sama
+        // dipakai ulang, menyebabkan state mismatch pada Google OAuth callback.
+        'Laravel\Socialite\Contracts\Factory',
     ],
 
     /*
