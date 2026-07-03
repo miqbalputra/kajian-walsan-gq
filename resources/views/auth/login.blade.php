@@ -15,7 +15,7 @@
                     class="inline-flex items-center justify-center w-20 h-20 bg-white/10 backdrop-blur-xl rounded-3xl mb-4 border border-white/20 shadow-2xl">
                     <span class="material-symbols-rounded text-5xl text-white">mosque</span>
                 </div>
-                <h1 class="text-3xl font-extrabold text-white tracking-tight">Presensi Kajian</h1>
+                <h1 class="text-3xl font-extrabold text-white tracking-tight">Presensi Wali Santri</h1>
                 <p class="text-white/70 text-sm mt-2 font-medium tracking-wide">Sistem Informasi Kehadiran</p>
             </div>
 

@@ -7,7 +7,7 @@ return [
     | Application Settings
     |--------------------------------------------------------------------------
     |
-    | Custom settings for the Kajian Walsan application.
+    | Custom settings for the Presensi Wali Santri application.
     |
     */
 
@@ -16,7 +16,7 @@ return [
     'admin_whatsapp' => env('ADMIN_WHATSAPP', '6281234567890'),
 
     // Application name for display
-    'name' => env('APP_KAJIAN_NAME', 'Kajian Walsan'),
+    'name' => env('APP_KAJIAN_NAME', 'Presensi Wali Santri'),
 
     // Institution name
     'institution' => env('APP_INSTITUTION', 'Kelompok Tahfidz Griya Qur\'an "Tunas Ilmu"'),

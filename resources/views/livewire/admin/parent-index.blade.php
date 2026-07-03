@@ -433,7 +433,7 @@
                             <div class="h-8 bg-gradient-to-r {{ $bgHeader }} flex items-center px-4 justify-between">
                                 <div class="flex items-center gap-1.5">
                                     <span class="material-symbols-rounded text-white text-base">mosque</span>
-                                    <p class="text-white font-black text-[9px] tracking-tight uppercase">Kajian Walsan</p>
+                                    <p class="text-white font-black text-[9px] tracking-tight uppercase">Presensi Wali Santri</p>
                                 </div>
                                 <p class="text-white/80 font-bold text-[7px] uppercase tracking-tighter">ID Wali Santri</p>
                             </div>
@@ -837,7 +837,7 @@
                                             class="h-8 bg-gradient-to-r {{ $bgHeaderBatch }} flex items-center px-3 justify-between">
                                             <div class="flex items-center gap-2">
                                                 <span class="material-symbols-rounded text-white text-base">mosque</span>
-                                                <p class="text-white font-black text-[9px] tracking-tight uppercase">Kajian Walsan</p>
+                                                <p class="text-white font-black text-[9px] tracking-tight uppercase">Presensi Wali Santri</p>
                                             </div>
                                         </div>
                                         <div class="p-3 flex gap-3 flex-1 overflow-hidden">
@@ -932,7 +932,7 @@
                                             <span class="material-symbols-rounded" style="color: white; font-size: 14pt;">mosque</span>
                                             <p
                                                 style="color: white; font-weight: 900; font-size: 8pt; margin: 0; text-transform: uppercase; letter-spacing: 0.5mm;">
-                                                Kajian Walsan</p>
+                                                Presensi Wali Santri</p>
                                         </div>
                                         <p
                                             style="color: rgba(255,255,255,0.8); font-weight: bold; font-size: 6pt; margin: 0; text-transform: uppercase;">

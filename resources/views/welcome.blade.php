@@ -26,8 +26,8 @@
                     </div>
                 </div>
                 <div class="flex flex-col">
-                    <span class="text-white font-bold text-xl tracking-tight leading-none">Wali Santri</span>
-                    <span class="text-white/70 text-[10px] font-medium uppercase tracking-wider">Presensi Kajian</span>
+                    <span class="text-white font-bold text-xl tracking-tight leading-none">Presensi</span>
+                    <span class="text-white/70 text-[10px] font-medium uppercase tracking-wider">Wali Santri</span>
                 </div>
             </div>
 
@@ -394,7 +394,7 @@
                     <div class="relative px-8 pt-16 pb-10 text-center">
                         <!-- App Title -->
                         <div class="mb-8">
-                            <h3 class="text-3xl font-black text-slate-900 tracking-tight mb-1">Kajian Walsan</h3>
+                            <h3 class="text-3xl font-black text-slate-900 tracking-tight mb-1">Presensi Wali Santri</h3>
                             <div class="flex items-center justify-center gap-2">
                                 <div class="h-1 w-8 bg-primary-500 rounded-full"></div>
                                 <p class="text-xs font-bold text-slate-400 uppercase tracking-[0.2em]">Pusat Kendali
@@ -488,7 +488,7 @@
                                 </a>
                             </div>
 
-                            <p class="text-[9px] text-slate-300 mt-6 font-medium">&copy; {{ date('Y') }} • Kajian Walsan
+                            <p class="text-[9px] text-slate-300 mt-6 font-medium">&copy; {{ date('Y') }} • Presensi Wali Santri
                                 Digital Ecosystem v2.0</p>
                         </div>
                     </div>

@@ -7,12 +7,12 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <meta name="theme-color" content="#10B981">
-    <meta name="description" content="Sistem Presensi Kajian Rutin Wali Santri dengan Scan QR Code">
+    <meta name="description" content="Sistem Presensi Wali Santri dengan Scan QR Code">
 
     {{-- PWA Meta --}}
     @include('components.pwa-meta')
 
-    <title>{{ $title ?? 'Beranda' }} - Presensi Kajian Wali Santri</title>
+    <title>{{ $title ?? 'Beranda' }} - Presensi Wali Santri</title>
 
     <!-- Favicon -->
     <link rel="icon" type="image/svg+xml"

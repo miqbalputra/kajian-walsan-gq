@@ -13,7 +13,7 @@
     {{-- PWA Meta --}}
     @include('components.pwa-meta')
 
-    <title>{{ $title ?? 'Beranda' }} - Presensi Kajian Wali Santri</title>
+    <title>{{ $title ?? 'Beranda' }} - Presensi Wali Santri</title>
 
     <!-- Favicon -->
     <link rel="icon" type="image/svg+xml"

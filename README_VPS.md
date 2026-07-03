@@ -1,4 +1,4 @@
-# Panduan Deploy - App Kajian Walsan v2 VPS
+# Panduan Deploy - App Presensi Wali Santri v2 VPS
 
 Panduan deployment kini telah diperbarui untuk menggunakan **Coolify** dan **MariaDB**.
 

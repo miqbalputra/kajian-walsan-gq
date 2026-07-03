@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-    <title>Laporan Presensi Kajian</title>
+    <title>Laporan Presensi Wali Santri</title>
     <style>
         /* Konfigurasi Halaman */
         @page {
@@ -346,7 +346,7 @@
     <table class="footer-section">
         <tr>
             <td width="70%" style="font-size: 8pt; color: #94a3b8;">
-                &copy; 2026 Kajian Walsan - Laporan ini dihasilkan secara otomatis oleh sistem.
+                &copy; 2026 Presensi Wali Santri - Laporan ini dihasilkan secara otomatis oleh sistem.
             </td>
             <td width="30%">
                 <div class="signature-box" style="float: right;">

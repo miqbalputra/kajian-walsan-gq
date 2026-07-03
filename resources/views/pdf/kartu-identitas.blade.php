@@ -305,7 +305,7 @@
             <div class="card-header">
                 <div class="header-left">
                     <span class="header-icon">mosque</span>
-                    <span class="header-title">Kajian Walsan</span>
+                    <span class="header-title">Presensi Wali Santri</span>
                 </div>
                 <span class="header-badge">ID Wali Santri</span>
             </div>

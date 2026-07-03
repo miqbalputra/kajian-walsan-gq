@@ -45,7 +45,7 @@ return new class extends Migration {
             ],
             [
                 'key' => 'app_name',
-                'value' => 'Kajian Walsan',
+                'value' => 'Presensi Wali Santri',
                 'type' => 'string',
                 'group' => 'general',
                 'label' => 'Nama Aplikasi',

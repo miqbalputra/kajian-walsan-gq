@@ -162,7 +162,7 @@
             const registration = await navigator.serviceWorker.register('/sw.js');
             await navigator.serviceWorker.ready;
 
-            registration.showNotification('Kajian Walsan', {
+            registration.showNotification('Presensi Wali Santri', {
                 body: 'Tes notifikasi pengingat kajian berhasil!',
                 icon: '/icons/icon-192x192.png',
                 badge: '/icons/icon-96x96.png',

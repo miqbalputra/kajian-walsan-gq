@@ -1,6 +1,6 @@
-# Panduan Instalasi Coolify & Deploy App Kajian Walsan
+# Panduan Instalasi Coolify & Deploy App Presensi Wali Santri
 
-Berikut adalah panduan langkah-demi-langkah untuk menginstal Coolify di VPS dan men-deploy aplikasi Kajian Walsan v2 menggunakan **MariaDB**.
+Berikut adalah panduan langkah-demi-langkah untuk menginstal Coolify di VPS dan men-deploy aplikasi Presensi Wali Santri v2 menggunakan **MariaDB**.
 
 ---
 
@@ -53,7 +53,7 @@ Aplikasi ini sebenarnya sudah memiliki **Migrations & Seeders** yang lengkap. Na
 Buka tab **Environment Variables** di Coolify dan masukkan nilai-nilai berikut:
 
 ```env
-APP_NAME="Presensi Kajian Walsan"
+APP_NAME="Presensi Wali Santri"
 APP_ENV=production
 APP_KEY=base64:EGtvPn/CmtaGp3r+HXVZn5hgBoRwcSPd0DRAogX8vPg=
 APP_DEBUG=false

@@ -127,7 +127,7 @@ class AiProviderService
         $messages = [
             [
                 'role' => 'system',
-                'content' => 'Anda adalah pemeriksa administrasi Kajian Walsan. Jawab hanya JSON valid dengan keys: decision, confidence, reason. decision hanya boleh approve, needs_review, atau reject. Jangan mengarang isi gambar jika tidak terlihat.',
+                'content' => 'Anda adalah pemeriksa administrasi Presensi Wali Santri. Jawab hanya JSON valid dengan keys: decision, confidence, reason. decision hanya boleh approve, needs_review, atau reject. Jangan mengarang isi gambar jika tidak terlihat.',
             ],
             [
                 'role' => 'user',
@@ -230,7 +230,7 @@ class AiProviderService
             [
                 'role' => 'system',
                 'content' => implode(' ', [
-                    'Anda adalah asisten admin Kajian Walsan.',
+                    'Anda adalah asisten admin Presensi Wali Santri.',
                     'Jawab dalam Bahasa Indonesia.',
                     'Akurasi wajib berbasis DATA_JSON yang diberikan, bukan asumsi.',
                     'Jika data tidak ada di konteks, katakan data tidak tersedia dan minta filter yang lebih spesifik.',

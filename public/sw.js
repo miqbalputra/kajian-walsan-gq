@@ -97,7 +97,7 @@ self.addEventListener('fetch', (event) => {
 self.addEventListener('push', function(event) {
     if (event.data) {
         let data = {
-            title: 'Kajian Walsan',
+            title: 'Presensi Wali Santri',
             body: 'Ada pembaruan!',
             icon: '/icons/icon-192x192.png',
             url: '/wali-santri'

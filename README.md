@@ -2,7 +2,7 @@
   <img src="public/img/logo.png" width="150" alt="Griya Quran Logo" onerror="this.src='https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg'">
 </p>
 
-# 🕌 Aplikasi Presensi Kajian Wali Santri v2
+# 🕌 Aplikasi Presensi Wali Santri v2
 
 [![Laravel](https://img.shields.io/badge/Laravel-FF2D20?style=for-the-badge&logo=laravel&logoColor=white)](https://laravel.com)
 [![Livewire](https://img.shields.io/badge/Livewire-4e56a6?style=for-the-badge&logo=livewire&logoColor=white)](https://laravel-livewire.com/)
@@ -12,7 +12,7 @@
 [![MariaDB](https://img.shields.io/badge/MariaDB-003545?style=for-the-badge&logo=mariadb&logoColor=white)](https://mariadb.org/)
 [![Coolify](https://img.shields.io/badge/Coolify-2C303E?style=for-the-badge&logo=linux&logoColor=white)](https://coolify.io/)
 
-**Kajian Walsan v2** adalah ekosistem aplikasi berbasis *web* interaktif rancangan khusus yang dikembangkan untuk manajemen administrasi dan presensi (kehadiran) Wali Santri di Griya Qur'an Tunas Ilmu. 
+**Presensi Wali Santri v2** adalah ekosistem aplikasi berbasis *web* interaktif rancangan khusus yang dikembangkan untuk manajemen administrasi dan presensi (kehadiran) Wali Santri di Griya Qur'an Tunas Ilmu. 
 
 Aplikasi ini mendigitalisasi proses verifikasi kehadiran dengan integrasi geolokasi (GPS), kode QR, integrasi Google Workspace (OAuth), hingga *Automated AI Chatbot* untuk bantuan pengguna tingkat lanjut.
 

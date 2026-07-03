@@ -10,7 +10,7 @@
     {{-- PWA Meta --}}
     @include('components.pwa-meta')
 
-    <title>{{ $title ?? 'Wali Kelas' }} - Kajian Walsan</title>
+    <title>{{ $title ?? 'Wali Kelas' }} - Presensi Wali Santri</title>
 
     <!-- Favicon -->
     <link rel="icon" type="image/svg+xml"
@@ -53,7 +53,7 @@
                     <span class="material-symbols-rounded text-white text-xl">school</span>
                 </div>
                 <div>
-                    <h1 class="font-bold text-gray-900 dark:text-white leading-tight">Kajian Walsan</h1>
+                    <h1 class="font-bold text-gray-900 dark:text-white leading-tight">Presensi Wali Santri</h1>
                     <p class="text-[10px] text-primary-600 dark:text-primary-400 font-bold uppercase tracking-wider">
                         Wali Kelas</p>
                 </div>

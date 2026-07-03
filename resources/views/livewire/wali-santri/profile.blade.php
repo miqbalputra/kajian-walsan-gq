@@ -288,7 +288,7 @@
                             <div class="h-8 bg-gradient-to-r {{ $bgHeader }} flex items-center px-4 justify-between">
                                 <div class="flex items-center gap-1.5">
                                     <span class="material-symbols-rounded text-white text-base">mosque</span>
-                                    <p class="text-white font-black text-[9px] tracking-tight uppercase">Kajian Walsan</p>
+                                    <p class="text-white font-black text-[9px] tracking-tight uppercase">Presensi Wali Santri</p>
                                 </div>
                                 <p class="text-white/80 font-bold text-[7px] uppercase tracking-tighter">ID Wali Santri</p>
                             </div>

@@ -149,7 +149,7 @@
                                 if($phone && !str_starts_with($phone, '62')) {
                                     $phone = '62' . ltrim($phone, '0');
                                 }
-                                $message = "Assalamu'alaikum Bapak/Ibu " . $p['user']['name'] . ", kami dari tim admin Kajian Wali Santri memperhatikan Bapak/Ibu sudah beberapa kali absen. Apakah ada kendala yang bisa kami bantu?";
+                                $message = "Assalamu'alaikum Bapak/Ibu " . $p['user']['name'] . ", kami dari tim admin Presensi Wali Santri memperhatikan Bapak/Ibu sudah beberapa kali absen. Apakah ada kendala yang bisa kami bantu?";
                             @endphp
                             <a href="https://wa.me/{{ $phone }}?text={{ urlencode($message) }}" target="_blank"
                                 class="p-2 bg-emerald-100 text-emerald-700 rounded-xl hover:bg-emerald-200 transition-colors"

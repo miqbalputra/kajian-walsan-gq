@@ -48,7 +48,7 @@ class WhatsAppNotificationService
             . "• Status: {$statusText}\n"
             . "• Validasi: ✅ Disetujui\n\n"
             . "Jazakumullahu khairan atas partisipasinya.\n\n"
-            . "— _Kajian Walsan_";
+            . "— _Presensi Wali Santri_";
 
         return $this->sendToN8n($phone, $message, 'approval', $attendance->id);
     }
@@ -87,7 +87,7 @@ class WhatsAppNotificationService
             . "📝 *Alasan Penolakan:*\n"
             . "{$reason}\n\n"
             . "Silakan upload ulang bukti yang sesuai melalui aplikasi.\n\n"
-            . "— _Kajian Walsan_";
+            . "— _Presensi Wali Santri_";
 
         return $this->sendToN8n($phone, $message, 'rejection', $attendance->id);
     }

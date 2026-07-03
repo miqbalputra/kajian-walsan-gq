@@ -1,7 +1,7 @@
 {
-    "name": "Presensi Kajian Wali Santri",
-    "short_name": "Kajian Walsan",
-    "description": "Sistem Presensi Kajian Rutin Wali Santri dengan Scan QR Code",
+    "name": "Presensi Wali Santri",
+    "short_name": "Presensi Walsan",
+    "description": "Sistem Presensi Wali Santri dengan Scan QR Code",
     "id": "/",
     "start_url": "/",
     "scope": "/",

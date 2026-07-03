@@ -9,7 +9,7 @@
 
     @include('components.pwa-meta')
 
-    <title>{{ $title ?? 'Kepala Sekolah' }} - Kajian Walsan</title>
+    <title>{{ $title ?? 'Kepala Sekolah' }} - Presensi Wali Santri</title>
 
     <link rel="icon" type="image/svg+xml"
         href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>%F0%9F%93%8B</text></svg>">
@@ -40,7 +40,7 @@
             <div class="h-16 flex items-center gap-3 px-6 border-b border-gray-200 dark:border-slate-800">
                 <span class="material-symbols-rounded text-primary-600 text-3xl">mosque</span>
                 <div>
-                    <h1 class="font-bold text-gray-900 dark:text-white">Kajian Walsan</h1>
+                    <h1 class="font-bold text-gray-900 dark:text-white">Presensi Wali Santri</h1>
                     <p class="text-xs text-gray-500 dark:text-gray-400">Kepala Sekolah</p>
                 </div>
             </div>

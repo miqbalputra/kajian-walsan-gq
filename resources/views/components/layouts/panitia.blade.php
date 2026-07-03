@@ -10,7 +10,7 @@
     {{-- PWA Meta --}}
     @include('components.pwa-meta')
 
-    <title>{{ $title ?? 'Panitia' }} - Kajian Walsan</title>
+    <title>{{ $title ?? 'Panitia' }} - Presensi Wali Santri</title>
 
     <!-- Favicon -->
     <link rel="icon" type="image/svg+xml"

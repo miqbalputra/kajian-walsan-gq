@@ -16,7 +16,7 @@
                 <div class="w-10 h-10 rounded-xl {{ $color }} flex items-center justify-center border border-white/20 shadow-lg">
                     <span class="material-symbols-rounded text-xl fill-1">{{ $icon }}</span>
                 </div>
-                <span class="text-[10px] font-black uppercase tracking-widest text-white/60">Presensi Kajian Wali Santri</span>
+                <span class="text-[10px] font-black uppercase tracking-widest text-white/60">Presensi Wali Santri</span>
             </div>
             <div class="flex items-center gap-2">
                 <x-theme-toggle />
@@ -208,7 +208,7 @@
             <!-- Active Kajian Card -->
             <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
                 <div class="bg-gradient-to-r from-secondary-500 to-secondary-600 text-white px-4 py-3">
-                    <p class="text-white/80 text-xs font-medium uppercase tracking-wide">Presensi Dibuka</p>
+                    <p class="text-white/80 text-xs font-medium uppercase tracking-wide">{{ $this->activeEvent->category_display }} — Presensi Dibuka</p>
                     <h2 class="font-bold text-lg">{{ $this->activeEvent->title }}</h2>
                 </div>
 
@@ -359,13 +359,15 @@
                                     </button>
                                 </div>
                             @else
-                                <div class="grid grid-cols-2 gap-3">
+                                <div class="grid {{ ($this->activeEvent->policy['online_enabled'] ?? false) ? 'grid-cols-2' : 'grid-cols-1' }} gap-3">
+                                    @if($this->activeEvent->policy['online_enabled'] ?? false)
                                     <!-- Online Attendance -->
                                     <button wire:click="openOnlineAttendanceModal"
                                         class="py-3 bg-secondary-50 text-secondary-700 rounded-xl font-medium flex items-center justify-center gap-2 hover:bg-secondary-100 transition-colors">
                                         <span class="material-symbols-rounded">videocam</span>
                                         Hadir Online
                                     </button>
+                                    @endif
 
                                     <!-- Permission/Izin -->
                                     <button wire:click="openIzinModal"

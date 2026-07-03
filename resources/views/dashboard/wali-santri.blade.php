@@ -6,7 +6,7 @@
                 <div class="flex items-center gap-3">
                     <span class="material-symbols-rounded text-2xl">mosque</span>
                     <div>
-                        <h1 class="font-bold text-lg">Kajian Walsan</h1>
+                        <h1 class="font-bold text-lg">Presensi Wali Santri</h1>
                         <p class="text-white/80 text-xs">
                             {{ auth()->user()->parentProfile?->type_display ?? 'Wali Santri' }}</p>
                     </div>

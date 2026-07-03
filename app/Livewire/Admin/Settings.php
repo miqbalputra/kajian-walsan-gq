@@ -36,7 +36,7 @@ class Settings extends Component
     {
         $this->admin_whatsapp = Setting::get('admin_whatsapp', '6281234567890');
         $this->institution_name = Setting::get('institution_name', 'Kelompok Tahfidz Griya Qur\'an "Tunas Ilmu"');
-        $this->app_name = Setting::get('app_name', 'Kajian Walsan');
+        $this->app_name = Setting::get('app_name', 'Presensi Wali Santri');
         $this->ai_enabled = (bool) Setting::get('ai_enabled', false);
         $this->ai_endpoint_url = Setting::get('ai_endpoint_url', '');
         $this->ai_model = Setting::get('ai_model', '');
