@@ -62,7 +62,7 @@
                     </div>
                 </div>
                 <h1 class="text-4xl md:text-5xl font-black text-white mb-3 tracking-tight drop-shadow-sm">
-                    Kajian Rutin
+                    Presensi Wali Santri
                 </h1>
                 <p class="text-lg text-white/80 font-medium max-w-sm mx-auto leading-relaxed">
                     Sistem Presensi & Informasi Kehadiran Wali Santri
@@ -411,7 +411,7 @@
                             </div>
                             <p class="text-slate-600 text-sm leading-relaxed relative z-10 font-medium">
                                 Solusi digital terintegrasi untuk pengelolaan data kehadiran & pemantauan kegiatan
-                                kajian rutin wali santri di lingkungan pesantren secara modern, akurat, dan transparan.
+                                pertemuan wali santri di lingkungan pesantren secara modern, akurat, dan transparan.
                             </p>
                         </div>
 
