@@ -14,23 +14,35 @@ use Laravel\Socialite\Facades\Socialite;
 class GoogleController extends Controller
 {
     /**
+     * Helper: Dapatkan URL callback untuk login flow.
+     */
+    private function getLoginCallbackUrl()
+    {
+        return rtrim(config('app.url'), '/') . '/auth/google/callback';
+    }
+
+    /**
      * Redirect ke Google OAuth (Login page)
      *
      * Menggunakan stateless() untuk kompatibilitas dengan Laravel Octane.
-     * Octane (FrankenPHP) tidak menjamin session state persist antar request
-     * (redirect → callback), sehingga state check Socialite bisa gagal.
-     * Stateless mode skip state validation — keamanan tetap terjaga karena:
-     * - Redirect URI dikunci di Google Cloud Console
-     * - Callback memverifikasi email terdaftar di database
-     * - Token exchange tetap dilakukan dengan client_secret
+     * redirectUrl() dipanggil eksplisit agar redirect_uri di authorize request
+     * dan token exchange request identik, menghindari Google 400 Bad Request.
      */
     public function redirect()
     {
+        $callbackUrl = $this->getLoginCallbackUrl();
+
         $redirectUrl = Socialite::driver('google')
+            ->redirectUrl($callbackUrl)
             ->scopes(['openid', 'profile', 'email'])
             ->stateless()
             ->redirect()
             ->getTargetUrl();
+
+        Log::info('[Google Login] Generated redirect URL', [
+            'callback_url' => $callbackUrl,
+            'target_url' => $redirectUrl,
+        ]);
 
         return response()
             ->view('auth.google-redirect', ['redirectUrl' => $redirectUrl])
@@ -42,8 +54,13 @@ class GoogleController extends Controller
      */
     public function callback()
     {
+        $callbackUrl = $this->getLoginCallbackUrl();
+
         try {
-            $googleUser = Socialite::driver('google')->stateless()->user();
+            $googleUser = Socialite::driver('google')
+                ->redirectUrl($callbackUrl)
+                ->stateless()
+                ->user();
         } catch (\Throwable $e) {
             Log::error('[Google Login] Callback failed', [
                 'error' => $e->getMessage(),
@@ -53,6 +70,7 @@ class GoogleController extends Controller
                 'request_state' => request()->get('state'),
                 'request_code' => request()->has('code') ? 'present' : 'missing',
                 'redirect_uri_config' => config('services.google.redirect'),
+                'redirect_uri_used' => $callbackUrl,
             ]);
             return redirect()->route('login')->withErrors(['google' => 'Gagal login dengan Google. Silakan coba lagi.']);
         }
