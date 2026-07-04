@@ -16,14 +16,21 @@ rm -f /var/www/html/storage/framework/views/*.php 2>/dev/null || true
 php -r "if (function_exists('opcache_reset')) { opcache_reset(); }" 2>/dev/null || true
 php artisan optimize:clear --no-interaction || true
 
-# Generate key jika belum ada
-php artisan key:generate --no-interaction --force
+# Generate key hanya jika APP_KEY belum disediakan oleh environment / .env.
+# Coolify biasanya inject APP_KEY dari env; key:generate akan gagal kalau APP_KEY sudah ada.
+if [ -z "${APP_KEY:-}" ] && ! grep -q '^APP_KEY=base64:' /var/www/html/.env 2>/dev/null; then
+    php artisan key:generate --no-interaction --force
+else
+    echo "APP_KEY already set; skipping key generation."
+fi
 
-# Jalankan migrations
+# Pulse migrations pernah dipublish saat runtime pada deploy lama.
+# Kalau tabel Pulse sudah ada tapi migration file baru muncul lagi, migrate gagal "table already exists".
+# Jangan jalankan migration Pulse runtime; aplikasi utama tetap aman.
+find /var/www/html/database/migrations -type f -iname '*pulse*' -delete 2>/dev/null || true
+
+# Jalankan migrations aplikasi
 php artisan migrate --force --no-interaction
-
-# Publish Pulse config & dashboard (jika belum ada)
-php artisan vendor:publish --provider="Laravel\Pulse\PulseServiceProvider" --no-interaction 2>/dev/null || true
 
 # Hapus compiled views agar Blade/Blaze compile ulang dari source terbaru
 php artisan view:clear --no-interaction
