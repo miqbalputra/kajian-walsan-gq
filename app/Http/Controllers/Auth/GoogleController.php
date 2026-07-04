@@ -24,7 +24,7 @@ class GoogleController extends Controller
     /**
      * Redirect ke Google OAuth (Login page)
      *
-     * Menggunakan stateless() untuk kompatibilitas dengan Laravel Octane.
+     * Menggunakan stateless() agar flow OAuth tidak bergantung session state.
      * redirectUrl() dipanggil eksplisit agar redirect_uri di authorize request
      * dan token exchange request identik, menghindari Google 400 Bad Request.
      */

@@ -47,7 +47,7 @@ Aplikasi ini dilengkapi dengan asisten pintar pendamping *login* yang sangat can
 
 - **Framework:** Laravel 12 (PHP 8.2+)
 - **Frontend / Styling:** Livewire 3 + Alpine.js + Tailwind CSS + Glassmorphism UI
-- **App Server:** FrankenPHP + Laravel Octane (in-memory, no per-request bootstrap)
+- **App Server:** PHP-FPM + Nginx + Supervisor
 - **Database Utama:** MariaDB / PostgreSQL
 - **Cache / Queue:** Redis (session, cache, queue, Pulse)
 - **Orkestrasi Otomasi:** N8N (Self-Hosted)
