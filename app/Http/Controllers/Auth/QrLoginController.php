@@ -4,7 +4,6 @@ namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
 use App\Models\ParentModel;
-use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\RateLimiter;
@@ -25,10 +24,11 @@ class QrLoginController extends Controller
     public function login(Request $request)
     {
         // Rate limiting - max 5 attempts per minute per IP
-        $key = 'qr-login:' . $request->ip();
+        $key = 'qr-login:'.$request->ip();
 
         if (RateLimiter::tooManyAttempts($key, 5)) {
             $seconds = RateLimiter::availableIn($key);
+
             return response()->json([
                 'success' => false,
                 'message' => "Terlalu banyak percobaan. Coba lagi dalam {$seconds} detik.",
@@ -36,25 +36,26 @@ class QrLoginController extends Controller
         }
 
         $request->validate([
-            'qr_code' => 'required|string|max:50',
+            'qr_code' => 'required|string|max:100',
         ]);
 
-        $qrCode = $request->input('qr_code');
+        $qrCode = trim($request->input('qr_code'));
 
-        // Validate QR Code format (WS-XXXXXXXX-YYYY)
-        if (!preg_match('/^WS-[A-Z0-9]{8}-\d{4}$/', $qrCode)) {
+        if (! $this->isValidQrPayload($qrCode)) {
             RateLimiter::hit($key, 60);
+
             return response()->json([
                 'success' => false,
                 'message' => 'Format QR Code tidak valid.',
             ], 400);
         }
 
-        // Find parent by QR code
+        // Find parent by current QR payload. Supports legacy WS-* and current A/B/T + NIS codes.
         $parent = ParentModel::where('qr_code_string', $qrCode)->first();
 
-        if (!$parent) {
+        if (! $parent) {
             RateLimiter::hit($key, 60);
+
             return response()->json([
                 'success' => false,
                 'message' => 'QR Code tidak valid atau tidak terdaftar.',
@@ -64,8 +65,9 @@ class QrLoginController extends Controller
         // Check if user is active
         $user = $parent->user;
 
-        if (!$user || !$user->is_active) {
+        if (! $user || ! $user->is_active) {
             RateLimiter::hit($key, 60);
+
             return response()->json([
                 'success' => false,
                 'message' => 'Akun tidak aktif. Silakan hubungi admin.',
@@ -95,10 +97,11 @@ class QrLoginController extends Controller
     public function validate(Request $request)
     {
         // Rate limiting for validation endpoint
-        $key = 'qr-validate:' . $request->ip();
+        $key = 'qr-validate:'.$request->ip();
 
         if (RateLimiter::tooManyAttempts($key, 10)) {
             $seconds = RateLimiter::availableIn($key);
+
             return response()->json([
                 'valid' => false,
                 'message' => "Terlalu banyak percobaan. Tunggu {$seconds} detik.",
@@ -106,14 +109,14 @@ class QrLoginController extends Controller
         }
 
         $request->validate([
-            'qr_code' => 'required|string|max:50',
+            'qr_code' => 'required|string|max:100',
         ]);
 
-        $qrCode = $request->input('qr_code');
+        $qrCode = trim($request->input('qr_code'));
 
-        // Validate QR Code format
-        if (!preg_match('/^WS-[A-Z0-9]{8}-\d{4}$/', $qrCode)) {
+        if (! $this->isValidQrPayload($qrCode)) {
             RateLimiter::hit($key, 60);
+
             return response()->json([
                 'valid' => false,
                 'message' => 'Format QR Code tidak valid.',
@@ -122,8 +125,9 @@ class QrLoginController extends Controller
 
         $parent = ParentModel::where('qr_code_string', $qrCode)->first();
 
-        if (!$parent) {
+        if (! $parent) {
             RateLimiter::hit($key, 60);
+
             return response()->json([
                 'valid' => false,
                 'message' => 'QR Code tidak valid.',
@@ -138,5 +142,15 @@ class QrLoginController extends Controller
                 'children_count' => $parent->students()->count(),
             ],
         ]);
+    }
+
+    /**
+     * Accept stored QR payloads, not only old WS-* format.
+     */
+    private function isValidQrPayload(string $qrCode): bool
+    {
+        return $qrCode !== ''
+            && strlen($qrCode) <= 100
+            && (bool) preg_match('/^[A-Za-z0-9:_\-]+$/', $qrCode);
     }
 }

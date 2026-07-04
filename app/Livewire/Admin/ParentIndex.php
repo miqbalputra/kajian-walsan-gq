@@ -3,31 +3,41 @@
 namespace App\Livewire\Admin;
 
 use App\Imports\ParentsImport;
+use App\Models\Attendance;
 use App\Models\ClassRoom;
+use App\Models\KajianEvent;
 use App\Models\ParentModel;
 use App\Models\Role;
 use App\Models\Student;
 use App\Models\User;
-use App\Models\KajianEvent;
-use App\Models\Attendance;
 use BaconQrCode\Renderer\Image\SvgImageBackEnd;
 use BaconQrCode\Renderer\ImageRenderer;
 use BaconQrCode\Renderer\RendererStyle\RendererStyle;
 use BaconQrCode\Writer;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Livewire\Component;
 use Livewire\WithFileUploads;
 use Livewire\WithPagination;
 use Maatwebsite\Excel\Facades\Excel;
+use Maatwebsite\Excel\Validators\ValidationException;
+use PhpOffice\PhpSpreadsheet\Spreadsheet;
+use PhpOffice\PhpSpreadsheet\Style\Alignment;
+use PhpOffice\PhpSpreadsheet\Style\Border;
+use PhpOffice\PhpSpreadsheet\Style\Fill;
+use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
 
 class ParentIndex extends Component
 {
-    use WithPagination;
     use WithFileUploads;
+    use WithPagination;
 
     public $search = '';
+
     public $typeFilter = '';
+
     public $classFilter = '';
+
     public $perPage = 10;
 
     protected $queryString = [
@@ -38,52 +48,81 @@ class ParentIndex extends Component
 
     // Modal state
     public $showModal = false;
+
     public $showDeleteModal = false;
+
     public $showCardModal = false;
+
     public $showBatchPrintModal = false;
+
     public $showImportModal = false;
+
     public $showCredentialsModal = false;
+
     public $editMode = false;
+
     public $parentId = null;
+
     public $showManualAttendanceModal = false;
+
     public $showHistoryModal = false;
 
     // Form fields
     public $name = '';
+
     public $username = '';
+
     public $email = '';
+
     public $password = '';
+
     public $phone = '';
+
     public $nik = '';
+
     public $type = 'father';
+
     public $is_teacher = false;
+
     public $occupation = '';
+
     public $address = '';
+
     public $is_single_parent = false;
+
     public $selectedChildren = [];
 
     // Manual Attendance Form
     public $manualKajianEventId = '';
+
     public $manualStatus = 'hadir_fisik';
+
     public $manualProofFile = null;
+
     public $manualNotes = '';
+
     public $manualParent = null;
 
     // Attendance History
     public $historyParent = null;
+
     public $historyAttendances = [];
+
     public $historySummary = [];
 
     // Card data
     public $cardParent = null;
+
     public $qrCodeSvg = '';
 
     // Batch print data
     public $batchPrintClassId = '';
+
     public $batchPrintParents = [];
 
     // Import
     public $importFile;
+
     public $importedCredentials = [];
 
     protected function rules()
@@ -98,10 +137,11 @@ class ParentIndex extends Component
             'name' => 'required|string|max:100',
             'username' => 'required|string|max:50',
             'email' => 'required|email|max:255',
+            'password' => 'nullable|string|min:6',
             'nik' => 'nullable|string|max:20',
             // Phone validation: Indonesian format (optional +62/62/0 prefix, 8-13 digits)
             'phone' => ['nullable', 'string', 'max:20', 'regex:/^(\+62|62|0)?[0-9]{8,13}$/'],
-            'type' => 'required|in:' . $allowedTypes,
+            'type' => 'required|in:'.$allowedTypes,
             'is_teacher' => 'boolean',
             'occupation' => 'nullable|string|max:100',
             'address' => 'nullable|string|max:500',
@@ -122,7 +162,7 @@ class ParentIndex extends Component
 
     protected function normalizeTypeFilter(): void
     {
-        if (!in_array($this->typeFilter, ['', 'father', 'mother', 'teacher'], true)) {
+        if (! in_array($this->typeFilter, ['', 'father', 'mother', 'teacher'], true)) {
             $this->typeFilter = '';
         }
     }
@@ -196,75 +236,84 @@ class ParentIndex extends Component
 
         if ($usernameQuery->exists()) {
             $this->addError('username', 'Username sudah digunakan.');
+
             return;
         }
 
         if ($emailQuery->exists()) {
             $this->addError('email', 'Email sudah digunakan.');
+
             return;
         }
 
         if ($this->editMode) {
-            // Update existing
-            $parent = ParentModel::findOrFail($this->parentId);
-            $user = $parent->user;
+            DB::transaction(function () {
+                // Update existing
+                $parent = ParentModel::with('user')->findOrFail($this->parentId);
+                $user = $parent->user;
 
-            $user->update([
-                'name' => $this->name,
-                'username' => $this->username,
-                'email' => $this->email,
-                'phone' => $this->phone,
-            ]);
+                $user->update([
+                    'name' => $this->name,
+                    'username' => $this->username,
+                    'email' => $this->email,
+                    'phone' => $this->phone,
+                ]);
 
-            if ($this->password) {
-                $user->update(['password' => Hash::make($this->password)]);
-            }
+                if ($this->password) {
+                    $user->update(['password' => Hash::make($this->password)]);
+                }
 
-            $parent->update([
-                'nik' => $this->nik,
-                'type' => $this->type,
-                'is_teacher' => $this->type === 'teacher' || (bool) $this->is_teacher,
-                'occupation' => $this->occupation,
-                'address' => $this->address,
-                'is_single_parent' => $this->is_single_parent,
-            ]);
+                $parent->update([
+                    'nik' => $this->nik,
+                    'type' => $this->type,
+                    'is_teacher' => $this->type === 'teacher' || (bool) $this->is_teacher,
+                    'occupation' => $this->occupation,
+                    'address' => $this->address,
+                    'is_single_parent' => $this->is_single_parent,
+                ]);
 
-            // Sync children
-            $parent->students()->sync($this->selectedChildren);
+                // Sync children first, then regenerate QR from latest type + first linked student.
+                $parent->students()->sync($this->selectedChildren);
+                $parent->refresh()->syncQrCode();
+            });
 
             $this->dispatch('notify', ['type' => 'success', 'message' => 'Data orang tua berhasil diperbarui!']);
         } else {
-            // Create new
-            $roleName = $this->type === 'teacher' ? 'guru' : 'wali_santri';
-            $targetRole = Role::where('name', $roleName)->first();
+            DB::transaction(function () {
+                // Create new
+                $roleName = $this->type === 'teacher' ? 'guru' : 'wali_santri';
+                $targetRole = Role::where('name', $roleName)->first();
 
-            $user = User::create([
-                'name' => $this->name,
-                'username' => $this->username,
-                'email' => $this->email,
-                'password' => Hash::make($this->password ?: 'password'),
-                'phone' => $this->phone,
-                'role_id' => $targetRole?->id,
-                'is_active' => true,
-            ]);
-
-            $parent = ParentModel::create([
-                'user_id' => $user->id,
-                'nik' => $this->nik,
-                'type' => $this->type,
-                'is_teacher' => $this->type === 'teacher' || (bool) $this->is_teacher,
-                'occupation' => $this->occupation,
-                'address' => $this->address,
-                'is_single_parent' => $this->is_single_parent,
-            ]);
-
-            // Attach children
-            if (!empty($this->selectedChildren)) {
-                $parent->students()->attach($this->selectedChildren, [
-                    'relationship' => 'biological',
-                    'is_primary_contact' => $this->type === 'father',
+                $user = User::create([
+                    'name' => $this->name,
+                    'username' => $this->username,
+                    'email' => $this->email,
+                    'password' => Hash::make($this->password ?: 'password'),
+                    'phone' => $this->phone,
+                    'role_id' => $targetRole?->id,
+                    'is_active' => true,
                 ]);
-            }
+
+                $parent = ParentModel::create([
+                    'user_id' => $user->id,
+                    'nik' => $this->nik,
+                    'type' => $this->type,
+                    'is_teacher' => $this->type === 'teacher' || (bool) $this->is_teacher,
+                    'occupation' => $this->occupation,
+                    'address' => $this->address,
+                    'is_single_parent' => $this->is_single_parent,
+                ]);
+
+                // Attach children first, then regenerate QR from first linked student.
+                if (! empty($this->selectedChildren)) {
+                    $parent->students()->attach($this->selectedChildren, [
+                        'relationship' => 'biological',
+                        'is_primary_contact' => $this->type === 'father',
+                    ]);
+                }
+
+                $parent->refresh()->syncQrCode();
+            });
 
             $this->dispatch('notify', ['type' => 'success', 'message' => 'Orang tua berhasil ditambahkan!']);
         }
@@ -289,8 +338,9 @@ class ParentIndex extends Component
             $this->showDeleteModal = false;
             $this->dispatch('notify', [
                 'type' => 'error',
-                'message' => "Tidak bisa dihapus! {$parent->user->name} memiliki {$attendanceCount} riwayat presensi. Gunakan fitur Nonaktifkan saja."
+                'message' => "Tidak bisa dihapus! {$parent->user->name} memiliki {$attendanceCount} riwayat presensi. Gunakan fitur Nonaktifkan saja.",
             ]);
+
             return;
         }
 
@@ -308,13 +358,16 @@ class ParentIndex extends Component
 
         if ($this->cardParent->isPureTeacher()) {
             $this->dispatch('notify', ['type' => 'info', 'message' => 'Guru murni tidak menggunakan kartu QR.']);
+
             return;
         }
+
+        $this->cardParent->syncQrCode();
 
         // Generate QR Code using bacon-qr-code
         $renderer = new ImageRenderer(
             new RendererStyle(400),
-            new SvgImageBackEnd()
+            new SvgImageBackEnd
         );
         $writer = new Writer($renderer);
         $this->qrCodeSvg = $writer->writeString($this->cardParent->qr_code_string);
@@ -345,12 +398,13 @@ class ParentIndex extends Component
         ]);
 
         // Check for existing attendance
-        $existing = \App\Models\Attendance::where('parent_id', $this->parentId)
+        $existing = Attendance::where('parent_id', $this->parentId)
             ->where('kajian_event_id', $this->manualKajianEventId)
             ->first();
 
         if ($existing) {
             $this->dispatch('notify', ['type' => 'error', 'message' => 'Orang tua ini sudah memiliki riwayat presensi untuk kajian tersebut.']);
+
             return;
         }
 
@@ -360,7 +414,7 @@ class ParentIndex extends Component
             $proofPath = $this->manualProofFile->store($folder, 'public');
         }
 
-        \App\Models\Attendance::create([
+        Attendance::create([
             'parent_id' => $this->parentId,
             'kajian_event_id' => $this->manualKajianEventId,
             'status' => $this->manualStatus,
@@ -383,13 +437,13 @@ class ParentIndex extends Component
     public function showHistory($id)
     {
         $this->historyParent = ParentModel::with(['user', 'students.classRoom'])->findOrFail($id);
-        
+
         // Get all attendances for this parent, ordered by kajian date
         $this->historyAttendances = Attendance::with('kajianEvent')
             ->where('parent_id', $id)
             ->whereHas('kajianEvent') // Ensure event still exists
             ->get()
-            ->sortByDesc(fn($attendance) => $attendance->kajianEvent->date)
+            ->sortByDesc(fn ($attendance) => $attendance->kajianEvent->date)
             ->values()
             ->toArray();
 
@@ -421,8 +475,9 @@ class ParentIndex extends Component
 
     public function loadParentsByClass()
     {
-        if (!$this->batchPrintClassId) {
+        if (! $this->batchPrintClassId) {
             $this->batchPrintParents = [];
+
             return;
         }
 
@@ -436,7 +491,7 @@ class ParentIndex extends Component
 
         $renderer = new ImageRenderer(
             new RendererStyle(250),
-            new SvgImageBackEnd()
+            new SvgImageBackEnd
         );
         $writer = new Writer($renderer);
 
@@ -447,11 +502,11 @@ class ParentIndex extends Component
                 'type' => $parent->type_display,
                 'qr_code' => $parent->qr_code_string,
                 'qr_svg' => $writer->writeString($parent->qr_code_string),
-                'children' => $parent->students->map(fn($s) => [
+                'children' => $parent->students->map(fn ($s) => [
                     'name' => $s->name,
                     'class' => $s->classRoom?->name ?? '-',
-                    'nis' => $s->nis
-                ])->toArray()
+                    'nis' => $s->nis,
+                ])->toArray(),
             ];
         })->toArray();
     }
@@ -459,16 +514,16 @@ class ParentIndex extends Component
     public function downloadTemplate()
     {
         // Create Excel template using PhpSpreadsheet
-        $spreadsheet = new \PhpOffice\PhpSpreadsheet\Spreadsheet();
+        $spreadsheet = new Spreadsheet;
         $sheet = $spreadsheet->getActiveSheet();
         $sheet->setTitle('Template Orang Tua');
 
         // Header style
         $headerStyle = [
             'font' => ['bold' => true, 'color' => ['rgb' => 'FFFFFF']],
-            'fill' => ['fillType' => \PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID, 'startColor' => ['rgb' => '8B5CF6']],
-            'alignment' => ['horizontal' => \PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER],
-            'borders' => ['allBorders' => ['borderStyle' => \PhpOffice\PhpSpreadsheet\Style\Border::BORDER_THIN]],
+            'fill' => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => '8B5CF6']],
+            'alignment' => ['horizontal' => Alignment::HORIZONTAL_CENTER],
+            'borders' => ['allBorders' => ['borderStyle' => Border::BORDER_THIN]],
         ];
 
         // Headers
@@ -511,7 +566,7 @@ class ParentIndex extends Component
             ['- Jika email kosong, akan digenerate dari nama'],
         ];
         foreach ($instructions as $row => $data) {
-            $instructionSheet->setCellValue('A' . ($row + 1), $data[0]);
+            $instructionSheet->setCellValue('A'.($row + 1), $data[0]);
         }
         $instructionSheet->getStyle('A1')->getFont()->setBold(true)->setSize(14);
         $instructionSheet->getColumnDimension('A')->setWidth(60);
@@ -521,14 +576,14 @@ class ParentIndex extends Component
 
         // Save to temp file
         $fileName = 'template_import_orang_tua.xlsx';
-        $tempPath = storage_path('app/public/' . $fileName);
+        $tempPath = storage_path('app/public/'.$fileName);
 
         // Ensure directory exists
-        if (!file_exists(storage_path('app/public'))) {
+        if (! file_exists(storage_path('app/public'))) {
             mkdir(storage_path('app/public'), 0755, true);
         }
 
-        $writer = new \PhpOffice\PhpSpreadsheet\Writer\Xlsx($spreadsheet);
+        $writer = new Xlsx($spreadsheet);
         $writer->save($tempPath);
 
         return response()->download($tempPath, $fileName, [
@@ -543,7 +598,7 @@ class ParentIndex extends Component
         ]);
 
         try {
-            $import = new ParentsImport();
+            $import = new ParentsImport;
             Excel::import($import, $this->importFile->getRealPath());
 
             $this->showImportModal = false;
@@ -553,26 +608,26 @@ class ParentIndex extends Component
             $this->dispatch('notify', ['type' => 'success', 'message' => $summary]);
 
             // Show credentials if any
-            if (!empty($import->credentials)) {
+            if (! empty($import->credentials)) {
                 $this->importedCredentials = $import->credentials;
                 $this->showCredentialsModal = true;
             }
 
             // Show errors if any
-            if (!empty($import->errors)) {
+            if (! empty($import->errors)) {
                 foreach (array_slice($import->errors, 0, 5) as $error) {
                     $this->dispatch('notify', ['type' => 'warning', 'message' => $error]);
                 }
             }
 
             $this->resetPage();
-        } catch (\Maatwebsite\Excel\Validators\ValidationException $e) {
+        } catch (ValidationException $e) {
             $failures = $e->failures();
             foreach (array_slice($failures, 0, 3) as $failure) {
-                $this->addError('importFile', "Baris {$failure->row()}: " . implode(', ', $failure->errors()));
+                $this->addError('importFile', "Baris {$failure->row()}: ".implode(', ', $failure->errors()));
             }
         } catch (\Exception $e) {
-            $this->addError('importFile', 'Gagal import: ' . $e->getMessage());
+            $this->addError('importFile', 'Gagal import: '.$e->getMessage());
         }
     }
 
@@ -581,9 +636,9 @@ class ParentIndex extends Component
         $query = ParentModel::with(['user', 'students.classRoom'])
             ->whereHas('user', function ($query) {
                 if ($this->search) {
-                    $query->where('name', 'like', '%' . $this->search . '%')
-                        ->orWhere('username', 'like', '%' . $this->search . '%')
-                        ->orWhere('email', 'like', '%' . $this->search . '%');
+                    $query->where('name', 'like', '%'.$this->search.'%')
+                        ->orWhere('username', 'like', '%'.$this->search.'%')
+                        ->orWhere('email', 'like', '%'.$this->search.'%');
                 }
             });
 
@@ -601,10 +656,10 @@ class ParentIndex extends Component
         }
 
         $query->when($this->classFilter, function ($query) {
-                $query->whereHas('students', function ($q) {
-                    $q->where('class_id', $this->classFilter);
-                });
-            })
+            $query->whereHas('students', function ($q) {
+                $q->where('class_id', $this->classFilter);
+            });
+        })
             ->orderBy('created_at', 'desc');
 
         // Handle "all" option

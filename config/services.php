@@ -42,10 +42,10 @@ return [
         'password_reset_secret' => env('N8N_PASSWORD_RESET_SECRET', ''),
     ],
 
-
     'google' => [
-        'client_id'     => env('GOOGLE_CLIENT_ID'),
+        'client_id' => env('GOOGLE_CLIENT_ID'),
         'client_secret' => env('GOOGLE_CLIENT_SECRET'),
-        'redirect'      => env('GOOGLE_REDIRECT_URI', '/auth/google/callback'),
+        'redirect' => env('GOOGLE_REDIRECT_URI', '/auth/google/callback'),
+        'link_redirect' => env('GOOGLE_LINK_REDIRECT_URI', '/auth/google/link/callback'),
     ],
 ];

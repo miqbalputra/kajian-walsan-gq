@@ -105,6 +105,15 @@
 
                 <div>
                     <label
+                        class="block text-xs font-black text-slate-400 uppercase tracking-widest mb-3 px-1">Username</label>
+                    <input type="text" wire:model="username"
+                        class="w-full px-6 py-4 bg-slate-50 border border-slate-100 rounded-2xl focus:ring-4 focus:ring-primary-500/10 focus:border-primary-500 transition-all outline-none text-sm font-bold text-slate-700">
+                    @error('username') <span class="text-red-500 text-xs font-bold mt-2 px-1 block">{{ $message }}</span>
+                    @enderror
+                </div>
+
+                <div>
+                    <label
                         class="block text-xs font-black text-slate-400 uppercase tracking-widest mb-3 px-1">Email</label>
                     <input type="email" wire:model="email"
                         class="w-full px-6 py-4 bg-slate-50 border border-slate-100 rounded-2xl focus:ring-4 focus:ring-primary-500/10 focus:border-primary-500 transition-all outline-none text-sm font-bold text-slate-700">
@@ -115,12 +124,9 @@
                 <div>
                     <label class="block text-xs font-black text-slate-400 uppercase tracking-widest mb-3 px-1">Nomor
                         WhatsApp</label>
-                    <div class="relative">
-                        <span
-                            class="absolute left-6 top-1/2 -translate-y-1/2 text-slate-400 font-bold text-sm">+62</span>
-                        <input type="text" wire:model="phone"
-                            class="w-full pl-16 pr-6 py-4 bg-slate-50 border border-slate-100 rounded-2xl focus:ring-4 focus:ring-primary-500/10 focus:border-primary-500 transition-all outline-none text-sm font-bold text-slate-700">
-                    </div>
+                    <input type="text" wire:model="phone"
+                        class="w-full px-6 py-4 bg-slate-50 border border-slate-100 rounded-2xl focus:ring-4 focus:ring-primary-500/10 focus:border-primary-500 transition-all outline-none text-sm font-bold text-slate-700"
+                        placeholder="081234567890">
                     @error('phone') <span class="text-red-500 text-xs font-bold mt-2 px-1 block">{{ $message }}</span>
                     @enderror
                 </div>

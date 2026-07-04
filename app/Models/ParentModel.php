@@ -66,22 +66,40 @@ class ParentModel extends Model
         // Kita butuh murid pertama.
         $student = $parent->students()->first();
 
-        if ($student && !empty($student->nis)) {
+        if ($student && ! empty($student->nis)) {
             $prefix = match ($parent->type) {
                 'father' => 'A',
                 'mother' => 'B',
                 'teacher' => 'T',
                 default => 'X',
             };
-            return $prefix . $student->nis;
+
+            return static::uniqueQrCode($prefix.$student->nis, $parent->id ?? null);
         }
 
         // Fallback jika belum ada murid terhubung
         do {
-            $code = 'TMP-' . strtoupper(Str::random(8));
+            $code = 'TMP-'.strtoupper(Str::random(8));
         } while (static::where('qr_code_string', $code)->exists());
 
         return $code;
+    }
+
+    private static function uniqueQrCode(string $baseCode, ?int $ignoreParentId = null): string
+    {
+        $baseCode = Str::limit($baseCode, 90, '');
+        $candidate = $baseCode;
+        $counter = 1;
+
+        while (static::where('qr_code_string', $candidate)
+            ->when($ignoreParentId, fn ($query) => $query->where('id', '!=', $ignoreParentId))
+            ->exists()) {
+            $suffix = '-'.($ignoreParentId ? $ignoreParentId.'-'.$counter : $counter);
+            $candidate = Str::limit($baseCode, 100 - strlen($suffix), '').$suffix;
+            $counter++;
+        }
+
+        return $candidate;
     }
 
     /**
@@ -221,6 +239,7 @@ class ParentModel extends Model
     public function regenerateQrCode(): bool
     {
         $this->qr_code_string = static::generateForParent($this);
+
         return $this->save();
     }
 
@@ -231,10 +250,11 @@ class ParentModel extends Model
     public function syncQrCode(): bool
     {
         $newCode = static::generateForParent($this);
-        
+
         // Hanya update jika formatnya berubah (misal dari TMP ke NIS)
         if ($this->qr_code_string !== $newCode) {
             $this->qr_code_string = $newCode;
+
             return $this->save();
         }
 

@@ -105,7 +105,7 @@
                         <div class="flex gap-2">
                             <input type="text" x-model="manualCode"
                                 class="w-full px-4 py-3.5 bg-white border border-gray-200 rounded-2xl focus:ring-4 focus:ring-primary-500/10 focus:border-primary-500 outline-none text-center font-bold tracking-[0.2em] uppercase transition-all"
-                                placeholder="WS-XXXX-YYYY">
+                                placeholder="A12345 / B12345">
                             <button type="submit"
                                 class="w-14 h-14 bg-primary-600 text-white rounded-2xl flex items-center justify-center hover:bg-primary-700 transition-all shadow-lg shadow-primary-600/20 active:scale-95"
                                 :disabled="loading">

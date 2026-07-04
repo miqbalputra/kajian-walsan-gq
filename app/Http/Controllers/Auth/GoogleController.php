@@ -18,7 +18,7 @@ class GoogleController extends Controller
      */
     private function getLoginCallbackUrl()
     {
-        return rtrim(config('app.url'), '/') . '/auth/google/callback';
+        return $this->buildCallbackUrl(config('services.google.redirect'), '/auth/google/callback');
     }
 
     /**
@@ -30,6 +30,14 @@ class GoogleController extends Controller
      */
     public function redirect()
     {
+        if (! $this->hasGoogleConfig()) {
+            Log::error('[Google Login] Missing Google OAuth credentials');
+
+            return redirect()->route('login')->withErrors([
+                'google' => 'Konfigurasi Google Login belum lengkap. Hubungi administrator.',
+            ]);
+        }
+
         $callbackUrl = $this->getLoginCallbackUrl();
 
         $redirectUrl = Socialite::driver('google')
@@ -72,6 +80,7 @@ class GoogleController extends Controller
                 'redirect_uri_config' => config('services.google.redirect'),
                 'redirect_uri_used' => $callbackUrl,
             ]);
+
             return redirect()->route('login')->withErrors(['google' => 'Gagal login dengan Google. Silakan coba lagi.']);
         }
 
@@ -96,13 +105,13 @@ class GoogleController extends Controller
             ]);
         }
 
-        if (!$user) {
+        if (! $user) {
             return redirect()->route('login')->withErrors([
                 'google' => 'Email Google ini belum terdaftar di aplikasi. Pastikan email Gmail sudah disimpan di akun wali santri.',
             ]);
         }
 
-        if (!$user->is_active) {
+        if (! $user->is_active) {
             return redirect()->route('login')->withErrors([
                 'google' => 'Akun Anda tidak aktif. Hubungi administrator.',
             ]);
@@ -116,7 +125,7 @@ class GoogleController extends Controller
 
     private function findLoginUser(string $googleId, string $googleEmail): ?User
     {
-        if (!$this->hasGoogleColumns()) {
+        if (! $this->hasGoogleColumns()) {
             throw new \RuntimeException('Missing users.google_id column');
         }
 
@@ -135,7 +144,7 @@ class GoogleController extends Controller
         }
 
         $user = User::whereRaw('LOWER(email) = ?', [$googleEmail])->first();
-        if (!$user) {
+        if (! $user) {
             return null;
         }
 
@@ -164,8 +173,7 @@ class GoogleController extends Controller
      */
     private function getLinkCallbackUrl()
     {
-        // Secara eksplisit paksakan URL HTTPS agar 100% cocok dengan Google Console
-        return rtrim(config('app.url'), '/') . '/auth/google/link/callback';
+        return $this->buildCallbackUrl(config('services.google.link_redirect'), '/auth/google/link/callback');
     }
 
     /**
@@ -175,12 +183,18 @@ class GoogleController extends Controller
      */
     public function linkRedirect()
     {
+        if (! $this->hasGoogleConfig()) {
+            Log::error('[Google Link] Missing Google OAuth credentials', ['user_id' => Auth::id()]);
+
+            return redirect()->route('wali-santri.profile')->with('google-error', 'Konfigurasi Google Login belum lengkap. Hubungi administrator.');
+        }
+
         $callbackUrl = $this->getLinkCallbackUrl();
 
         // Enkripsi ID user ke parameter state.
         // Tujuannya agar jika request direbut oleh Antivirus/Pre-fetcher di background,
         // backend tetap tahu akun siapa yang harus dilink tanpa butuh auth session.
-        $statePayload = encrypt(Auth::id() . '|' . time());
+        $statePayload = encrypt(Auth::id().'|'.time());
 
         return Socialite::driver('google')
             ->redirectUrl($callbackUrl)
@@ -210,9 +224,9 @@ class GoogleController extends Controller
         // Tentukan target fallback user (dari Auth session atau dari state rahasia)
         $targetUser = Auth::user() ?? ($intendedUserId ? User::find($intendedUserId) : null);
 
-        if (!$targetUser) {
+        if (! $targetUser) {
             return redirect()->route('login')->withErrors([
-                'google' => 'Sesi Anda telah berakhir dan data state tidak valid. Silakan login ulang.'
+                'google' => 'Sesi Anda telah berakhir dan data state tidak valid. Silakan login ulang.',
             ]);
         }
 
@@ -228,8 +242,8 @@ class GoogleController extends Controller
             // KITA CEK apakah akun user ternyata BARUSAJA berhasil di-link dalam 2 menit terakhir!
             // Jika iya, artinya proses pertama (Antivirus) berhasil, dan ini adalah proses kedua (Browser).
             if (
-                str_contains($e->getMessage(), 'invalid_grant') && 
-                $targetUser->google_id !== null && 
+                str_contains($e->getMessage(), 'invalid_grant') &&
+                $targetUser->google_id !== null &&
                 $targetUser->updated_at->diffInSeconds(now()) < 120
             ) {
                 return redirect()->route('wali-santri.profile')->with('google-success', 'Akun Google berhasil dihubungkan! (Diselamatkan dari interupsi keamanan browser)');
@@ -237,11 +251,12 @@ class GoogleController extends Controller
 
             // Jika error lain atau belum terlink sama sekali, tampilkan error aslinya
             Log::error('[Google Link] Callback failed', [
-                'error'        => $e->getMessage(),
+                'error' => $e->getMessage(),
                 'callback_url' => $callbackUrl,
-                'target_user'  => $targetUser->id
+                'target_user' => $targetUser->id,
             ]);
-            return redirect()->route('wali-santri.profile')->with('google-error', 'Gagal menghubungkan akun Google. Pastikan Client Secret di .env server sudah sesuai dengan Google Cloud. (Error: ' . $e->getMessage() . ')');
+
+            return redirect()->route('wali-santri.profile')->with('google-error', 'Gagal menghubungkan akun Google. Pastikan Client Secret di .env server sudah sesuai dengan Google Cloud. (Error: '.$e->getMessage().')');
         }
 
         // 3. Proses linking normal (Token berhasil ditukar)
@@ -252,8 +267,8 @@ class GoogleController extends Controller
         }
 
         $targetUser->update([
-            'google_id'    => $googleUser->getId(),
-            'email'        => $targetUser->email ?? $googleUser->getEmail(),
+            'google_id' => $googleUser->getId(),
+            'email' => $targetUser->email ?? $googleUser->getEmail(),
         ]);
 
         Log::info('[Google Link] Success', ['user_id' => $targetUser->id, 'google_id' => $googleUser->getId()]);
@@ -263,6 +278,34 @@ class GoogleController extends Controller
         return redirect()->route('wali-santri.profile')->with('google-success', 'Akun Google berhasil dihubungkan! Sekarang Anda bisa login dengan Google.');
     }
 
+    private function buildCallbackUrl(?string $configuredUrl, string $fallbackPath): string
+    {
+        $configuredUrl = trim((string) $configuredUrl);
+
+        if (Str::startsWith($configuredUrl, ['http://', 'https://'])) {
+            return $configuredUrl;
+        }
+
+        $path = $configuredUrl !== '' ? $configuredUrl : $fallbackPath;
+
+        if (! Str::startsWith($path, '/')) {
+            $path = '/'.$path;
+        }
+
+        return rtrim(config('app.url'), '/').$path;
+    }
+
+    private function hasGoogleConfig(): bool
+    {
+        $clientId = trim((string) config('services.google.client_id'));
+        $clientSecret = trim((string) config('services.google.client_secret'));
+
+        return $clientId !== ''
+            && $clientSecret !== ''
+            && ! Str::startsWith($clientId, 'your_')
+            && ! Str::startsWith($clientSecret, 'your_');
+    }
+
     /**
      * Unlink akun Google
      */
@@ -270,7 +313,7 @@ class GoogleController extends Controller
     {
         $user = Auth::user();
 
-        if (!$user->password) {
+        if (! $user->password) {
             return redirect()->route('wali-santri.profile')->with('google-error', 'Tidak dapat melepas Google karena Anda tidak memiliki password. Atur password terlebih dahulu.');
         }
 
@@ -279,4 +322,3 @@ class GoogleController extends Controller
         return redirect()->route('wali-santri.profile')->with('google-success', 'Akun Google berhasil dilepaskan.');
     }
 }
-

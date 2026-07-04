@@ -1,11 +1,14 @@
 <?php
 
-use App\Http\Controllers\Auth\GoogleController;
 use App\Http\Controllers\Auth\ForgotPasswordController;
+use App\Http\Controllers\Auth\GoogleController;
 use App\Http\Controllers\Auth\QrLoginController;
 use App\Http\Controllers\HomeController;
 use App\Http\Controllers\PanitiaAttendanceScanController;
+use App\Http\Controllers\PushSubscriptionController;
+use App\Http\Middleware\InjectPwaInstallPrompt;
 use App\Livewire\Admin\AnnouncementIndex;
+use App\Livewire\Admin\AttendanceTrash;
 use App\Livewire\Admin\AttendanceValidation;
 use App\Livewire\Admin\ChatAi;
 use App\Livewire\Admin\ClassIndex;
@@ -13,15 +16,25 @@ use App\Livewire\Admin\Dashboard;
 use App\Livewire\Admin\KajianIndex;
 use App\Livewire\Admin\ParentIndex;
 use App\Livewire\Admin\ReportIndex;
+use App\Livewire\Admin\Settings;
 use App\Livewire\Admin\StudentIndex;
+use App\Livewire\Admin\SurveyAnalysis;
 use App\Livewire\Admin\TeacherAttendanceIndex;
 use App\Livewire\Admin\UserIndex;
 use App\Livewire\Kepsek\Dashboard as KepsekDashboard;
 use App\Livewire\Kepsek\GuardianAttendanceReport as KepsekGuardianAttendanceReport;
 use App\Livewire\Kepsek\SurveyAnalysis as KepsekSurveyAnalysis;
 use App\Livewire\Kepsek\TeacherAttendanceReport as KepsekTeacherAttendanceReport;
+use App\Livewire\Panitia\JadwalKajian;
 use App\Livewire\Panitia\Scanner;
 use App\Livewire\WaliSantri\Dashboard as WaliSantriDashboard;
+use App\Livewire\WaliSantri\KajianSchedule;
+use App\Livewire\WaliSantri\Profile;
+use App\Models\ParentModel;
+use BaconQrCode\Renderer\Image\SvgImageBackEnd;
+use BaconQrCode\Renderer\ImageRenderer;
+use BaconQrCode\Renderer\RendererStyle\RendererStyle;
+use BaconQrCode\Writer;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -35,7 +48,7 @@ Route::get('/__deploy-version', function () {
     return response()->json([
         'version' => '2026-05-19-push-notification-loader-v4',
         'commit_hint' => 'push-notification-loader',
-        'pwa_middleware_install' => class_exists(\App\Http\Middleware\InjectPwaInstallPrompt::class),
+        'pwa_middleware_install' => class_exists(InjectPwaInstallPrompt::class),
         'pwa_push_script' => file_exists(public_path('js/pwa-push.js')),
         'timestamp' => now()->toISOString(),
     ])->header('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0');
@@ -85,20 +98,22 @@ Route::middleware('auth')->group(function () {
         Route::get('/', Dashboard::class)->name('dashboard');
         Route::get('/students', StudentIndex::class)->name('students.index');
         Route::get('/parents', ParentIndex::class)->name('parents.index');
-        Route::get('/parents/{parent}/kartu/download', function (\App\Models\ParentModel $parent) {
-            $parent->loadMissing('user', 'students');
-            abort_if($parent->isPureTeacher(), 404);
+        Route::get('/parents/{parent}/kartu/download', function (ParentModel $parent) {
+            $parent->loadMissing('user', 'students.classRoom');
+            abort_if($parent->isPureTeacher() || blank($parent->qr_code_string), 404);
 
-            $renderer = new \BaconQrCode\Renderer\ImageRenderer(
-                new \BaconQrCode\Renderer\RendererStyle\RendererStyle(300),
-                new \BaconQrCode\Renderer\Image\SvgImageBackEnd()
+            $parent->syncQrCode();
+
+            $renderer = new ImageRenderer(
+                new RendererStyle(300),
+                new SvgImageBackEnd
             );
-            $writer = new \BaconQrCode\Writer($renderer);
+            $writer = new Writer($renderer);
             $qrSvg = $writer->writeString($parent->qr_code_string);
 
             return view('pdf.kartu-identitas', [
-                'parent'   => $parent,
-                'qrSvg'    => $qrSvg,
+                'parent' => $parent,
+                'qrSvg' => $qrSvg,
                 'isMother' => $parent->type === 'mother',
             ]);
         })->name('parents.kartu.download');
@@ -109,17 +124,17 @@ Route::middleware('auth')->group(function () {
         Route::get('/classes', ClassIndex::class)->name('classes.index');
         Route::get('/reports', ReportIndex::class)->name('reports.index');
         Route::get('/validation', AttendanceValidation::class)->name('validation.index');
-        Route::get('/validation/trash', \App\Livewire\Admin\AttendanceTrash::class)->name('validation.trash');
+        Route::get('/validation/trash', AttendanceTrash::class)->name('validation.trash');
         Route::get('/users', UserIndex::class)->name('users.index');
-        Route::get('/settings', \App\Livewire\Admin\Settings::class)->name('settings');
-        Route::get('/surveys', \App\Livewire\Admin\SurveyAnalysis::class)->name('surveys.index');
+        Route::get('/settings', Settings::class)->name('settings');
+        Route::get('/surveys', SurveyAnalysis::class)->name('surveys.index');
     });
 
     // Panitia Routes - Admin and Panitia can access
     Route::prefix('panitia')->name('panitia.')->middleware('role:admin,panitia')->group(function () {
         Route::get('/scanner', Scanner::class)->name('scanner');
         Route::post('/scan', [PanitiaAttendanceScanController::class, 'store'])->name('scan.store');
-        Route::get('/jadwal', \App\Livewire\Panitia\JadwalKajian::class)->name('jadwal');
+        Route::get('/jadwal', JadwalKajian::class)->name('jadwal');
     });
 
     // Kepala Sekolah Routes - Read-only monitoring
@@ -132,35 +147,37 @@ Route::middleware('auth')->group(function () {
 
     // Wali Kelas Routes - Admin and Wali Kelas can access
     Route::prefix('wali-kelas')->name('wali-kelas.')->middleware('role:admin,wali_kelas')->group(function () {
-        Route::get('/', \App\Livewire\WaliKelas\Dashboard::class)->name('dashboard');
-        Route::get('/reports', \App\Livewire\WaliKelas\ReportIndex::class)->name('reports');
+        Route::get('/', App\Livewire\WaliKelas\Dashboard::class)->name('dashboard');
+        Route::get('/reports', App\Livewire\WaliKelas\ReportIndex::class)->name('reports');
     });
 
     // Wali Santri Routes - Only Wali Santri and Guru can access
     Route::prefix('wali-santri')->name('wali-santri.')->middleware('role:wali_santri,guru')->group(function () {
         Route::get('/', WaliSantriDashboard::class)->name('dashboard');
-        Route::get('/schedule', \App\Livewire\WaliSantri\KajianSchedule::class)->name('schedule');
-        Route::get('/profile', \App\Livewire\WaliSantri\Profile::class)->name('profile');
+        Route::get('/schedule', KajianSchedule::class)->name('schedule');
+        Route::get('/profile', Profile::class)->name('profile');
 
         // Kartu Identitas - Print/Download Page (same approach as admin, proven to work)
         Route::get('/kartu/download', function () {
             $user = auth()->user();
-            $parent = \App\Models\ParentModel::with('user', 'students')
+            $parent = ParentModel::with('user', 'students.classRoom')
                 ->where('user_id', $user->id)
                 ->firstOrFail();
-            abort_if($parent->isPureTeacher(), 404);
+            abort_if($parent->isPureTeacher() || blank($parent->qr_code_string), 404);
+
+            $parent->syncQrCode();
 
             // Generate QR SVG (same as admin approach)
-            $renderer = new \BaconQrCode\Renderer\ImageRenderer(
-                new \BaconQrCode\Renderer\RendererStyle\RendererStyle(300),
-                new \BaconQrCode\Renderer\Image\SvgImageBackEnd()
+            $renderer = new ImageRenderer(
+                new RendererStyle(300),
+                new SvgImageBackEnd
             );
-            $writer = new \BaconQrCode\Writer($renderer);
+            $writer = new Writer($renderer);
             $qrSvg = $writer->writeString($parent->qr_code_string);
 
             return view('pdf.kartu-identitas', [
-                'parent'   => $parent,
-                'qrSvg'    => $qrSvg,
+                'parent' => $parent,
+                'qrSvg' => $qrSvg,
                 'isMother' => $parent->type === 'mother',
             ]);
         })->name('kartu.download');
@@ -172,15 +189,15 @@ Route::middleware('auth')->group(function () {
     Route::post('/auth/google/unlink', [GoogleController::class, 'unlink'])->name('google.unlink');
 
     // Web Push Subscription Routes
-    Route::post('/push-subscription', [\App\Http\Controllers\PushSubscriptionController::class, 'store'])->name('push.store');
-    Route::delete('/push-subscription', [\App\Http\Controllers\PushSubscriptionController::class, 'destroy'])->name('push.destroy');
+    Route::post('/push-subscription', [PushSubscriptionController::class, 'store'])->name('push.store');
+    Route::delete('/push-subscription', [PushSubscriptionController::class, 'destroy'])->name('push.destroy');
 
     // Logout
     Route::post('/logout', function () {
         auth()->logout();
         request()->session()->invalidate();
         request()->session()->regenerateToken();
+
         return redirect('/');
     })->name('logout');
 });
-
