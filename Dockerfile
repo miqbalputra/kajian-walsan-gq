@@ -24,14 +24,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 # Install PHP extensions — split into layers for better caching.
 # Extensions yang cepat (pre-compiled) dipisah dari yang compile dari source.
 
-# Layer 1: Extensions yang pre-compiled / cepat (tanpa redis)
-# Redis tidak diinstall sebagai PHP extension — menggunakan predis (pure PHP)
-# untuk menghindari compile dari source yang menyebabkan OOM di VPS 4GB.
-#
-# pcntl     — WAJIB untuk Octane (signal handling: SIGINT, SIGTERM)
-# pdo_mysql — WAJIB untuk database MariaDB
-# exif      — dibutuhkan untuk upload foto bukti presensi
-RUN install-php-extensions pdo_mysql pcntl exif gd zip intl bcmath
+# Layer 1: Extensions wajib (kecil, cepat)
+RUN install-php-extensions mbstring opcache pdo_mysql pcntl exif gd zip intl bcmath
 
 # Install Composer
 COPY --from=composer:latest /usr/bin/composer /usr/bin/composer

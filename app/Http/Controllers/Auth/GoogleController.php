@@ -45,7 +45,15 @@ class GoogleController extends Controller
         try {
             $googleUser = Socialite::driver('google')->stateless()->user();
         } catch (\Throwable $e) {
-            Log::error('[Google Login] Callback failed', ['error' => $e->getMessage()]);
+            Log::error('[Google Login] Callback failed', [
+                'error' => $e->getMessage(),
+                'class' => get_class($e),
+                'code' => $e->getCode(),
+                'trace' => $e->getTraceAsString(),
+                'request_state' => request()->get('state'),
+                'request_code' => request()->has('code') ? 'present' : 'missing',
+                'redirect_uri_config' => config('services.google.redirect'),
+            ]);
             return redirect()->route('login')->withErrors(['google' => 'Gagal login dengan Google. Silakan coba lagi.']);
         }
 
