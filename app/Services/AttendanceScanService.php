@@ -24,7 +24,7 @@ class AttendanceScanService
             ->where('qr_code_string', trim($qrCode))
             ->first();
 
-        if (!$parent) {
+        if (! $parent) {
             return [
                 'status' => 'error',
                 'message' => 'QR Code tidak ditemukan dalam sistem.',
@@ -38,9 +38,19 @@ class AttendanceScanService
             ];
         }
 
-        $students = $parent->students;
+        $event->loadMissing('targetClasses');
+
+        if (! $event->targetsParent($parent)) {
+            return [
+                'status' => 'error',
+                'message' => 'Wali santri tidak termasuk kelas sasaran kegiatan ini.',
+            ];
+        }
+
+        $students = $event->targetedStudentsForParent($parent);
+        $studentId = $students->first()?->id;
         $childDisplayNames = $students
-            ->map(fn ($student) => $student->name . ($student->classRoom ? ' (' . $student->classRoom->name . ')' : ''))
+            ->map(fn ($student) => $student->name.($student->classRoom ? ' ('.$student->classRoom->name.')' : ''))
             ->values()
             ->all();
 
@@ -54,7 +64,7 @@ class AttendanceScanService
                 $attendance->restore();
                 $needsProof = $parent->isWaliTeacher() && ($event->policy['guru_hadir_fisik_requires_proof'] ?? true);
                 $attendance->update([
-                    'student_id' => $students->first()?->id,
+                    'student_id' => $studentId,
                     'status' => Attendance::STATUS_HADIR_FISIK,
                     'method' => Attendance::METHOD_SCAN_QR,
                     'validation_status' => $needsProof ? Attendance::VALIDATION_PENDING : Attendance::VALIDATION_APPROVED,
@@ -67,7 +77,7 @@ class AttendanceScanService
             } else {
                 return [
                     'status' => 'warning',
-                    'message' => $parent->user->name . ' sudah tercatat hadir.',
+                    'message' => $parent->user->name.' sudah tercatat hadir.',
                     'payload' => [
                         'parentName' => $parent->user->name,
                     ],
@@ -76,11 +86,11 @@ class AttendanceScanService
         } else {
             try {
                 $needsProof = $parent->isWaliTeacher() && ($event->policy['guru_hadir_fisik_requires_proof'] ?? true);
-                DB::transaction(function () use ($event, $parent, $students, $userId, $deviceInfo, $needsProof) {
+                DB::transaction(function () use ($event, $parent, $studentId, $userId, $deviceInfo, $needsProof) {
                     Attendance::create([
                         'kajian_event_id' => $event->id,
                         'parent_id' => $parent->id,
-                        'student_id' => $students->first()?->id,
+                        'student_id' => $studentId,
                         'status' => Attendance::STATUS_HADIR_FISIK,
                         'method' => Attendance::METHOD_SCAN_QR,
                         'validation_status' => $needsProof ? Attendance::VALIDATION_PENDING : Attendance::VALIDATION_APPROVED,
@@ -94,7 +104,7 @@ class AttendanceScanService
                 if ($this->isDuplicateAttendance($exception)) {
                     return [
                         'status' => 'warning',
-                        'message' => $parent->user->name . ' sudah tercatat hadir.',
+                        'message' => $parent->user->name.' sudah tercatat hadir.',
                         'payload' => [
                             'parentName' => $parent->user->name,
                         ],
@@ -106,7 +116,7 @@ class AttendanceScanService
         }
 
         $childNameDisplay = count($childDisplayNames) > 0
-            ? (count($childDisplayNames) . ' Santri: ' . implode(', ', $childDisplayNames))
+            ? (count($childDisplayNames).' Santri: '.implode(', ', $childDisplayNames))
             : 'Tidak ada data santri';
 
         $parentType = match ($parent->type) {
@@ -119,7 +129,7 @@ class AttendanceScanService
         $needsProof = $parent->isWaliTeacher() && ($event->policy['guru_hadir_fisik_requires_proof'] ?? true);
         $message = ($parent->isWaliTeacher() && $needsProof)
             ? "Selamat Datang, {$parentType} {$parent->user->name}. Berhasil mencatat, mohon ingatkan untuk upload catatan kajian di dashboard."
-            : "Selamat Datang, {$parentType} {$parent->user->name}. Berhasil mencatat presensi untuk " . ($students->count() ?: 1) . ' santri.';
+            : "Selamat Datang, {$parentType} {$parent->user->name}. Berhasil mencatat presensi untuk ".($students->count() ?: 1).' santri.';
 
         return [
             'status' => 'success',

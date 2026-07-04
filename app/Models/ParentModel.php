@@ -226,6 +226,23 @@ class ParentModel extends Model
     }
 
     /**
+     * Scope guardians/parents that are counted for a class-targeted event.
+     * Empty event targets mean all classes.
+     */
+    public function scopeTargetedByEvent($query, KajianEvent $event)
+    {
+        if ($event->targetsAllClasses()) {
+            return $query;
+        }
+
+        $targetClassIds = $event->targetClassIds()->all();
+
+        return $query->whereHas('students', function ($query) use ($targetClassIds) {
+            $query->whereIn('students.class_id', $targetClassIds);
+        });
+    }
+
+    /**
      * Find parent by QR code string.
      */
     public static function findByQrCode(string $qrCode): ?self

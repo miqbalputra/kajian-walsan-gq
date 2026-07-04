@@ -3,16 +3,22 @@
 namespace App\Livewire\WaliSantri;
 
 use App\Models\KajianEvent;
+use App\Models\ParentModel;
 use Carbon\Carbon;
 use Livewire\Component;
 
 class KajianSchedule extends Component
 {
     public $currentMonth;
+
     public $currentYear;
+
     public $calendarDays = [];
+
     public $events = [];
+
     public $selectedEvent = null;
+
     public $showEventDetail = false;
 
     public function mount()
@@ -72,8 +78,12 @@ class KajianSchedule extends Component
         $startDate = Carbon::create($this->calendarDays[0]['year'], $this->calendarDays[0]['month'], $this->calendarDays[0]['day'])->toDateString();
         $endDate = Carbon::create($this->calendarDays[41]['year'], $this->calendarDays[41]['month'], $this->calendarDays[41]['day'])->toDateString();
 
+        $parent = $this->parent();
+
         $this->events = KajianEvent::whereBetween('date', [$startDate, $endDate])
+            ->with('targetClasses')
             ->get()
+            ->filter(fn (KajianEvent $event) => ! $parent || $event->targetsParent($parent))
             ->groupBy(function ($event) {
                 return $event->date->toDateString();
             })
@@ -98,8 +108,22 @@ class KajianSchedule extends Component
 
     public function showDetail($eventId)
     {
-        $this->selectedEvent = KajianEvent::find($eventId);
+        $event = KajianEvent::with('targetClasses')->find($eventId);
+        $parent = $this->parent();
+
+        if (! $event || ($parent && ! $event->targetsParent($parent))) {
+            return;
+        }
+
+        $this->selectedEvent = $event;
         $this->showEventDetail = true;
+    }
+
+    protected function parent(): ?ParentModel
+    {
+        return ParentModel::with('students.classRoom')
+            ->where('user_id', auth()->id())
+            ->first();
     }
 
     public function render()

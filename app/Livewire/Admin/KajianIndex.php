@@ -3,7 +3,11 @@
 namespace App\Livewire\Admin;
 
 use App\Models\AcademicYear;
+use App\Models\ClassRoom;
 use App\Models\KajianEvent;
+use App\Services\WebPushService;
+use Carbon\Carbon;
+use Illuminate\Support\Facades\DB;
 use Livewire\Component;
 use Livewire\WithPagination;
 
@@ -12,33 +16,54 @@ class KajianIndex extends Component
     use WithPagination;
 
     public $search = '';
+
     public $statusFilter = '';
+
     public $perPage = 10;
 
     // Modal state
     public $showModal = false;
+
     public $showDeleteModal = false;
+
     public $editMode = false;
+
     public $kajianId = null;
 
     // Form fields
     public $title = '';
+
     public $description = '';
+
     public $speaker = '';
+
     public $location = '';
+
     public $date = '';
+
     public $time_start = '';
+
     public $time_end = '';
+
     public $status = 'draft';
+
     public $academic_year_id = '';
+
     public $category = 'kajian';
+
+    public $target_class_ids = [];
 
     // Policy toggles (per-event, disimpan ke policy_overrides JSON)
     public $online_enabled = true;
+
     public $online_requires_proof = true;
+
     public $izin_requires_proof = true;
+
     public $izin_requires_notes = true;
+
     public $guru_hadir_fisik_requires_proof = true;
+
     public $ai_review = true;
 
     protected $rules = [
@@ -52,6 +77,8 @@ class KajianIndex extends Component
         'status' => 'required|in:draft,open,ongoing,closed',
         'academic_year_id' => 'required|exists:academic_years,id',
         'category' => 'required|in:kajian,rapor,pertemuan',
+        'target_class_ids' => 'array',
+        'target_class_ids.*' => 'integer|exists:classes,id',
     ];
 
     public function mount()
@@ -82,7 +109,7 @@ class KajianIndex extends Component
 
     public function openCreateModal()
     {
-        $this->reset(['title', 'description', 'speaker', 'location', 'date', 'time_start', 'time_end', 'status', 'editMode', 'kajianId']);
+        $this->reset(['title', 'description', 'speaker', 'location', 'date', 'time_start', 'time_end', 'status', 'editMode', 'kajianId', 'target_class_ids']);
         $this->status = 'draft';
         $this->category = 'kajian';
         $this->date = now()->format('Y-m-d');
@@ -100,7 +127,7 @@ class KajianIndex extends Component
 
     public function openEditModal($id)
     {
-        $kajian = KajianEvent::findOrFail($id);
+        $kajian = KajianEvent::with('targetClasses')->findOrFail($id);
         $this->kajianId = $id;
         $this->title = $kajian->title;
         $this->description = $kajian->description;
@@ -112,6 +139,7 @@ class KajianIndex extends Component
         $this->status = $kajian->status;
         $this->academic_year_id = $kajian->academic_year_id;
         $this->category = $kajian->category ?? 'kajian';
+        $this->target_class_ids = $kajian->targetClasses->pluck('id')->map(fn ($id) => (string) $id)->toArray();
 
         // Load policy from event (merge config defaults + overrides)
         $policy = $kajian->policy;
@@ -158,18 +186,33 @@ class KajianIndex extends Component
             ],
         ];
 
+        $targetClassIds = collect($this->target_class_ids)
+            ->filter()
+            ->map(fn ($id) => (int) $id)
+            ->unique()
+            ->values()
+            ->all();
+
         if ($this->editMode) {
-            $kajian = KajianEvent::findOrFail($this->kajianId);
-            $kajian->update($data);
+            DB::transaction(function () use ($data, $targetClassIds) {
+                $kajian = KajianEvent::findOrFail($this->kajianId);
+                $kajian->update($data);
+                $kajian->targetClasses()->sync($targetClassIds);
+            });
+
             $this->dispatch('notify', ['type' => 'success', 'message' => 'Kegiatan berhasil diperbarui!']);
         } else {
-            $data['created_by'] = auth()->id();
-            KajianEvent::create($data);
+            DB::transaction(function () use ($data, $targetClassIds) {
+                $data['created_by'] = auth()->id();
+                $kajian = KajianEvent::create($data);
+                $kajian->targetClasses()->sync($targetClassIds);
+            });
+
             $this->dispatch('notify', ['type' => 'success', 'message' => 'Kegiatan berhasil ditambahkan!']);
         }
 
         $this->showModal = false;
-        $this->reset(['title', 'description', 'speaker', 'location', 'date', 'time_start', 'time_end', 'status', 'editMode', 'kajianId', 'category']);
+        $this->reset(['title', 'description', 'speaker', 'location', 'date', 'time_start', 'time_end', 'status', 'editMode', 'kajianId', 'category', 'target_class_ids']);
     }
 
     public function toggleStatus($id)
@@ -179,7 +222,7 @@ class KajianIndex extends Component
         $newStatus = $kajian->status === 'open' ? 'closed' : 'open';
         $kajian->update(['status' => $newStatus]);
 
-        $this->dispatch('notify', ['type' => 'success', 'message' => 'Status kegiatan diubah menjadi ' . ucfirst($newStatus) . '!']);
+        $this->dispatch('notify', ['type' => 'success', 'message' => 'Status kegiatan diubah menjadi '.ucfirst($newStatus).'!']);
     }
 
     public function confirmDelete($id)
@@ -199,28 +242,28 @@ class KajianIndex extends Component
 
     public function sendReminder($id)
     {
-        $kajian = KajianEvent::findOrFail($id);
-        $service = new \App\Services\WebPushService();
+        $kajian = KajianEvent::with('targetClasses')->findOrFail($id);
+        $service = new WebPushService;
 
-        $title = $kajian->category_display . ": " . $kajian->title;
-        $body = "Akan dimulai pada " . $kajian->date->translatedFormat('d M Y') . " jam " . \Carbon\Carbon::parse($kajian->time_start)->format('H:i') . ". " .
-                ($kajian->speaker ? "Pemateri: " . $kajian->speaker . ". " : "") .
-                "Klik untuk melihat detail.";
+        $title = $kajian->category_display.': '.$kajian->title;
+        $body = 'Akan dimulai pada '.$kajian->date->translatedFormat('d M Y').' jam '.Carbon::parse($kajian->time_start)->format('H:i').'. '.
+                ($kajian->speaker ? 'Pemateri: '.$kajian->speaker.'. ' : '').
+                'Klik untuk melihat detail.';
 
-        $result = $service->sendToAllWali($title, $body, '/wali-santri/schedule');
+        $result = $service->sendToWaliForEvent($kajian, $title, $body, '/wali-santri/schedule');
 
         $this->dispatch('notify', [
             'type' => 'success',
-            'message' => "Pengingat dikirim ke {$result['sent']} perangkat (Gagal: {$result['failed']})"
+            'message' => "Pengingat dikirim ke {$result['sent']} perangkat (Gagal: {$result['failed']})",
         ]);
     }
 
     public function render()
     {
-        $kajians = KajianEvent::with('academicYear')
+        $kajians = KajianEvent::with(['academicYear', 'targetClasses'])
             ->when($this->search, function ($query) {
-                $query->where('title', 'like', '%' . $this->search . '%')
-                    ->orWhere('speaker', 'like', '%' . $this->search . '%');
+                $query->where('title', 'like', '%'.$this->search.'%')
+                    ->orWhere('speaker', 'like', '%'.$this->search.'%');
             })
             ->when($this->statusFilter, function ($query) {
                 $query->where('status', $this->statusFilter);
@@ -229,11 +272,13 @@ class KajianIndex extends Component
             ->paginate($this->perPage);
 
         $academicYears = AcademicYear::orderBy('name', 'desc')->get();
+        $allClasses = ClassRoom::where('is_active', true)->orderBy('name')->get();
 
         return view('livewire.admin.kajian-index', [
             'kajians' => $kajians,
             'academicYears' => $academicYears,
-            'categories' => collect(config('event_categories', []))->map(fn($cfg, $key) => [
+            'allClasses' => $allClasses,
+            'categories' => collect(config('event_categories', []))->map(fn ($cfg, $key) => [
                 'value' => $key,
                 'label' => $cfg['label'] ?? ucfirst($key),
             ])->values(),

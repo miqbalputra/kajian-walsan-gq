@@ -96,6 +96,10 @@
                                 <span>{{ $kajian->location }}</span>
                             </div>
                         @endif
+                        <div class="flex items-start gap-2">
+                            <span class="material-symbols-rounded text-lg">groups</span>
+                            <span>{{ $kajian->target_classes_display }}</span>
+                        </div>
                     </div>
 
                     <!-- Toggle Status Button -->
@@ -221,7 +225,28 @@
                             </div>
                         </div>
 
-                                                    <!-- Kategori Kegiatan -->
+                            <!-- Kelas Sasaran -->
+                            <div class="mt-4 bg-blue-50 border border-blue-100 rounded-xl p-4">
+                                <div class="flex items-start gap-2 mb-3">
+                                    <span class="material-symbols-rounded text-blue-600 text-lg">groups</span>
+                                    <div>
+                                        <label class="block text-sm font-semibold text-blue-950">Kelas Sasaran</label>
+                                        <p class="text-xs text-blue-700">Kosongkan jika kegiatan berlaku untuk semua kelas.</p>
+                                    </div>
+                                </div>
+                                <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-40 overflow-y-auto pr-1">
+                                    @foreach($allClasses as $class)
+                                        <label class="flex items-center gap-2 bg-white/80 border border-blue-100 rounded-lg px-3 py-2 text-sm text-slate-700 cursor-pointer hover:bg-white">
+                                            <input type="checkbox" wire:model="target_class_ids" value="{{ $class->id }}"
+                                                class="rounded border-blue-300 text-primary-500 focus:ring-primary-500">
+                                            <span>{{ $class->name }}</span>
+                                        </label>
+                                    @endforeach
+                                </div>
+                                @error('target_class_ids.*') <span class="text-red-500 text-sm block mt-2">{{ $message }}</span> @enderror
+                            </div>
+
+                            <!-- Kategori Kegiatan -->
                             <div>
                                 <label class="block text-sm font-medium text-gray-700 mb-1">Kategori Kegiatan</label>
                                 <select wire:model.live="category"

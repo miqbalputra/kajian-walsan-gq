@@ -5,9 +5,9 @@ namespace App\Livewire\Panitia;
 use App\Models\Attendance;
 use App\Models\KajianEvent;
 use App\Models\ParentModel;
-use Illuminate\Support\Facades\RateLimiter;
-use Illuminate\Support\Facades\Log;
 use App\Services\AttendanceScanService;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\RateLimiter;
 use Livewire\Component;
 
 class Scanner extends Component
@@ -15,11 +15,17 @@ class Scanner extends Component
     protected $listeners = ['refreshScannerData' => '$refresh'];
 
     public $activeEvent = null;
+
     public $searchQuery = '';
+
     public $searchResults = [];
+
     public $showManualModal = false;
+
     public $lastScanResult = null;
+
     public $lastScanSuccess = false;
+
     public $lastScanMessage = '';
 
     public function mount()
@@ -35,18 +41,20 @@ class Scanner extends Component
             $this->lastScanSuccess = false;
 
             // Rate limiting - generous enough for busy check-in lanes but still blocks abuse
-            $key = 'scanner:' . auth()->id();
+            $key = 'scanner:'.auth()->id();
             if (RateLimiter::tooManyAttempts($key, 120)) {
                 $seconds = RateLimiter::availableIn($key);
                 $this->lastScanMessage = "Terlalu banyak percobaan. Tunggu {$seconds} detik.";
                 $this->dispatch('scan-error', message: $this->lastScanMessage);
+
                 return;
             }
             RateLimiter::hit($key, 60);
 
-            if (!$this->activeEvent) {
+            if (! $this->activeEvent) {
                 $this->lastScanMessage = 'Tidak ada kajian yang sedang dibuka.';
                 $this->dispatch('scan-error', message: $this->lastScanMessage);
+
                 return;
             }
 
@@ -70,18 +78,20 @@ class Scanner extends Component
                     'time' => $result['payload']['time'],
                 ];
                 $this->dispatch('scan-success', $result['payload']);
+
                 return;
             }
 
             if ($result['status'] === 'warning') {
                 $this->dispatch('scan-warning', message: $this->lastScanMessage);
+
                 return;
             }
 
             $this->dispatch('scan-error', message: $this->lastScanMessage);
         } catch (\Exception $e) {
-            Log::error('Scanner Error: ' . $e->getMessage());
-            $this->dispatch('scan-error', message: 'Server Error: ' . $e->getMessage());
+            Log::error('Scanner Error: '.$e->getMessage());
+            $this->dispatch('scan-error', message: 'Server Error: '.$e->getMessage());
         }
     }
 
@@ -89,11 +99,13 @@ class Scanner extends Component
     {
         if (strlen($this->searchQuery) >= 2) {
             $this->searchResults = ParentModel::with(['user', 'students.classRoom'])
-                ->whereHas('user', function ($q) {
-                    $q->where('name', 'like', '%' . $this->searchQuery . '%');
-                })
-                ->orWhereHas('students', function ($q) {
-                    $q->where('name', 'like', '%' . $this->searchQuery . '%');
+                ->when($this->activeEvent, fn ($query) => $query->targetedByEvent($this->activeEvent))
+                ->where(function ($query) {
+                    $query->whereHas('user', function ($q) {
+                        $q->where('name', 'like', '%'.$this->searchQuery.'%');
+                    })->orWhereHas('students', function ($q) {
+                        $q->where('name', 'like', '%'.$this->searchQuery.'%');
+                    });
                 })
                 ->take(10)
                 ->get();
@@ -104,16 +116,26 @@ class Scanner extends Component
 
     public function manualCheckIn($parentId)
     {
-        if (!$this->activeEvent) {
+        if (! $this->activeEvent) {
             session()->flash('error', 'Tidak ada kajian aktif.');
+
             return;
         }
 
-        $parent = ParentModel::with('user', 'students')->findOrFail($parentId);
+        $parent = ParentModel::with('user', 'students.classRoom')->findOrFail($parentId);
 
         if ($parent->isPureTeacher()) {
             $this->dispatch('scan-warning', message: 'Guru murni tidak perlu presensi QR/manual. Silakan upload catatan kajian dari dashboard.');
             $this->showManualModal = false;
+
+            return;
+        }
+
+        $this->activeEvent->loadMissing('targetClasses');
+        if (! $this->activeEvent->targetsParent($parent)) {
+            $this->dispatch('scan-error', message: 'Wali santri tidak termasuk kelas sasaran kegiatan ini.');
+            $this->showManualModal = false;
+
             return;
         }
 
@@ -123,16 +145,17 @@ class Scanner extends Component
             ->first();
 
         if ($existingAttendance) {
-            $this->dispatch('scan-warning', message: $parent->user->name . ' sudah tercatat hadir.');
+            $this->dispatch('scan-warning', message: $parent->user->name.' sudah tercatat hadir.');
             $this->showManualModal = false;
+
             return;
         }
 
-        $students = $parent->students;
+        $students = $this->activeEvent->targetedStudentsForParent($parent);
         $childDisplayNames = [];
 
         foreach ($students as $student) {
-            $childDisplayNames[] = $student->name . ($student->classRoom ? ' (' . $student->classRoom->name . ')' : '');
+            $childDisplayNames[] = $student->name.($student->classRoom ? ' ('.$student->classRoom->name.')' : '');
         }
 
         // Record single attendance for manual check-in
@@ -149,7 +172,7 @@ class Scanner extends Component
             'validated_at' => $needsProof ? null : now(),
         ]);
 
-        $parentType = match($parent->type) {
+        $parentType = match ($parent->type) {
             'father' => 'Bapak',
             'mother' => 'Ibu',
             'teacher' => 'Ustadz/ah',
@@ -157,12 +180,12 @@ class Scanner extends Component
         };
 
         $childNameDisplay = count($childDisplayNames) > 0
-            ? (count($childDisplayNames) . " Santri: " . implode(', ', $childDisplayNames))
+            ? (count($childDisplayNames).' Santri: '.implode(', ', $childDisplayNames))
             : 'Tidak ada data santri';
 
         $message = ($parent->isWaliTeacher() && $needsProof)
             ? "Selamat Datang, {$parentType} {$parent->user->name}! Berhasil mencatat, mohon ingatkan untuk upload catatan kajian."
-            : "Selamat Datang, {$parentType} {$parent->user->name}! Berhasil mencatat presensi untuk " . ($students->count() ?: 1) . " santri.";
+            : "Selamat Datang, {$parentType} {$parent->user->name}! Berhasil mencatat presensi untuk ".($students->count() ?: 1).' santri.';
 
         $this->dispatch('scan-success', [
             'message' => $message,
@@ -179,8 +202,9 @@ class Scanner extends Component
     public function cancelAttendance($attendanceId)
     {
         // Security: Only allow cancelling attendance from active event
-        if (!$this->activeEvent) {
+        if (! $this->activeEvent) {
             session()->flash('error', 'Tidak ada kajian aktif.');
+
             return;
         }
 
@@ -189,8 +213,9 @@ class Scanner extends Component
             ->where('kajian_event_id', $this->activeEvent->id)
             ->first();
 
-        if (!$attendance) {
+        if (! $attendance) {
             session()->flash('error', 'Presensi tidak ditemukan.');
+
             return;
         }
 
@@ -210,7 +235,7 @@ class Scanner extends Component
 
     public function getRecentAttendancesProperty()
     {
-        if (!$this->activeEvent) {
+        if (! $this->activeEvent) {
             return collect();
         }
 
@@ -223,7 +248,7 @@ class Scanner extends Component
 
     public function getTotalAttendanceProperty()
     {
-        if (!$this->activeEvent) {
+        if (! $this->activeEvent) {
             return 0;
         }
 

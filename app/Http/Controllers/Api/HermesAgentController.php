@@ -9,7 +9,6 @@ use App\Models\KajianEvent;
 use App\Models\ParentModel;
 use App\Models\Student;
 use App\Models\User;
-use App\Services\AiProviderService;
 use App\Services\CloudinaryService;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Builder;
@@ -18,7 +17,6 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\Rule;
 
 class HermesAgentController extends Controller
@@ -676,8 +674,23 @@ class HermesAgentController extends Controller
             ->get()
             ->keyBy('parent_id');
 
+        $event->loadMissing('targetClasses');
+
         return ParentModel::with(['user', 'students.classRoom'])
             ->when($audience, fn (Builder $query, string $audience) => $this->applyAudienceScope($query, $audience))
+            ->when($audience === 'wali_santri', fn (Builder $query) => $query->targetedByEvent($event))
+            ->when($audience === null && ! $event->targetsAllClasses(), function (Builder $query) use ($event) {
+                $targetClassIds = $event->targetClassIds()->all();
+
+                $query->where(function (Builder $query) use ($targetClassIds) {
+                    $query->where(function (Builder $guardianQuery) use ($targetClassIds) {
+                        $guardianQuery->whereIn('type', ['father', 'mother'])
+                            ->whereHas('students', fn (Builder $studentQuery) => $studentQuery->whereIn('students.class_id', $targetClassIds));
+                    })->orWhere(function (Builder $teacherQuery) {
+                        $teacherQuery->where('type', 'teacher')->orWhere('is_teacher', true);
+                    });
+                });
+            })
             ->when($search, function (Builder $query, string $search) {
                 $query->where(function (Builder $query) use ($search) {
                     $query->whereHas('user', function (Builder $userQuery) use ($search) {
@@ -749,7 +762,7 @@ class HermesAgentController extends Controller
 
     protected function eventHasEnded(KajianEvent $event): bool
     {
-        $end = Carbon::parse($event->date->format('Y-m-d') . ' ' . Carbon::parse($event->time_end)->format('H:i:s'));
+        $end = Carbon::parse($event->date->format('Y-m-d').' '.Carbon::parse($event->time_end)->format('H:i:s'));
 
         return now()->gt($end) || $event->status === 'closed';
     }

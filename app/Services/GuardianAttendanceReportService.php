@@ -10,10 +10,11 @@ use Illuminate\Support\Collection;
 
 class GuardianAttendanceReportService
 {
-    public function guardians(): Collection
+    public function guardians(?KajianEvent $event = null): Collection
     {
         return ParentModel::with(['user', 'students.classRoom'])
             ->whereIn('type', ['father', 'mother'])
+            ->when($event, fn ($query) => $query->targetedByEvent($event))
             ->orderBy('id')
             ->get();
     }
@@ -31,7 +32,9 @@ class GuardianAttendanceReportService
             ->get()
             ->keyBy('parent_id');
 
-        return $this->guardians()
+        $event->loadMissing('targetClasses');
+
+        return $this->guardians($event)
             ->map(function (ParentModel $guardian) use ($attendances, $event, $eventState) {
                 $attendance = $attendances->get($guardian->id);
 
@@ -66,6 +69,11 @@ class GuardianAttendanceReportService
                     return null;
                 }
 
+                $event->loadMissing('targetClasses');
+                if (! $event->targetsParent($guardian)) {
+                    return null;
+                }
+
                 return $this->rowFromAttendance($guardian, $event, $attendance, $this->eventState($event));
             })
             ->filter()
@@ -90,6 +98,7 @@ class GuardianAttendanceReportService
     public function performance(?string $fromDate, ?string $toDate, ?string $search = null): Collection
     {
         $events = KajianEvent::query()
+            ->with('targetClasses')
             ->when($fromDate, fn ($query) => $query->whereDate('date', '>=', $fromDate))
             ->when($toDate, fn ($query) => $query->whereDate('date', '<=', $toDate))
             ->whereDate('date', '<=', today())
@@ -99,7 +108,7 @@ class GuardianAttendanceReportService
 
         $attendances = Attendance::whereIn('kajian_event_id', $events->pluck('id'))
             ->get()
-            ->groupBy(fn (Attendance $attendance) => $attendance->kajian_event_id . ':' . $attendance->parent_id);
+            ->groupBy(fn (Attendance $attendance) => $attendance->kajian_event_id.':'.$attendance->parent_id);
 
         return $this->guardians()
             ->when($search, function (Collection $guardians) use ($search) {
@@ -126,8 +135,13 @@ class GuardianAttendanceReportService
                 ];
 
                 foreach ($events as $event) {
+                    $event->loadMissing('targetClasses');
+                    if (! $event->targetsParent($guardian)) {
+                        continue;
+                    }
+
                     $eventState = $this->eventState($event);
-                    $attendance = $attendances->get($event->id . ':' . $guardian->id)?->first();
+                    $attendance = $attendances->get($event->id.':'.$guardian->id)?->first();
                     $derived = $this->deriveStatus($attendance, $eventState);
 
                     if ($eventState === 'ended') {
@@ -160,7 +174,7 @@ class GuardianAttendanceReportService
                     'email' => $guardian->user?->email ?? '-',
                     'guardian_type' => $guardian->type_display,
                     'children' => $this->childDisplay($guardian),
-                    'total_events' => $events->count(),
+                    'total_events' => $events->filter(fn (KajianEvent $event) => $event->targetsParent($guardian))->count(),
                     'participation_rate' => $rate,
                 ]);
             })
@@ -222,8 +236,8 @@ class GuardianAttendanceReportService
 
     public function eventState(KajianEvent $event): string
     {
-        $start = Carbon::parse($event->date->format('Y-m-d') . ' ' . Carbon::parse($event->time_start)->format('H:i:s'));
-        $end = Carbon::parse($event->date->format('Y-m-d') . ' ' . Carbon::parse($event->time_end)->format('H:i:s'));
+        $start = Carbon::parse($event->date->format('Y-m-d').' '.Carbon::parse($event->time_start)->format('H:i:s'));
+        $end = Carbon::parse($event->date->format('Y-m-d').' '.Carbon::parse($event->time_end)->format('H:i:s'));
 
         if (now()->lt($start)) {
             return 'not_started';
@@ -305,7 +319,7 @@ class GuardianAttendanceReportService
     protected function childDisplay(ParentModel $guardian): string
     {
         return $guardian->students
-            ->map(fn ($student) => $student->name . ($student->classRoom ? ' (' . $student->classRoom->name . ')' : ''))
+            ->map(fn ($student) => $student->name.($student->classRoom ? ' ('.$student->classRoom->name.')' : ''))
             ->filter()
             ->join(', ') ?: '-';
     }

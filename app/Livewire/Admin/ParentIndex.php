@@ -377,7 +377,7 @@ class ParentIndex extends Component
 
     public function openManualAttendanceModal($id)
     {
-        $this->manualParent = ParentModel::with('user')->findOrFail($id);
+        $this->manualParent = ParentModel::with('user', 'students.classRoom')->findOrFail($id);
         $this->parentId = $id;
         $this->manualKajianEventId = KajianEvent::orderBy('date', 'desc')->first()?->id ?? '';
         $this->manualStatus = 'hadir_fisik';
@@ -396,6 +396,21 @@ class ParentIndex extends Component
         ], [
             'manualProofFile.required' => $this->manualStatus === 'hadir_online' ? 'Catatan kajian wajib diupload.' : 'Surat pernyataan izin wajib diupload.',
         ]);
+
+        $event = KajianEvent::with('targetClasses')->findOrFail($this->manualKajianEventId);
+        $parent = ParentModel::with('user', 'students.classRoom')->findOrFail($this->parentId);
+
+        if (! $event->targetsParent($parent)) {
+            $this->dispatch('notify', ['type' => 'error', 'message' => 'Wali santri ini tidak termasuk kelas sasaran kegiatan tersebut.']);
+
+            return;
+        }
+
+        if (! in_array($this->manualStatus, $event->policy['statuses'] ?? [], true)) {
+            $this->dispatch('notify', ['type' => 'error', 'message' => 'Status presensi tidak tersedia untuk aturan kegiatan ini.']);
+
+            return;
+        }
 
         // Check for existing attendance
         $existing = Attendance::where('parent_id', $this->parentId)
@@ -417,6 +432,7 @@ class ParentIndex extends Component
         Attendance::create([
             'parent_id' => $this->parentId,
             'kajian_event_id' => $this->manualKajianEventId,
+            'student_id' => $event->targetedStudentsForParent($parent)->first()?->id,
             'status' => $this->manualStatus,
             'method' => 'manual',
             'proof_file' => $proofPath,
@@ -427,7 +443,6 @@ class ParentIndex extends Component
         ]);
 
         // Update kajian attendance count
-        $event = KajianEvent::find($this->manualKajianEventId);
         $event->updateAttendanceCount();
 
         $this->showManualAttendanceModal = false;

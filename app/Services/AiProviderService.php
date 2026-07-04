@@ -35,6 +35,7 @@ class AiProviderService
             return Crypt::decryptString($encrypted);
         } catch (\Throwable $exception) {
             Log::warning('[AI] Failed to decrypt API key', ['error' => $exception->getMessage()]);
+
             return null;
         }
     }
@@ -54,7 +55,7 @@ class AiProviderService
             ->get($this->modelsUrl($endpoint));
 
         if (! $response->successful()) {
-            throw new \RuntimeException('Gagal mengambil model AI: HTTP ' . $response->status());
+            throw new \RuntimeException('Gagal mengambil model AI: HTTP '.$response->status());
         }
 
         return collect($response->json('data', []))
@@ -93,7 +94,7 @@ class AiProviderService
                 'body' => Str::limit($response->body(), 500),
             ]);
 
-            throw new \RuntimeException('AI gagal merespons: HTTP ' . $response->status());
+            throw new \RuntimeException('AI gagal merespons: HTTP '.$response->status());
         }
 
         return $response->json('choices.0.message.content', '');
@@ -136,12 +137,12 @@ class AiProviderService
                         'type' => 'text',
                         'text' => implode("\n", [
                             'Tugas: nilai apakah gambar/file ini layak disetujui sebagai bukti presensi.',
-                            'Jenis bukti yang diharapkan: ' . $expectedDocument . '.',
-                            'Nama wali: ' . ($attendance->parent?->user?->name ?? '-'),
-                            'Status presensi: ' . $attendance->status_display,
-                            'Kajian: ' . ($attendance->kajianEvent?->title ?? '-'),
-                            'Tanggal kajian: ' . optional($attendance->kajianEvent?->date)->format('d/m/Y'),
-                            'Catatan user: ' . ($attendance->notes ?: '-'),
+                            'Jenis bukti yang diharapkan: '.$expectedDocument.'.',
+                            'Nama wali: '.($attendance->parent?->user?->name ?? '-'),
+                            'Status presensi: '.$attendance->status_display,
+                            'Kajian: '.($attendance->kajianEvent?->title ?? '-'),
+                            'Tanggal kajian: '.optional($attendance->kajianEvent?->date)->format('d/m/Y'),
+                            'Catatan user: '.($attendance->notes ?: '-'),
                             '',
                             'Kriteria approve untuk catatan kajian: terlihat seperti catatan kajian, berisi poin materi atau ringkasan yang relevan, bukan gambar kosong/random.',
                             'Kriteria approve untuk izin: terlihat seperti surat/pernyataan izin atau keterangan izin yang wajar, bukan gambar kosong/random.',
@@ -164,7 +165,7 @@ class AiProviderService
             $result = [
                 'decision' => 'needs_review',
                 'confidence' => 0,
-                'reason' => 'AI memberi respons tidak terstruktur: ' . Str::limit($content, 180),
+                'reason' => 'AI memberi respons tidak terstruktur: '.Str::limit($content, 180),
             ];
         }
 
@@ -276,6 +277,7 @@ class AiProviderService
             ->get()
             ->map(function (Attendance $attendance) {
                 $student = $attendance->parent?->students?->first();
+
                 return [
                     'id' => $attendance->id,
                     'wali' => $attendance->parent?->user?->name,
@@ -289,7 +291,7 @@ class AiProviderService
                     'validator' => $attendance->validator?->name,
                     'catatan' => $attendance->notes,
                     'alasan_ditolak' => $attendance->rejection_reason,
-                    'ai' => trim(($attendance->ai_validation_status ?? '-') . ' ' . ($attendance->ai_validation_confidence ? "({$attendance->ai_validation_confidence}%)" : '')),
+                    'ai' => trim(($attendance->ai_validation_status ?? '-').' '.($attendance->ai_validation_confidence ? "({$attendance->ai_validation_confidence}%)" : '')),
                     'bukti_url' => CloudinaryService::getDisplayUrl($attendance->proof_file),
                 ];
             })
@@ -378,13 +380,27 @@ class AiProviderService
             ->get()
             ->keyBy('parent_id');
 
+        $event->loadMissing('targetClasses');
+
         $parents = ParentModel::with(['user', 'students.classRoom'])
+            ->when(! $event->targetsAllClasses(), function ($query) use ($event) {
+                $targetClassIds = $event->targetClassIds()->all();
+
+                $query->where(function ($query) use ($targetClassIds) {
+                    $query->where(function ($guardianQuery) use ($targetClassIds) {
+                        $guardianQuery->whereIn('type', ['father', 'mother'])
+                            ->whereHas('students', fn ($studentQuery) => $studentQuery->whereIn('students.class_id', $targetClassIds));
+                    })->orWhere(function ($teacherQuery) {
+                        $teacherQuery->where('type', 'teacher')->orWhere('is_teacher', true);
+                    });
+                });
+            })
             ->orderBy('id')
             ->get();
 
-        $roster = $parents->map(function (ParentModel $parent) use ($attendances) {
+        $roster = $parents->map(function (ParentModel $parent) use ($attendances, $event) {
             $attendance = $attendances->get($parent->id);
-            $student = $parent->students->first();
+            $student = $event->targetedStudentsForParent($parent)->first() ?? $parent->students->first();
             $status = $attendance?->status ?? Attendance::STATUS_ALPHA;
             $validation = $attendance?->validation_status;
             $reason = null;
@@ -588,7 +604,7 @@ class AiProviderService
             return $endpoint;
         }
 
-        return $endpoint . '/chat/completions';
+        return $endpoint.'/chat/completions';
     }
 
     protected function modelsUrl(string $endpoint): string
@@ -596,9 +612,9 @@ class AiProviderService
         $endpoint = rtrim($endpoint, '/');
 
         if (Str::endsWith($endpoint, '/chat/completions')) {
-            return Str::beforeLast($endpoint, '/chat/completions') . '/models';
+            return Str::beforeLast($endpoint, '/chat/completions').'/models';
         }
 
-        return $endpoint . '/models';
+        return $endpoint.'/models';
     }
 }

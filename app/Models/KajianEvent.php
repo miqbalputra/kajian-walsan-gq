@@ -2,11 +2,13 @@
 
 namespace App\Models;
 
+use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
-use Carbon\Carbon;
+use Illuminate\Support\Collection;
 
 class KajianEvent extends Model
 {
@@ -54,6 +56,16 @@ class KajianEvent extends Model
     }
 
     /**
+     * Get classes targeted by this event.
+     * Empty pivot means all classes for backward compatibility.
+     */
+    public function targetClasses(): BelongsToMany
+    {
+        return $this->belongsToMany(ClassRoom::class, 'kajian_event_class', 'kajian_event_id', 'class_id')
+            ->withTimestamps();
+    }
+
+    /**
      * Get all attendance records for this event.
      */
     public function attendances(): HasMany
@@ -98,7 +110,7 @@ class KajianEvent extends Model
      */
     public function isPast(): bool
     {
-        return $this->date->isPast() && !$this->isToday();
+        return $this->date->isPast() && ! $this->isToday();
     }
 
     /**
@@ -124,6 +136,7 @@ class KajianEvent extends Model
     {
         $start = Carbon::parse($this->time_start)->format('H:i');
         $end = Carbon::parse($this->time_end)->format('H:i');
+
         return "{$start} - {$end} WIB";
     }
 
@@ -196,7 +209,69 @@ class KajianEvent extends Model
         if ($activeYear) {
             return $query->where('academic_year_id', $activeYear->id);
         }
+
         return $query;
+    }
+
+    /**
+     * Event target class IDs. Empty = all classes.
+     */
+    public function targetClassIds(): Collection
+    {
+        if ($this->relationLoaded('targetClasses')) {
+            return $this->targetClasses->pluck('id')->values();
+        }
+
+        return $this->targetClasses()->pluck('classes.id')->values();
+    }
+
+    public function targetsAllClasses(): bool
+    {
+        return $this->targetClassIds()->isEmpty();
+    }
+
+    /**
+     * Check whether a parent/guardian is counted for this event.
+     * Pure teachers are not scoped by wali class targets.
+     */
+    public function targetsParent(ParentModel $parent): bool
+    {
+        if ($parent->isPureTeacher() || $this->targetsAllClasses()) {
+            return true;
+        }
+
+        return $this->targetedStudentsForParent($parent)->isNotEmpty();
+    }
+
+    /**
+     * Students from this parent that match event target classes.
+     */
+    public function targetedStudentsForParent(ParentModel $parent): Collection
+    {
+        $students = $parent->relationLoaded('students')
+            ? $parent->students
+            : $parent->students()->with('classRoom')->get();
+
+        if ($this->targetsAllClasses()) {
+            return $students->values();
+        }
+
+        $targetClassIds = $this->targetClassIds()->map(fn ($id) => (int) $id)->all();
+
+        return $students
+            ->filter(fn ($student) => in_array((int) $student->class_id, $targetClassIds, true))
+            ->values();
+    }
+
+    public function getTargetClassesDisplayAttribute(): string
+    {
+        if ($this->targetsAllClasses()) {
+            return 'Semua kelas';
+        }
+
+        return $this->relationLoaded('targetClasses')
+            ? $this->targetClasses->pluck('name')->join(', ')
+            : $this->targetClasses()->pluck('name')->join(', ');
     }
 
     /**
@@ -204,7 +279,7 @@ class KajianEvent extends Model
      */
     public function getCategoryDisplayAttribute(): string
     {
-        return config('event_categories.' . $this->category . '.label', ucfirst($this->category ?? 'kajian'));
+        return config('event_categories.'.$this->category.'.label', ucfirst($this->category ?? 'kajian'));
     }
 
     /**
@@ -213,8 +288,9 @@ class KajianEvent extends Model
     public function getPolicyAttribute(): array
     {
         $category = $this->category ?? 'kajian';
-        $defaults = config('event_categories.' . $category, config('event_categories.kajian'));
+        $defaults = config('event_categories.'.$category, config('event_categories.kajian'));
         $overrides = $this->policy_overrides ?? [];
+
         return array_merge($defaults, $overrides);
     }
 

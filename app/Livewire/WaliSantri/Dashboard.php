@@ -4,6 +4,7 @@ namespace App\Livewire\WaliSantri;
 
 use App\Models\Attendance;
 use App\Models\KajianEvent;
+use App\Models\KajianFeedback;
 use App\Models\ParentModel;
 use App\Services\AiProviderService;
 use App\Services\CloudinaryService;
@@ -11,7 +12,6 @@ use BaconQrCode\Renderer\Image\SvgImageBackEnd;
 use BaconQrCode\Renderer\ImageRenderer;
 use BaconQrCode\Renderer\RendererStyle\RendererStyle;
 use BaconQrCode\Writer;
-use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Log;
 use Livewire\Component;
 use Livewire\WithFileUploads;
@@ -21,22 +21,37 @@ class Dashboard extends Component
     use WithFileUploads;
 
     public $showQrModal = false;
+
     public $showPhysicalModal = false;
+
     public $showOnlineModal = false;
+
     public $showIzinModal = false;
+
     public $showReuploadModal = false;
+
     public $showFeedbackModal = false;
 
     public $feedbackEventId = null;
+
     public $ratingMateri = 0;
+
     public $ratingOperasional = 0;
+
     public $feedbackComment = '';
+
     public $proofPhoto = null;
+
     public $izinDocument = null;
+
     public $reuploadFile = null;
+
     public $reuploadAttendanceId = null;
+
     public $reuploadIsPendingReplace = false; // true jika mengganti foto pending (bukan rejected)
+
     public $reuploadIsInitialTeacherNote = false;
+
     public $notes = '';
 
     protected $rules = [
@@ -49,7 +64,7 @@ class Dashboard extends Component
         $parent = ParentModel::where('user_id', auth()->id())->first();
 
         // Auto-create teacher profile if not exists
-        if (!$parent && auth()->check() && auth()->user()->isGuru()) {
+        if (! $parent && auth()->check() && auth()->user()->isGuru()) {
             $parent = ParentModel::create([
                 'user_id' => auth()->id(),
                 'type' => 'teacher',
@@ -62,26 +77,34 @@ class Dashboard extends Component
 
     public function getActiveEventProperty()
     {
-        return KajianEvent::activeForAttendance();
+        if (! $this->parent) {
+            return null;
+        }
+
+        return KajianEvent::openForAttendance()
+            ->with('targetClasses')
+            ->get()
+            ->first(fn (KajianEvent $event) => $event->targetsParent($this->parent));
     }
 
     public function getQrCodeSvgProperty()
     {
-        if (!$this->parent || $this->parent->isPureTeacher()) {
+        if (! $this->parent || $this->parent->isPureTeacher()) {
             return '';
         }
 
         $renderer = new ImageRenderer(
             new RendererStyle(250),
-            new SvgImageBackEnd()
+            new SvgImageBackEnd
         );
         $writer = new Writer($renderer);
+
         return $writer->writeString($this->parent->qr_code_string);
     }
 
     public function getMyAttendanceTodayProperty()
     {
-        if (!$this->parent || !$this->activeEvent) {
+        if (! $this->parent || ! $this->activeEvent) {
             return null;
         }
 
@@ -111,21 +134,23 @@ class Dashboard extends Component
      */
     public function getRejectedAttendancesProperty()
     {
-        if (!$this->parent) {
+        if (! $this->parent) {
             return collect();
         }
 
-        return Attendance::with('kajianEvent')
+        return Attendance::with('kajianEvent.targetClasses')
             ->where('parent_id', $this->parent->id)
             ->where('validation_status', 'rejected')
             ->whereHas('kajianEvent', fn ($query) => $query->where('status', 'open'))
             ->orderByDesc('updated_at')
-            ->get();
+            ->get()
+            ->filter(fn (Attendance $attendance) => $attendance->kajianEvent?->targetsParent($this->parent))
+            ->values();
     }
 
     public function getAttendanceHistoryProperty()
     {
-        if (!$this->parent) {
+        if (! $this->parent) {
             return collect();
         }
 
@@ -144,7 +169,7 @@ class Dashboard extends Component
      */
     public function getPendingFeedbackEventsProperty()
     {
-        if (!$this->parent) {
+        if (! $this->parent) {
             return collect();
         }
 
@@ -170,11 +195,17 @@ class Dashboard extends Component
      */
     public function getUpcomingEventProperty()
     {
+        if (! $this->parent) {
+            return null;
+        }
+
         return KajianEvent::where('date', '>', today())
             ->whereIn('status', ['draft', 'open', 'ongoing']) // draft di masa depan dianggap scheduled
+            ->with('targetClasses')
             ->orderBy('date')
             ->orderBy('time_start')
-            ->first();
+            ->get()
+            ->first(fn (KajianEvent $event) => $event->targetsParent($this->parent));
     }
 
     public function openPhysicalAttendanceModal(): void
@@ -245,8 +276,9 @@ class Dashboard extends Component
             'notes' => 'nullable|string|max:500',
         ]);
 
-        if (!$this->activeEvent || !$this->parent || !$this->isGuru) {
+        if (! $this->activeEvent || ! $this->parent || ! $this->isGuru || ! $this->ensureEligibleForActiveEvent()) {
             session()->flash('error', 'Tidak dapat mengirim catatan hadir langsung.');
+
             return;
         }
 
@@ -255,12 +287,14 @@ class Dashboard extends Component
         if ($attendance && ($attendance->status !== Attendance::STATUS_HADIR_FISIK || $attendance->proof_file)) {
             session()->flash('error', 'Anda sudah tercatat pada kajian ini.');
             $this->showPhysicalModal = false;
+
             return;
         }
 
-        if (!$attendance && $this->isWaliGuru) {
+        if (! $attendance && $this->isWaliGuru) {
             session()->flash('error', 'Silakan scan QR di lokasi terlebih dahulu, lalu upload catatan kajian.');
             $this->showPhysicalModal = false;
+
             return;
         }
 
@@ -283,7 +317,7 @@ class Dashboard extends Component
             $attendance = Attendance::create([
                 'kajian_event_id' => $this->activeEvent->id,
                 'parent_id' => $this->parent->id,
-                'student_id' => $this->parent->students()->first()?->id,
+                'student_id' => $this->targetedStudentIdForActiveEvent(),
                 'status' => Attendance::STATUS_HADIR_FISIK,
                 'method' => Attendance::METHOD_UPLOAD,
                 'validation_status' => Attendance::VALIDATION_PENDING,
@@ -307,8 +341,16 @@ class Dashboard extends Component
             'proofPhoto' => 'required|image|mimes:jpg,jpeg,png|max:2048',
         ]);
 
-        if (!$this->activeEvent || !$this->parent) {
+        if (! $this->activeEvent || ! $this->parent || ! $this->ensureEligibleForActiveEvent()) {
             session()->flash('error', 'Tidak dapat melakukan presensi.');
+
+            return;
+        }
+
+        if (! $this->activeEventAllowsStatus(Attendance::STATUS_HADIR_ONLINE)) {
+            session()->flash('error', 'Presensi online tidak tersedia untuk kegiatan ini.');
+            $this->showOnlineModal = false;
+
             return;
         }
 
@@ -316,6 +358,7 @@ class Dashboard extends Component
         if ($this->myAttendanceToday) {
             session()->flash('error', 'Anda sudah tercatat pada kajian ini.');
             $this->showOnlineModal = false;
+
             return;
         }
 
@@ -333,7 +376,7 @@ class Dashboard extends Component
         $attendance = Attendance::create([
             'kajian_event_id' => $this->activeEvent->id,
             'parent_id' => $this->parent->id,
-            'student_id' => $this->parent->students()->first()?->id,
+            'student_id' => $this->targetedStudentIdForActiveEvent(),
             'status' => 'hadir_online',
             'method' => 'upload',
             'validation_status' => 'pending',
@@ -357,8 +400,16 @@ class Dashboard extends Component
             'notes' => 'required|string|max:500',
         ]);
 
-        if (!$this->activeEvent || !$this->parent) {
+        if (! $this->activeEvent || ! $this->parent || ! $this->ensureEligibleForActiveEvent()) {
             session()->flash('error', 'Tidak dapat mengirim izin.');
+
+            return;
+        }
+
+        if (! $this->activeEventAllowsStatus(Attendance::STATUS_IZIN)) {
+            session()->flash('error', 'Izin tidak tersedia untuk kegiatan ini.');
+            $this->showIzinModal = false;
+
             return;
         }
 
@@ -366,6 +417,7 @@ class Dashboard extends Component
         if ($this->myAttendanceToday) {
             session()->flash('error', 'Anda sudah tercatat pada kajian ini.');
             $this->showIzinModal = false;
+
             return;
         }
 
@@ -383,7 +435,7 @@ class Dashboard extends Component
         $attendance = Attendance::create([
             'kajian_event_id' => $this->activeEvent->id,
             'parent_id' => $this->parent->id,
-            'student_id' => $this->parent->students()->first()?->id,
+            'student_id' => $this->targetedStudentIdForActiveEvent(),
             'status' => 'izin',
             'method' => 'upload',
             'validation_status' => 'pending',
@@ -421,8 +473,8 @@ class Dashboard extends Component
             'reuploadFile' => 'required|image|mimes:jpg,jpeg,png|max:2048',
         ], [
             'reuploadFile.required' => 'File bukti wajib diupload.',
-            'reuploadFile.mimes'    => 'Format file harus JPG atau PNG.',
-            'reuploadFile.max'      => 'Ukuran file maksimal 2MB.',
+            'reuploadFile.mimes' => 'Format file harus JPG atau PNG.',
+            'reuploadFile.max' => 'Ukuran file maksimal 2MB.',
         ]);
 
         // Boleh replace jika status rejected ATAU pending (belum diapprove)
@@ -432,15 +484,17 @@ class Dashboard extends Component
             ->with('kajianEvent')
             ->first();
 
-        if (!$attendance) {
+        if (! $attendance) {
             session()->flash('error', 'Data presensi tidak ditemukan atau sudah divalidasi.');
             $this->showReuploadModal = false;
+
             return;
         }
 
-        if (!$attendance->kajianEvent?->isOpen()) {
+        if (! $attendance->kajianEvent?->isOpen()) {
             session()->flash('error', 'Presensi kajian ini sudah ditutup.');
             $this->showReuploadModal = false;
+
             return;
         }
 
@@ -457,16 +511,16 @@ class Dashboard extends Component
             $attendance->status === 'izin' => 'izin-documents',
             default => 'attendance-proofs',
         };
-        $result  = $cloudinary->upload($this->reuploadFile, $folder);
-        $path    = $result['url'];
+        $result = $cloudinary->upload($this->reuploadFile, $folder);
+        $path = $result['url'];
 
         // Update record
         $attendance->update([
-            'proof_file'       => $path,
+            'proof_file' => $path,
             'validation_status' => 'pending', // reset ke pending (baik dari rejected maupun replace)
             'rejection_reason' => null,
-            'validated_by'     => null,
-            'validated_at'     => null,
+            'validated_by' => null,
+            'validated_at' => null,
         ]);
 
         $this->runAiReview($attendance->fresh());
@@ -487,8 +541,9 @@ class Dashboard extends Component
 
     public function cancelSubmittedAttendance(int $attendanceId): void
     {
-        if (!$this->parent) {
+        if (! $this->parent) {
             session()->flash('error', 'Data akun tidak ditemukan.');
+
             return;
         }
 
@@ -506,13 +561,15 @@ class Dashboard extends Component
             ->with('kajianEvent')
             ->first();
 
-        if (!$attendance) {
+        if (! $attendance) {
             session()->flash('error', 'Kiriman tidak ditemukan atau sudah divalidasi admin.');
+
             return;
         }
 
-        if (!$attendance->kajianEvent?->isOpen()) {
+        if (! $attendance->kajianEvent?->isOpen()) {
             session()->flash('error', 'Presensi kajian ini sudah ditutup.');
+
             return;
         }
 
@@ -523,6 +580,7 @@ class Dashboard extends Component
         if ($attendance->method === Attendance::METHOD_UPLOAD) {
             $attendance->forceDelete();
             session()->flash('message', 'Kiriman berhasil dibatalkan. Silakan pilih presensi dari awal.');
+
             return;
         }
 
@@ -543,6 +601,7 @@ class Dashboard extends Component
             ]);
 
             session()->flash('message', 'Upload catatan berhasil dibatalkan. Presensi QR tetap tercatat; silakan upload catatan yang benar.');
+
             return;
         }
 
@@ -561,9 +620,44 @@ class Dashboard extends Component
         }
     }
 
+    protected function ensureEligibleForActiveEvent(): bool
+    {
+        if (! $this->activeEvent || ! $this->parent) {
+            return false;
+        }
+
+        $this->activeEvent->loadMissing('targetClasses');
+
+        if ($this->activeEvent->targetsParent($this->parent)) {
+            return true;
+        }
+
+        session()->flash('error', 'Akun Anda tidak termasuk kelas sasaran kegiatan ini.');
+
+        return false;
+    }
+
+    protected function targetedStudentIdForActiveEvent(): ?int
+    {
+        if (! $this->activeEvent || ! $this->parent) {
+            return null;
+        }
+
+        return $this->activeEvent->targetedStudentsForParent($this->parent)->first()?->id;
+    }
+
+    protected function activeEventAllowsStatus(string $status): bool
+    {
+        if (! $this->activeEvent) {
+            return false;
+        }
+
+        return in_array($status, $this->activeEvent->policy['statuses'] ?? [], true);
+    }
+
     protected function clearDeletedAttendanceForActiveEvent(): void
     {
-        if (!$this->activeEvent || !$this->parent) {
+        if (! $this->activeEvent || ! $this->parent) {
             return;
         }
 
@@ -586,7 +680,7 @@ class Dashboard extends Component
      */
     protected function deleteOldProofFile(string $url): void
     {
-        if (!CloudinaryService::isCloudinaryUrl($url)) {
+        if (! CloudinaryService::isCloudinaryUrl($url)) {
             return;
         }
 
@@ -620,7 +714,7 @@ class Dashboard extends Component
 
         $overallRating = round(($this->ratingMateri + $this->ratingOperasional) / 2, 1);
 
-        \App\Models\KajianFeedback::updateOrCreate(
+        KajianFeedback::updateOrCreate(
             ['kajian_event_id' => $this->feedbackEventId, 'user_id' => auth()->id()],
             [
                 'rating' => $overallRating,
@@ -628,7 +722,7 @@ class Dashboard extends Component
                 'extra_feedback' => [
                     'materi' => $this->ratingMateri,
                     'operasional' => $this->ratingOperasional,
-                ]
+                ],
             ]
         );
 
@@ -636,6 +730,7 @@ class Dashboard extends Component
         $this->reset(['ratingMateri', 'ratingOperasional', 'feedbackComment', 'feedbackEventId']);
         session()->flash('message', 'Terima kasih atas masukan Anda!');
     }
+
     public function render()
     {
         return view('livewire.wali-santri.dashboard')

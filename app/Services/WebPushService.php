@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Models\KajianEvent;
 use App\Models\PushSubscription;
 use Illuminate\Support\Facades\Log;
 use Minishlink\WebPush\Subscription;
@@ -10,7 +11,9 @@ use Minishlink\WebPush\WebPush;
 class WebPushService
 {
     protected string $publicKey;
+
     protected string $privateKey;
+
     protected string $subject;
 
     public function __construct()
@@ -33,17 +36,42 @@ class WebPushService
     }
 
     /**
+     * Kirim notifikasi ke wali santri peserta kegiatan.
+     */
+    public function sendToWaliForEvent(KajianEvent $event, string $title, string $body, string $url = '/wali-santri'): array
+    {
+        $event->loadMissing('targetClasses');
+
+        if ($event->targetsAllClasses()) {
+            return $this->sendToAllWali($title, $body, $url);
+        }
+
+        $targetClassIds = $event->targetClassIds()->all();
+        $subscriptions = PushSubscription::whereHas('user.role', function ($query) {
+            $query->where('name', 'wali_santri');
+        })
+            ->whereHas('user.parentProfile.students', function ($query) use ($targetClassIds) {
+                $query->whereIn('students.class_id', $targetClassIds);
+            })
+            ->get();
+
+        return $this->sendToSubscriptions($subscriptions, $title, $body, $url);
+    }
+
+    /**
      * Kirim notifikasi ke kumpulan subscription.
      */
     public function sendToSubscriptions($subscriptions, string $title, string $body, string $url = '/'): array
     {
         if (empty($this->publicKey) || empty($this->privateKey)) {
             Log::warning('[WebPush] VAPID keys not configured');
+
             return ['sent' => 0, 'failed' => $subscriptions->count(), 'total' => $subscriptions->count()];
         }
 
-        if (!class_exists(WebPush::class) || !class_exists(Subscription::class)) {
+        if (! class_exists(WebPush::class) || ! class_exists(Subscription::class)) {
             Log::error('[WebPush] minishlink/web-push is not installed. Run composer install/update before sending push notifications.');
+
             return ['sent' => 0, 'failed' => $subscriptions->count(), 'total' => $subscriptions->count()];
         }
 
@@ -86,6 +114,7 @@ class WebPushService
 
             if ($report->isSuccess()) {
                 $sent++;
+
                 continue;
             }
 
