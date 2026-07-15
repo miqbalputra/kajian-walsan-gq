@@ -6,6 +6,11 @@
             <p class="text-gray-500">Kelola data siswa/santri</p>
         </div>
         <div class="flex gap-3">
+            <button wire:click="exportWaliSantri"
+                class="inline-flex items-center justify-center gap-2 px-4 py-3 bg-green-500 text-white rounded-xl font-semibold hover:bg-green-600 transition-colors">
+                <span class="material-symbols-rounded">table_chart</span>
+                Export Excel (.xlsx)
+            </button>
             <button wire:click="$set('showImportModal', true)"
                 class="inline-flex items-center justify-center gap-2 px-4 py-3 bg-white border border-gray-200 text-gray-700 rounded-xl font-semibold hover:bg-gray-50 transition-colors">
                 <span class="material-symbols-rounded">upload_file</span>

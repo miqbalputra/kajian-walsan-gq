@@ -8,6 +8,11 @@ use App\Models\Student;
 use Livewire\Component;
 use Livewire\WithPagination;
 use Maatwebsite\Excel\Facades\Excel;
+use PhpOffice\PhpSpreadsheet\Spreadsheet;
+use PhpOffice\PhpSpreadsheet\Style\Alignment;
+use PhpOffice\PhpSpreadsheet\Style\Border;
+use PhpOffice\PhpSpreadsheet\Style\Fill;
+use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
 
 class StudentIndex extends Component
 {
@@ -143,6 +148,97 @@ class StudentIndex extends Component
         $this->showDeleteModal = false;
         $this->studentId = null;
         $this->dispatch('notify', ['type' => 'success', 'message' => 'Siswa berhasil dihapus!']);
+    }
+
+    /**
+     * Export seluruh data identitas santri beserta orang tuanya (ayah & ibu)
+     * ke file Excel (.xlsx) native. Satu baris per santri.
+     */
+    public function exportWaliSantri()
+    {
+        $students = Student::with(['classRoom', 'parents.user'])
+            ->orderBy('name')
+            ->get();
+
+        $spreadsheet = new Spreadsheet();
+        $sheet = $spreadsheet->getActiveSheet();
+        $sheet->setTitle('Data Santri & Wali');
+
+        $headerStyle = [
+            'font' => ['bold' => true, 'color' => ['rgb' => 'FFFFFF']],
+            'fill' => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => '10B981']],
+            'alignment' => ['horizontal' => Alignment::HORIZONTAL_CENTER, 'wrap' => true],
+            'borders' => ['allBorders' => ['borderStyle' => Border::BORDER_THIN]],
+        ];
+
+        $headers = [
+            'NIS', 'Nama Santri', 'Kelas', 'Jenis Kelamin', 'Tempat Lahir', 'Tanggal Lahir', 'Alamat Santri', 'Status Aktif',
+            'Nama Ayah', 'NIK Ayah', 'Pekerjaan Ayah', 'No HP Ayah', 'Email Ayah', 'Alamat Ayah',
+            'Nama Ibu', 'NIK Ibu', 'Pekerjaan Ibu', 'No HP Ibu', 'Email Ibu', 'Alamat Ibu',
+            'Nama Wali (fallback)', 'Telepon Wali (fallback)', 'Hubungan Wali (fallback)',
+        ];
+        $sheet->fromArray($headers, null, 'A1');
+        $lastCol = \PhpOffice\PhpSpreadsheet\Cell\Coordinate::stringFromColumnIndex(count($headers)); // 23 -> 'W'
+        $sheet->getStyle('A1:'.$lastCol.'1')->applyFromArray($headerStyle);
+
+        $rows = [];
+        foreach ($students as $student) {
+            // Ambil ayah/ibu dari koleksi yang sudah di-eager-load (hindari N+1).
+            $father = $student->parents->firstWhere('type', 'father');
+            $mother = $student->parents->firstWhere('type', 'mother');
+
+            $rows[] = [
+                $student->nis,
+                $student->name,
+                $student->classRoom?->name ?? '-',
+                $student->gender ?? '',
+                $student->birth_place ?? '',
+                $student->birth_date?->format('Y-m-d') ?? '',
+                $student->address ?? '',
+                $student->is_active ? 'Aktif' : 'Tidak Aktif',
+                // Ayah
+                $father?->user?->name ?? '',
+                $father?->nik ?? '',
+                $father?->occupation ?? '',
+                $father?->user?->phone ?? '',
+                $father?->user?->email ?? '',
+                $father?->address ?? '',
+                // Ibu
+                $mother?->user?->name ?? '',
+                $mother?->nik ?? '',
+                $mother?->occupation ?? '',
+                $mother?->user?->phone ?? '',
+                $mother?->user?->email ?? '',
+                $mother?->address ?? '',
+                // Wali fallback (kolom teks di tabel students, untuk santri tanpa akun wali)
+                $student->guardian_name ?? '',
+                $student->guardian_phone ?? '',
+                $student->guardian_relationship ?? '',
+            ];
+        }
+
+        $sheet->fromArray($rows, null, 'A2');
+
+        // Lebar kolom otomatis
+        foreach (range('A', $lastCol) as $col) {
+            $sheet->getColumnDimension($col)->setAutoSize(true);
+        }
+
+        // Freeze header
+        $sheet->freezePane('A2');
+
+        // Simpan ke temp file lalu download
+        $fileName = 'data-santri-wali-'.date('Y-m-d').'.xlsx';
+        if (!file_exists(storage_path('app/public'))) {
+            mkdir(storage_path('app/public'), 0755, true);
+        }
+        $tempPath = storage_path('app/public/'.$fileName);
+
+        (new Xlsx($spreadsheet))->save($tempPath);
+
+        return response()->download($tempPath, $fileName, [
+            'Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        ])->deleteFileAfterSend(true);
     }
 
     public function downloadTemplate()
