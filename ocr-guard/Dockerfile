@@ -16,6 +16,12 @@ RUN apt-get update \
 COPY requirements.txt ./
 RUN pip install --no-cache-dir --disable-pip-version-check -r requirements.txt
 
+# RapidOCR declares opencv-python, which pulls GUI/X11 libraries into a slim
+# image. Install the headless wheel and install RapidOCR without dependencies;
+# all of its runtime dependencies are pinned above.
+RUN pip install --no-cache-dir --disable-pip-version-check --no-deps rapidocr==3.9.2 \
+    && python -c "import cv2; from rapidocr import RapidOCR; print('OpenCV headless', cv2.__version__)"
+
 # RapidOCR tidak membundel ONNX di wheel. Pin model PP-OCRv6 small dan
 # classifier pada build image, lalu verifikasi checksum agar runtime offline.
 ENV OCR_GUARD_MODEL_ROOT=/opt/ocr-models
