@@ -3,7 +3,8 @@
 namespace App\Jobs;
 
 use App\Models\Attendance;
-use App\Services\AiProviderService;
+use App\Services\AttendanceProofReviewService;
+use App\Services\WhatsAppNotificationService;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
@@ -34,15 +35,41 @@ class ReviewAttendanceProof implements ShouldQueue
 
     public function handle(): void
     {
-        if (! $this->attendance->proof_file) {
+        $attendance = $this->attendance->fresh();
+
+        if (! $attendance || ! $attendance->proof_file) {
             return;
         }
 
         try {
-            app(AiProviderService::class)->autoReviewAttendance($this->attendance);
+            $beforeStatus = $attendance->validation_status;
+            app(AttendanceProofReviewService::class)->review($attendance);
+            $attendance->refresh();
+
+            if ($beforeStatus === Attendance::VALIDATION_PENDING
+                && in_array($attendance->validation_status, [
+                    Attendance::VALIDATION_APPROVED,
+                    Attendance::VALIDATION_REJECTED,
+                ], true)) {
+                try {
+                    $notifier = app(WhatsAppNotificationService::class);
+                    $attendance->load(['parent.user', 'kajianEvent']);
+
+                    if ($attendance->validation_status === Attendance::VALIDATION_APPROVED) {
+                        $notifier->sendApprovalNotification($attendance);
+                    } else {
+                        $notifier->sendRejectionNotification($attendance);
+                    }
+                } catch (\Throwable $notificationException) {
+                    Log::warning('[OCR Review Job] Notification failed', [
+                        'attendance_id' => $attendance->id,
+                        'error' => $notificationException->getMessage(),
+                    ]);
+                }
+            }
         } catch (\Throwable $e) {
             Log::warning('[AI Review Job] Gagal', [
-                'attendance_id' => $this->attendance->id,
+                'attendance_id' => $attendance->id,
                 'error' => $e->getMessage(),
             ]);
 

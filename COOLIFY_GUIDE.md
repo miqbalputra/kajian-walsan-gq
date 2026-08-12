@@ -78,7 +78,47 @@ CLOUDINARY_CLOUD_NAME=your_cloud_name
 CLOUDINARY_API_KEY=your_api_key
 CLOUDINARY_API_SECRET=your_api_secret
 CLOUDINARY_FOLDER=kajian-walsan
+
+# LOCAL OCR GUARD (RapidOCR + ONNX Runtime, internal only)
+# Deploy ocr-guard sebagai service private dari folder ocr-guard/.
+# Gunakan hostname internal service Coolify, bukan domain publik.
+OCR_GUARD_ENABLED=true
+OCR_GUARD_URL=http://ocr-guard:9005
+OCR_GUARD_TOKEN=ganti_dengan_token_internal_panjang
+OCR_GUARD_TIMEOUT=90
+OCR_GUARD_CONNECT_TIMEOUT=10
+OCR_GUARD_SHADOW_MODE=true
+OCR_GUARD_MODEL=PP-OCRv6-small-id
+OCR_GUARD_APPROVE_NOTE_MIN_CHARS=40
+OCR_GUARD_APPROVE_LETTER_MIN_CHARS=80
+OCR_GUARD_APPROVE_MIN_BOXES=2
+OCR_GUARD_APPROVE_MIN_CONFIDENCE=70
+OCR_GUARD_REJECT_MIN_CONFIDENCE=90
 ```
+
+### 4a. Deploy Service OCR Internal
+
+Service OCR tidak boleh diberi domain publik atau port host. Buat application
+internal kedua dari repository yang sama dengan pengaturan berikut:
+
+- **Build Pack**: Dockerfile
+- **Dockerfile Location**: `/ocr-guard/Dockerfile`
+- **Internal Port**: `9005`
+- **Public FQDN**: kosong
+- **Network**: samakan dengan aplikasi Laravel
+- **Service Name**: `ocr-guard`
+
+Dockerfile mengunduh model PP-OCRv6 `small` dan classifier dengan versi serta
+checksum yang dipin saat build image. Model sudah berada di image sebelum
+service berjalan, sehingga request produksi tidak mengunduh model dari
+internet.
+
+Set environment `OCR_GUARD_TOKEN` dengan nilai yang sama pada aplikasi Laravel
+dan service OCR. Health check harus merespons `GET /health` dengan status `ok`.
+
+Setelah service sehat, lakukan deployment aplikasi Laravel. Mulai dengan
+`OCR_GUARD_SHADOW_MODE=true`: hasil OCR dicatat tetapi tidak mengubah status
+approve/reject. Setelah minimal 20--30 upload diuji, ubah menjadi `false`.
 
 ---
 

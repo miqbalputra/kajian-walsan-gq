@@ -48,4 +48,10 @@ return [
         'redirect' => env('GOOGLE_REDIRECT_URI', '/auth/google/callback'),
         'link_redirect' => env('GOOGLE_LINK_REDIRECT_URI', '/auth/google/link/callback'),
     ],
+
+    'ocr_guard' => [
+        'enabled' => env('OCR_GUARD_ENABLED', false),
+        'url' => env('OCR_GUARD_URL', 'http://ocr-guard:9005'),
+        'token' => env('OCR_GUARD_TOKEN', ''),
+    ],
 ];

@@ -93,6 +93,11 @@ class Attendance extends Model
         return $this->belongsTo(StudentEnrollment::class, 'student_enrollment_id');
     }
 
+    public function aiReviews()
+    {
+        return $this->hasMany(AttendanceAiReview::class);
+    }
+
     /**
      * Get the user who validated this attendance.
      */

@@ -7,7 +7,7 @@ use App\Models\KajianEvent;
 use App\Models\KajianFeedback;
 use App\Models\ParentModel;
 use App\Models\StudentEnrollment;
-use App\Services\AiProviderService;
+use App\Services\AttendanceProofReviewService;
 use App\Services\CloudinaryService;
 use BaconQrCode\Renderer\Image\SvgImageBackEnd;
 use BaconQrCode\Renderer\ImageRenderer;
@@ -333,9 +333,12 @@ class Dashboard extends Component
 
         $this->showPhysicalModal = false;
         $this->reset(['proofPhoto', 'notes']);
-        session()->flash('message', $attendance->fresh()->validation_status === Attendance::VALIDATION_APPROVED
-            ? 'Catatan hadir langsung berhasil dikirim dan disetujui AI.'
-            : 'Catatan hadir langsung berhasil dikirim. Menunggu validasi.');
+        $freshAttendance = $attendance->fresh();
+        session()->flash('message', $freshAttendance->validation_status === Attendance::VALIDATION_APPROVED
+            ? 'Catatan hadir langsung berhasil dikirim dan disetujui otomatis.'
+            : ($freshAttendance->ai_validation_status === 'queued'
+                ? 'Catatan berhasil dikirim. Sedang diperiksa otomatis.'
+                : 'Catatan hadir langsung berhasil dikirim. Menunggu validasi.'));
     }
 
     public function submitOnlineAttendance()
@@ -392,9 +395,12 @@ class Dashboard extends Component
 
         $this->showOnlineModal = false;
         $this->reset(['proofPhoto', 'notes']);
-        session()->flash('message', $attendance->fresh()->validation_status === 'approved'
-            ? 'Presensi online berhasil dikirim dan disetujui AI.'
-            : 'Presensi online berhasil dikirim. Menunggu validasi.');
+        $freshAttendance = $attendance->fresh();
+        session()->flash('message', $freshAttendance->validation_status === Attendance::VALIDATION_APPROVED
+            ? 'Presensi online berhasil dikirim dan disetujui otomatis.'
+            : ($freshAttendance->ai_validation_status === 'queued'
+                ? 'Bukti berhasil dikirim. Sedang diperiksa otomatis.'
+                : 'Presensi online berhasil dikirim. Menunggu validasi.'));
     }
 
     public function submitIzin()
@@ -452,9 +458,12 @@ class Dashboard extends Component
 
         $this->showIzinModal = false;
         $this->reset(['izinDocument', 'notes']);
-        session()->flash('message', $attendance->fresh()->validation_status === 'approved'
-            ? 'Izin berhasil dikirim dan disetujui AI.'
-            : 'Izin berhasil dikirim. Menunggu validasi.');
+        $freshAttendance = $attendance->fresh();
+        session()->flash('message', $freshAttendance->validation_status === Attendance::VALIDATION_APPROVED
+            ? 'Izin berhasil dikirim dan disetujui otomatis.'
+            : ($freshAttendance->ai_validation_status === 'queued'
+                ? 'Dokumen izin berhasil dikirim. Sedang diperiksa otomatis.'
+                : 'Izin berhasil dikirim. Menunggu validasi.'));
     }
 
     /**
@@ -536,11 +545,18 @@ class Dashboard extends Component
 
         $this->reset(['reuploadFile', 'reuploadAttendanceId', 'reuploadIsPendingReplace', 'reuploadIsInitialTeacherNote']);
 
+        $freshAttendance = $attendance->fresh();
         $message = $isInitialTeacherNote
-            ? 'Catatan kajian berhasil dikirim. Menunggu validasi admin.'
+            ? ($freshAttendance->ai_validation_status === 'queued'
+                ? 'Catatan kajian berhasil dikirim. Sedang diperiksa otomatis.'
+                : 'Catatan kajian berhasil dikirim. Menunggu validasi admin.')
             : ($isPendingReplace
-            ? 'Foto bukti berhasil diganti. Menunggu validasi admin.'
-            : 'Bukti berhasil diupload ulang. Menunggu validasi admin.');
+            ? ($freshAttendance->ai_validation_status === 'queued'
+                ? 'Foto bukti berhasil diganti. Sedang diperiksa otomatis.'
+                : 'Foto bukti berhasil diganti. Menunggu validasi admin.')
+            : ($freshAttendance->ai_validation_status === 'queued'
+                ? 'Bukti berhasil diupload ulang. Sedang diperiksa otomatis.'
+                : 'Bukti berhasil diupload ulang. Menunggu validasi admin.'));
         session()->flash('message', $message);
     }
 
@@ -616,9 +632,9 @@ class Dashboard extends Component
     protected function runAiReview(Attendance $attendance): void
     {
         try {
-            app(AiProviderService::class)->autoReviewAttendance($attendance);
+            app(AttendanceProofReviewService::class)->queue($attendance);
         } catch (\Throwable $exception) {
-            Log::warning('[AI] Attendance auto review failed', [
+            Log::warning('[Proof Review] Attendance review queue failed', [
                 'attendance_id' => $attendance->id,
                 'error' => $exception->getMessage(),
             ]);

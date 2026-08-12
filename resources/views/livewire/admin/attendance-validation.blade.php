@@ -14,6 +14,21 @@
         </button>
     </div>
 
+    <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-6">
+        <div class="rounded-2xl border border-indigo-100 bg-indigo-50 px-4 py-3">
+            <p class="text-[10px] font-black uppercase tracking-widest text-indigo-500">Antrean OCR</p>
+            <p class="mt-1 text-2xl font-black text-indigo-800">{{ $ocrStats['queued'] }}</p>
+        </div>
+        <div class="rounded-2xl border border-amber-100 bg-amber-50 px-4 py-3">
+            <p class="text-[10px] font-black uppercase tracking-widest text-amber-600">OCR Gagal</p>
+            <p class="mt-1 text-2xl font-black text-amber-800">{{ $ocrStats['failed'] }}</p>
+        </div>
+        <div class="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
+            <p class="text-[10px] font-black uppercase tracking-widest text-slate-500">Pending dengan Hasil OCR</p>
+            <p class="mt-1 text-2xl font-black text-slate-800">{{ $ocrStats['shadow'] }}</p>
+        </div>
+    </div>
+
     <!-- Filters -->
     <div
         class="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-gray-100 dark:border-slate-800 p-4 mb-6 transition-colors">
@@ -33,6 +48,17 @@
                     <option value="approved">✅ Disetujui</option>
                     <option value="rejected">❌ Ditolak</option>
                     <option value="">Semua Status</option>
+                </select>
+            </div>
+            <div class="sm:w-52">
+                <select wire:model.live="ocrFilter"
+                    class="w-full px-4 py-2.5 bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-slate-800 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all dark:text-white">
+                    <option value="">Semua Hasil OCR</option>
+                    <option value="queued">Antrean OCR</option>
+                    <option value="failed">OCR Gagal</option>
+                    <option value="approve">Disetujui Otomatis</option>
+                    <option value="reject">Ditolak Otomatis</option>
+                    <option value="needs_review">Perlu Review Admin</option>
                 </select>
             </div>
         </div>
@@ -98,13 +124,16 @@
                                     @else Izin @endif
                                 </span>
                                 @if($attendance->ai_validation_status)
-                                    <div class="mt-2 text-[11px] text-indigo-600 font-semibold flex items-center gap-1">
+                                    <div class="mt-2 text-[11px] {{ $attendance->ai_validation_status === 'failed' ? 'text-amber-600' : 'text-indigo-600' }} font-semibold flex items-center gap-1">
                                         <span class="material-symbols-rounded text-sm">psychology</span>
-                                        AI: {{ str_replace('_', ' ', $attendance->ai_validation_status) }}
+                                        OCR: {{ str_replace('_', ' ', $attendance->ai_validation_status) }}
                                         @if($attendance->ai_validation_confidence)
                                             ({{ $attendance->ai_validation_confidence }}%)
                                         @endif
                                     </div>
+                                    @if($attendance->ai_validation_reason)
+                                        <p class="mt-1 text-[10px] text-gray-500">{{ Str::limit($attendance->ai_validation_reason, 100) }}</p>
+                                    @endif
                                 @endif
                             </td>
                             <td class="px-6 py-4 text-sm text-gray-500">
@@ -120,6 +149,13 @@
                             <td class="px-6 py-4">
                                 <div class="flex items-center justify-end gap-2">
                                     @if($attendance->validation_status === 'pending')
+                                        @if($attendance->ai_validation_status === 'failed')
+                                            <button wire:click="retryAutomaticReview({{ $attendance->id }})"
+                                                class="p-2 text-amber-600 hover:bg-amber-50 rounded-lg transition-colors"
+                                                title="Masukkan ulang ke antrean OCR">
+                                                <span class="material-symbols-rounded">refresh</span>
+                                            </button>
+                                        @endif
                                         <button wire:click="reviewWithAi({{ $attendance->id }})"
                                             wire:loading.attr="disabled" wire:target="reviewWithAi({{ $attendance->id }})"
                                             class="p-2 text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"

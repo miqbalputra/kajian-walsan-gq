@@ -207,6 +207,15 @@ class AiProviderService
             $updates['validated_by'] = null;
             $updates['validated_at'] = now();
             $updates['rejection_reason'] = null;
+        } elseif (($result['decision'] ?? '') === 'reject') {
+            $updates['validation_status'] = Attendance::VALIDATION_REJECTED;
+            $updates['validated_by'] = null;
+            $updates['validated_at'] = now();
+            $updates['rejection_reason'] = $result['reason'];
+        } else {
+            $updates['validation_status'] = Attendance::VALIDATION_PENDING;
+            $updates['validated_by'] = null;
+            $updates['validated_at'] = null;
         }
 
         $attendance->update($updates);

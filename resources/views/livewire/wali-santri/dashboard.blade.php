@@ -272,7 +272,13 @@
                                 <p class="text-green-600 text-sm">
                                     Status: {{ ucfirst(str_replace('_', ' ', $this->myAttendanceToday->status)) }}
                                     @if($this->myAttendanceToday->validation_status === 'pending')
-                                        <span class="text-yellow-600 text-xs">(Menunggu validasi)</span>
+                                        @if($this->myAttendanceToday->ai_validation_status === 'queued')
+                                            <span class="text-indigo-600 text-xs">(Sedang diperiksa otomatis)</span>
+                                        @elseif($this->myAttendanceToday->ai_validation_status === 'failed')
+                                            <span class="text-amber-600 text-xs">(Perlu pemeriksaan admin)</span>
+                                        @else
+                                            <span class="text-yellow-600 text-xs">(Menunggu validasi)</span>
+                                        @endif
                                     @elseif($this->myAttendanceToday->validation_status === 'approved' && in_array($this->myAttendanceToday->method, ['upload', 'manual', 'scan_qr']))
                                         <span class="text-green-600 text-xs">(Divalidasi)</span>
                                     @endif
@@ -557,6 +563,7 @@
                         @else
                             Upload foto <b>catatan hasil kajian</b> sebagai bukti hadir langsung.
                         @endif
+                        <span class="block mt-2 text-amber-600 text-xs font-semibold">Pastikan yang dikirim benar-benar foto catatan, bukan kipas, ruangan, meja, atau objek lain. Foto akan diperiksa otomatis.</span>
                     </p>
 
                     <form wire:submit="submitPhysicalAttendance">
@@ -655,6 +662,7 @@
                         @else
                             Upload foto bukti Anda menyimak kajian secara online.
                         @endif
+                        <span class="block mt-2 text-amber-600 text-xs font-semibold">Kirim foto catatan hasil kajian yang terlihat jelas. Jangan kirim foto kipas, ruangan, meja, atau objek lain.</span>
                     </p>
 
                     <form wire:submit="submitOnlineAttendance">
@@ -754,6 +762,7 @@
                         @else
                             Upload surat izin atau keterangan berhalangan hadir jika Anda tidak bisa mengikuti kajian.
                         @endif
+                        <span class="block mt-2 text-amber-600 text-xs font-semibold">Upload foto surat/pernyataan yang lengkap dan terbaca, bukan foto objek atau ruangan.</span>
                     </p>
 
                     <form wire:submit="submitIzin">

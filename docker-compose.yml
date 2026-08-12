@@ -16,6 +16,31 @@ services:
     networks:
       - kajian-network
 
+  # Internal, CPU-only OCR service. In Coolify this may also be deployed as
+  # a separate private application using ocr-guard/Dockerfile.
+  ocr-guard:
+    build:
+      context: ./ocr-guard
+      dockerfile: Dockerfile
+    expose:
+      - "9005"
+    environment:
+      OCR_GUARD_TOKEN: ${OCR_GUARD_TOKEN:-}
+      OCR_GUARD_MODEL: ${OCR_GUARD_MODEL:-PP-OCRv6-small-id}
+      OCR_GUARD_MAX_BYTES: ${OCR_GUARD_MAX_BYTES:-4194304}
+      OCR_GUARD_MAX_SIDE: ${OCR_GUARD_MAX_SIDE:-1600}
+      OMP_NUM_THREADS: "1"
+      OPENBLAS_NUM_THREADS: "1"
+      MKL_NUM_THREADS: "1"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:9005/health', timeout=5)"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    restart: unless-stopped
+    networks:
+      - kajian-network
+
 # ============================================================
 # Redis dijalankan SEKALI sebagai resource Coolify terpisah dan
 # dipakai bersama aplikasi lain (lihat .env.example bagian REDIS).

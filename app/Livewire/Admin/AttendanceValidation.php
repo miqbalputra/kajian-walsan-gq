@@ -3,7 +3,7 @@
 namespace App\Livewire\Admin;
 
 use App\Models\Attendance;
-use App\Services\AiProviderService;
+use App\Services\AttendanceProofReviewService;
 use App\Services\WhatsAppNotificationService;
 use Illuminate\Support\Facades\Log;
 use Livewire\Component;
@@ -15,6 +15,7 @@ class AttendanceValidation extends Component
 
     public $search = '';
     public $statusFilter = 'pending';
+    public $ocrFilter = '';
     public $perPage = 10;
 
     // Modal state
@@ -29,6 +30,11 @@ class AttendanceValidation extends Component
     }
 
     public function updatingStatusFilter()
+    {
+        $this->resetPage();
+    }
+
+    public function updatingOcrFilter()
     {
         $this->resetPage();
     }
@@ -107,7 +113,9 @@ class AttendanceValidation extends Component
 
     public function reviewWithAi($id)
     {
-        if (! app(AiProviderService::class)->configured()) {
+        $reviewService = app(AttendanceProofReviewService::class);
+
+        if (! $reviewService->configured()) {
             $this->dispatch('notify', [
                 'type' => 'warning',
                 'message' => 'AI belum aktif atau belum lengkap di Pengaturan.',
@@ -118,7 +126,7 @@ class AttendanceValidation extends Component
         $attendance = Attendance::with(['parent.user', 'parent.students.classRoom', 'kajianEvent'])->findOrFail($id);
 
         try {
-            $result = app(AiProviderService::class)->autoReviewAttendance($attendance);
+            $result = $reviewService->review($attendance);
             $fresh = $attendance->fresh();
 
             if ($fresh->validation_status === Attendance::VALIDATION_APPROVED) {
@@ -148,9 +156,35 @@ class AttendanceValidation extends Component
         }
     }
 
+    public function retryAutomaticReview($id): void
+    {
+        $reviewService = app(AttendanceProofReviewService::class);
+
+        if (! $reviewService->configured()) {
+            $this->dispatch('notify', [
+                'type' => 'warning',
+                'message' => 'Pemeriksaan otomatis belum dikonfigurasi.',
+            ]);
+
+            return;
+        }
+
+        $attendance = Attendance::where('validation_status', Attendance::VALIDATION_PENDING)
+            ->whereNotNull('proof_file')
+            ->findOrFail($id);
+
+        $reviewService->queue($attendance);
+        $this->dispatch('notify', [
+            'type' => 'success',
+            'message' => 'Pengajuan dimasukkan kembali ke antrean pemeriksaan.',
+        ]);
+    }
+
     public function reviewPendingWithAi()
     {
-        if (! app(AiProviderService::class)->configured()) {
+        $reviewService = app(AttendanceProofReviewService::class);
+
+        if (! $reviewService->configured()) {
             $this->dispatch('notify', [
                 'type' => 'warning',
                 'message' => 'AI belum aktif atau belum lengkap di Pengaturan.',
@@ -166,17 +200,13 @@ class AttendanceValidation extends Component
             ->limit(20)
             ->get();
 
-        $approved = 0;
-        $needsReview = 0;
-        $failed = 0;
+        $queued = 0;
 
         foreach ($attendances as $attendance) {
             try {
-                app(AiProviderService::class)->autoReviewAttendance($attendance);
-                $attendance->refresh();
-                $attendance->validation_status === Attendance::VALIDATION_APPROVED ? $approved++ : $needsReview++;
+                $reviewService->queue($attendance);
+                $queued++;
             } catch (\Throwable $exception) {
-                $failed++;
                 Log::warning('[AI] Batch attendance review failed', [
                     'attendance_id' => $attendance->id,
                     'error' => $exception->getMessage(),
@@ -185,8 +215,8 @@ class AttendanceValidation extends Component
         }
 
         $this->dispatch('notify', [
-            'type' => $failed > 0 ? 'warning' : 'success',
-            'message' => "AI selesai: {$approved} disetujui, {$needsReview} tetap pending, {$failed} gagal.",
+            'type' => 'success',
+            'message' => "{$queued} pengajuan dimasukkan ke antrean pemeriksaan otomatis.",
         ]);
     }
 
@@ -198,6 +228,9 @@ class AttendanceValidation extends Component
             ->when($this->statusFilter, function ($query) {
                 $query->where('validation_status', $this->statusFilter);
             })
+            ->when($this->ocrFilter, function ($query) {
+                $query->where('ai_validation_status', $this->ocrFilter);
+            })
             ->when($this->search, function ($query) {
                 $query->whereHas('parent.user', function ($q) {
                     $q->where('name', 'like', '%' . $this->search . '%');
@@ -206,8 +239,17 @@ class AttendanceValidation extends Component
             ->orderByDesc('created_at')
             ->paginate($this->perPage);
 
+        $ocrStats = [
+            'queued' => Attendance::where('ai_validation_status', 'queued')->count(),
+            'failed' => Attendance::where('ai_validation_status', 'failed')->count(),
+            'shadow' => Attendance::whereIn('ai_validation_status', ['approve', 'reject', 'needs_review'])
+                ->where('validation_status', Attendance::VALIDATION_PENDING)
+                ->count(),
+        ];
+
         return view('livewire.admin.attendance-validation', [
-            'attendances' => $attendances
+            'attendances' => $attendances,
+            'ocrStats' => $ocrStats,
         ])->layout('components.layouts.admin', ['title' => 'Validasi Presensi']);
     }
 }
