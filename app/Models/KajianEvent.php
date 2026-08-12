@@ -246,11 +246,16 @@ class KajianEvent extends Model
     /**
      * Students from this parent that match event target classes.
      */
-    public function targetedStudentsForParent(ParentModel $parent): Collection
+    public function targetedStudentsForParent(ParentModel $parent, bool $includeInactive = false): Collection
     {
         $students = $parent->relationLoaded('students')
             ? $parent->students
             : $parent->students()->with('classRoom')->get();
+
+        $students = $students->filter(function ($student) use ($includeInactive) {
+            return $includeInactive
+                || (($student->student_status ?? 'active') === 'active' && (bool) $student->is_active);
+        });
 
         if ($this->targetsAllClasses()) {
             return $students->values();

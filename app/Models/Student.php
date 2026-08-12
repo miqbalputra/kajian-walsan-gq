@@ -25,11 +25,15 @@ class Student extends Model
         'guardian_relationship',
         'photo',
         'is_active',
+        'student_status',
+        'graduated_at',
+        'graduation_academic_year_id',
     ];
 
     protected $casts = [
         'birth_date' => 'date',
         'is_active' => 'boolean',
+        'graduated_at' => 'datetime',
     ];
 
     /**
@@ -57,6 +61,16 @@ class Student extends Model
     public function attendances(): HasMany
     {
         return $this->hasMany(Attendance::class);
+    }
+
+    public function enrollments(): HasMany
+    {
+        return $this->hasMany(StudentEnrollment::class);
+    }
+
+    public function graduationAcademicYear(): BelongsTo
+    {
+        return $this->belongsTo(AcademicYear::class, 'graduation_academic_year_id');
     }
 
     /**
@@ -98,7 +112,9 @@ class Student extends Model
      */
     public function scopeActive($query)
     {
-        return $query->where('is_active', true);
+        return $query->where('is_active', true)->where(function ($query) {
+            $query->whereNull('student_status')->orWhere('student_status', 'active');
+        });
     }
 
     /**

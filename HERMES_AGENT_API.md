@@ -151,6 +151,12 @@ user_id
 qr_code
 ```
 
+`qr_code` menerima QR utama orang tua, QR legacy yang sudah pernah dicetak,
+atau QR alias berdasarkan NIS anak. Semua kode aktif akan diarahkan ke parent
+yang sama. Response parent menyertakan `canonical_qr_code` dan daftar `qr_codes`
+aktif agar integrasi dapat menampilkan seluruh identitas QR tanpa mengubah QR
+utama ketika anak naik kelas atau lulus.
+
 Status yang didukung:
 
 ```text

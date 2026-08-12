@@ -54,9 +54,9 @@ class StudentsImport implements ToCollection, WithHeadingRow, WithValidation, Sk
                 $genderRaw = strtolower(trim($row['jenis_kelamin'] ?? $row['gender'] ?? ''));
                 $gender = null;
                 if (in_array($genderRaw, ['l', 'laki-laki', 'laki', 'male', 'm', 'putra'])) {
-                    $gender = 'male';
+                    $gender = 'L';
                 } elseif (in_array($genderRaw, ['p', 'perempuan', 'female', 'f', 'putri', 'wanita'])) {
-                    $gender = 'female';
+                    $gender = 'P';
                 }
 
                 // Parse birth date
@@ -97,7 +97,7 @@ class StudentsImport implements ToCollection, WithHeadingRow, WithValidation, Sk
                     $this->updateCount++;
                 } else {
                     // Create new student
-                    Student::create(array_merge(['nis' => $nis], $studentData));
+                    Student::create(array_merge(['nis' => $nis, 'student_status' => 'active'], $studentData));
                     $this->successCount++;
                 }
             } catch (\Exception $e) {

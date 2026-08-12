@@ -15,6 +15,7 @@ use App\Livewire\Admin\ClassIndex;
 use App\Livewire\Admin\Dashboard;
 use App\Livewire\Admin\KajianIndex;
 use App\Livewire\Admin\ParentIndex;
+use App\Livewire\Admin\PromotionWizard;
 use App\Livewire\Admin\ReportIndex;
 use App\Livewire\Admin\Settings;
 use App\Livewire\Admin\StudentIndex;
@@ -98,6 +99,7 @@ Route::middleware('auth')->group(function () {
         Route::get('/', Dashboard::class)->name('dashboard');
         Route::get('/students', StudentIndex::class)->name('students.index');
         Route::get('/parents', ParentIndex::class)->name('parents.index');
+        Route::get('/promotion', PromotionWizard::class)->name('promotion.index');
         Route::get('/parents/{parent}/kartu/download', function (ParentModel $parent) {
             $parent->loadMissing('user', 'students.classRoom');
             abort_if($parent->isPureTeacher() || blank($parent->qr_code_string), 404);

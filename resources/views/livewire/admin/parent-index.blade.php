@@ -6,6 +6,13 @@
             <p class="text-gray-500">{{ $isTeacherMode ? 'Kelola data guru dan pengajar' : 'Kelola data wali santri dan generate kartu ID' }}</p>
         </div>
         <div class="flex flex-wrap gap-3 sm:justify-end">
+            @unless($isTeacherMode)
+                <button wire:click="downloadFullData" wire:loading.attr="disabled"
+                    class="inline-flex shrink-0 items-center justify-center gap-2 px-4 py-3 bg-emerald-600 text-white rounded-xl font-semibold hover:bg-emerald-700 transition-colors">
+                    <span class="material-symbols-rounded">download</span>
+                    Export Full
+                </button>
+            @endunless
             <button wire:click="$set('showImportModal', true)"
                 class="inline-flex shrink-0 items-center justify-center gap-2 px-4 py-3 bg-white border border-gray-200 text-gray-700 rounded-xl font-semibold hover:bg-gray-50 transition-colors">
                 <span class="material-symbols-rounded">upload_file</span>
@@ -183,6 +190,13 @@
                                         title="Riwayat Presensi Lengkap">
                                         <span class="material-symbols-rounded text-xl">history_edu</span>
                                     </button>
+                                    @unless($isTeacherMode)
+                                        <button type="button" wire:click="openLinkChildModal({{ $parent->id }})"
+                                            class="relative z-10 p-2 text-gray-600 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors"
+                                            title="Tambah/sambungkan anak kelas 1">
+                                            <span class="material-symbols-rounded text-xl">person_add</span>
+                                        </button>
+                                    @endunless
                                     <button type="button" wire:click="openManualAttendanceModal({{ $parent->id }})"
                                         class="relative z-10 p-2 text-gray-600 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors"
                                         title="Input Presensi Manual">
@@ -364,6 +378,60 @@
     @endif
 
     <!-- Delete Confirmation Modal -->
+    <!-- Link New Child Modal -->
+    @if($showLinkChildModal && $linkParent)
+        <div class="fixed inset-0 z-50 overflow-y-auto" aria-modal="true">
+            <div class="flex min-h-screen items-center justify-center px-4 py-8">
+                <div class="fixed inset-0 bg-black/50" wire:click="$set('showLinkChildModal', false)"></div>
+                <div class="relative z-10 w-full max-w-2xl rounded-2xl bg-white p-6 shadow-xl">
+                    <div class="mb-6 flex items-center justify-between">
+                        <div>
+                            <h3 class="text-xl font-bold text-gray-900">Tambah / Sambungkan Anak</h3>
+                            <p class="text-sm text-gray-500">Wali: {{ $linkParent->user?->name }}. QR utama tidak akan berubah.</p>
+                        </div>
+                        <button wire:click="$set('showLinkChildModal', false)" class="rounded-full p-2 hover:bg-gray-100"><span class="material-symbols-rounded">close</span></button>
+                    </div>
+                    <form wire:submit="saveLinkedChild" class="space-y-4">
+                        <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
+                            <label class="block text-sm font-medium text-gray-700">NIS Anak <span class="text-red-500">*</span>
+                                <input wire:model="linkChildNis" class="mt-1 w-full rounded-xl border-gray-200 px-4 py-3" placeholder="NIS baru atau NIS yang sudah ada">
+                                @error('linkChildNis')<span class="text-sm text-red-500">{{ $message }}</span>@enderror
+                            </label>
+                            <label class="block text-sm font-medium text-gray-700">Nama Anak
+                                <input wire:model="linkChildName" class="mt-1 w-full rounded-xl border-gray-200 px-4 py-3" placeholder="Wajib jika NIS baru">
+                                @error('linkChildName')<span class="text-sm text-red-500">{{ $message }}</span>@enderror
+                            </label>
+                            <label class="block text-sm font-medium text-gray-700">Kelas 1 <span class="text-red-500">*</span>
+                                <select wire:model="linkChildClassId" class="mt-1 w-full rounded-xl border-gray-200 px-4 py-3">
+                                    <option value="">-- Pilih kelas 1 --</option>
+                                    @foreach($allClasses->where('level', '1') as $class)<option value="{{ $class->id }}">{{ $class->name }}</option>@endforeach
+                                </select>
+                                @error('linkChildClassId')<span class="text-sm text-red-500">{{ $message }}</span>@enderror
+                            </label>
+                            <label class="block text-sm font-medium text-gray-700">Jenis Kelamin
+                                <select wire:model="linkChildGender" class="mt-1 w-full rounded-xl border-gray-200 px-4 py-3"><option value="">-- Pilih --</option><option value="L">Laki-laki</option><option value="P">Perempuan</option></select>
+                            </label>
+                            <label class="block text-sm font-medium text-gray-700">Tanggal Lahir
+                                <input type="date" wire:model="linkChildBirthDate" class="mt-1 w-full rounded-xl border-gray-200 px-4 py-3">
+                            </label>
+                            <label class="block text-sm font-medium text-gray-700">Hubungan
+                                <select wire:model="linkChildRelationship" class="mt-1 w-full rounded-xl border-gray-200 px-4 py-3"><option value="biological">Biologis</option><option value="guardian">Wali</option><option value="step">Tiri</option></select>
+                            </label>
+                        </div>
+                        <label class="block text-sm font-medium text-gray-700">Alamat
+                            <textarea wire:model="linkChildAddress" rows="2" class="mt-1 w-full rounded-xl border-gray-200 px-4 py-3"></textarea>
+                        </label>
+                        <label class="inline-flex items-center gap-2 text-sm text-gray-700"><input type="checkbox" wire:model="linkChildPrimaryContact" class="rounded border-gray-300 text-primary-600"> Jadikan kontak utama untuk anak ini</label>
+                        <div class="flex justify-end gap-3 border-t border-gray-100 pt-4">
+                            <button type="button" wire:click="$set('showLinkChildModal', false)" class="rounded-xl border border-gray-200 px-5 py-3 font-semibold text-gray-700">Batal</button>
+                            <button type="submit" wire:loading.attr="disabled" class="inline-flex items-center gap-2 rounded-xl bg-emerald-600 px-5 py-3 font-semibold text-white hover:bg-emerald-700"><span class="material-symbols-rounded">link</span> Simpan & Sambungkan</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    @endif
+
     @if($showDeleteModal)
         <div class="fixed inset-0 z-50 overflow-y-auto" aria-modal="true">
             <div class="flex items-center justify-center min-h-screen px-4">
@@ -373,8 +441,8 @@
                     <div class="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
                         <span class="material-symbols-rounded text-red-600 text-3xl">delete</span>
                     </div>
-                    <h3 class="text-xl font-bold text-gray-900 mb-2">Hapus Orang Tua?</h3>
-                    <p class="text-gray-500 mb-6">Akun dan data orang tua akan dihapus permanen.</p>
+                    <h3 class="text-xl font-bold text-gray-900 mb-2">Nonaktifkan Akun Orang Tua?</h3>
+                    <p class="text-gray-500 mb-6">Akun akan dinonaktifkan. Data, relasi anak, QR, dan histori tidak akan dihapus.</p>
 
                     <div class="flex gap-3">
                         <button wire:click="$set('showDeleteModal', false)"
@@ -383,7 +451,7 @@
                         </button>
                         <button wire:click="delete"
                             class="flex-1 px-4 py-2.5 bg-red-500 text-white rounded-xl font-medium hover:bg-red-600 transition-colors">
-                            Hapus
+                            Nonaktifkan
                         </button>
                     </div>
                 </div>
@@ -1412,4 +1480,3 @@
     </script>
     @endpush
 </div>
-

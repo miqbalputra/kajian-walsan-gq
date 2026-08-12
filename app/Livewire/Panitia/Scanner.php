@@ -5,6 +5,7 @@ namespace App\Livewire\Panitia;
 use App\Models\Attendance;
 use App\Models\KajianEvent;
 use App\Models\ParentModel;
+use App\Models\StudentEnrollment;
 use App\Services\AttendanceScanService;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\RateLimiter;
@@ -165,12 +166,15 @@ class Scanner extends Component
             'kajian_event_id' => $this->activeEvent->id,
             'parent_id' => $parent->id,
             'student_id' => $students->first()?->id,
+            'student_enrollment_id' => StudentEnrollment::ensureForEvent($students->first(), $this->activeEvent)?->id,
             'status' => 'hadir_fisik',
             'method' => 'manual',
             'validation_status' => $needsProof ? 'pending' : 'approved',
             'validated_by' => $needsProof ? null : auth()->id(),
             'validated_at' => $needsProof ? null : now(),
         ]);
+
+        $this->activeEvent->updateAttendanceCount();
 
         $parentType = match ($parent->type) {
             'father' => 'Bapak',

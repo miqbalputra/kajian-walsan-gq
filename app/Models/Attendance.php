@@ -15,6 +15,7 @@ class Attendance extends Model
         'kajian_event_id',
         'parent_id',
         'student_id',
+        'student_enrollment_id',
         'status',
         'method',
         'proof_file',
@@ -85,6 +86,11 @@ class Attendance extends Model
     public function student(): BelongsTo
     {
         return $this->belongsTo(Student::class);
+    }
+
+    public function studentEnrollment(): BelongsTo
+    {
+        return $this->belongsTo(StudentEnrollment::class, 'student_enrollment_id');
     }
 
     /**
@@ -207,6 +213,7 @@ class Attendance extends Model
             'kajian_event_id' => $event->id,
             'parent_id' => $parent->id,
             'student_id' => $student?->id,
+            'student_enrollment_id' => StudentEnrollment::ensureForEvent($student, $event)?->id,
             'status' => self::STATUS_HADIR_FISIK,
             'method' => self::METHOD_SCAN_QR,
             'validation_status' => self::VALIDATION_APPROVED,

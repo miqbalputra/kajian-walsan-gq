@@ -4,12 +4,17 @@ namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
 use App\Models\ParentModel;
+use App\Services\ParentQrCodeService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\RateLimiter;
 
 class QrLoginController extends Controller
 {
+    public function __construct(private ParentQrCodeService $qrCodes)
+    {
+    }
+
     /**
      * Show the QR login scanner page.
      */
@@ -51,7 +56,7 @@ class QrLoginController extends Controller
         }
 
         // Find parent by current QR payload. Supports legacy WS-* and current A/B/T + NIS codes.
-        $parent = ParentModel::where('qr_code_string', $qrCode)->first();
+        $parent = $this->qrCodes->resolve($qrCode);
 
         if (! $parent) {
             RateLimiter::hit($key, 60);
@@ -87,6 +92,8 @@ class QrLoginController extends Controller
             'user' => [
                 'name' => $user->name,
                 'type' => $parent->type_display,
+                'canonical_qr_code' => $parent->qr_code_string,
+                'matched_qr_code' => $qrCode,
             ],
         ]);
     }
@@ -123,7 +130,7 @@ class QrLoginController extends Controller
             ]);
         }
 
-        $parent = ParentModel::where('qr_code_string', $qrCode)->first();
+        $parent = $this->qrCodes->resolve($qrCode);
 
         if (! $parent) {
             RateLimiter::hit($key, 60);
@@ -140,6 +147,8 @@ class QrLoginController extends Controller
                 'name' => $parent->user->name,
                 'type' => $parent->type_display,
                 'children_count' => $parent->students()->count(),
+                'canonical_qr_code' => $parent->qr_code_string,
+                'matched_qr_code' => $qrCode,
             ],
         ]);
     }

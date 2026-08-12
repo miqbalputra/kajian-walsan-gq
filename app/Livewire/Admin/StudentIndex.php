@@ -47,7 +47,7 @@ class StudentIndex extends Component
     protected $rules = [
         'nis' => ['required', 'string', 'max:20', 'regex:/^[A-Za-z0-9]+$/'],
         'name' => 'required|string|max:100',
-        'class_id' => 'required|exists:classes,id',
+        'class_id' => 'nullable|exists:classes,id',
         'gender' => 'required|in:L,P',
         'birth_date' => 'nullable|date',
         'guardian_name' => 'nullable|string|max:100',
@@ -100,6 +100,12 @@ class StudentIndex extends Component
     {
         $this->validate();
 
+        if (! $this->editMode && ! $this->class_id) {
+            $this->addError('class_id', 'Kelas wajib dipilih untuk siswa baru.');
+
+            return;
+        }
+
         $data = [
             'nis' => $this->nis,
             'name' => $this->name,
@@ -144,10 +150,19 @@ class StudentIndex extends Component
     public function delete()
     {
         $student = Student::findOrFail($this->studentId);
-        $student->delete();
+        // Preserve the student, parent relation, and attendance history.
+        $student->update([
+            'class_id' => null,
+            'student_status' => 'withdrawn',
+            'is_active' => false,
+        ]);
+        $student->enrollments()->whereNull('ended_at')->update([
+            'status' => 'withdrawn',
+            'ended_at' => now()->toDateString(),
+        ]);
         $this->showDeleteModal = false;
         $this->studentId = null;
-        $this->dispatch('notify', ['type' => 'success', 'message' => 'Siswa berhasil dihapus!']);
+        $this->dispatch('notify', ['type' => 'success', 'message' => 'Siswa diarsipkan sebagai nonaktif. Histori dan relasi tetap tersimpan.']);
     }
 
     /**

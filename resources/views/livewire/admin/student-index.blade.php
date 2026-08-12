@@ -122,8 +122,8 @@
                             </td>
                             <td class="px-6 py-4">
                                 <span
-                                    class="px-2 py-1 rounded-lg text-xs font-medium {{ $student->is_active ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-700' }}">
-                                    {{ $student->is_active ? 'Aktif' : 'Nonaktif' }}
+                                    class="px-2 py-1 rounded-lg text-xs font-medium {{ ($student->student_status ?? '') === 'graduated' ? 'bg-amber-100 text-amber-700' : ($student->is_active ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-700') }}">
+                                    {{ ($student->student_status ?? '') === 'graduated' ? 'Alumni/Lulus' : ($student->is_active ? 'Aktif' : 'Nonaktif') }}
                                 </span>
                             </td>
                             <td class="px-6 py-4">
@@ -432,7 +432,7 @@
                             <span class="material-symbols-rounded text-red-600 text-3xl">delete</span>
                         </div>
                         <h3 class="text-xl font-bold text-gray-900 mb-2">Hapus Siswa?</h3>
-                        <p class="text-gray-500 mb-6">Data siswa akan dihapus permanen dan tidak dapat dikembalikan.</p>
+                        <p class="text-gray-500 mb-6">Siswa akan diarsipkan sebagai nonaktif. Data, relasi, dan histori tidak akan dihapus.</p>
 
                         <div class="flex gap-3">
                             <button wire:click="$set('showDeleteModal', false)"
@@ -441,7 +441,7 @@
                             </button>
                             <button wire:click="delete"
                                 class="flex-1 px-4 py-2.5 bg-red-500 text-white rounded-xl font-medium hover:bg-red-600 transition-colors">
-                                Hapus
+                            Arsipkan
                             </button>
                         </div>
                     </div>

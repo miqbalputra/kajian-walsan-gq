@@ -61,6 +61,7 @@ class ReportIndex extends Component
                 'parent.students.classRoom',
                 'kajianEvent.academicYear',
                 'student.classRoom',
+                'studentEnrollment.classRoom',
             ])
             ->whereHas('parent', function ($query) {
                 $query->where('type', '!=', 'teacher');
@@ -74,8 +75,13 @@ class ReportIndex extends Component
                 $query->where('kajian_event_id', $this->kajianId);
             })
             ->when($this->classId, function ($query) {
-                $query->whereHas('parent.students', function ($q) {
-                    $q->where('class_id', $this->classId);
+                $query->where(function ($q) {
+                    $q->whereHas('studentEnrollment', function ($enrollmentQuery) {
+                        $enrollmentQuery->where('class_id', $this->classId);
+                    })->orWhere(function ($fallback) {
+                        $fallback->whereNull('student_enrollment_id')
+                            ->whereHas('student', fn ($studentQuery) => $studentQuery->where('class_id', $this->classId));
+                    });
                 });
             })
             ->when($this->status, function ($query) {
@@ -119,8 +125,11 @@ class ReportIndex extends Component
 
             // Data rows
             foreach ($attendances as $index => $attendance) {
-                $childName = $attendance->parent?->students->first()?->name ?? '-';
-                $className = $attendance->parent?->students->first()?->classRoom?->name ?? '-';
+                $childName = $attendance->student?->name ?? $attendance->parent?->students->first()?->name ?? '-';
+                $className = $attendance->studentEnrollment?->class_name
+                    ?? $attendance->student?->classRoom?->name
+                    ?? $attendance->parent?->students->first()?->classRoom?->name
+                    ?? '-';
 
                 fputcsv($file, [
                     $index + 1,
@@ -133,7 +142,7 @@ class ReportIndex extends Component
                     $this->getStatusLabel($attendance->status),
                     $this->getMethodLabel($attendance->method),
                     $this->getValidationLabel($attendance->validation_status),
-                    $attendance->scan_time?->format('H:i') ?? '-',
+                    $attendance->scanned_at?->format('H:i') ?? '-',
                 ], ';');
             }
 

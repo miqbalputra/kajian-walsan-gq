@@ -55,9 +55,13 @@ class ReportIndex extends Component
         }
 
         return Attendance::query()
-            ->with(['student', 'parent.user', 'kajianEvent'])
-            ->whereHas('student', function ($query) use ($teacherClass) {
-                $query->where('class_id', $teacherClass->id);
+            ->with(['student.classRoom', 'studentEnrollment', 'parent.user', 'kajianEvent'])
+            ->where(function ($query) use ($teacherClass) {
+                $query->whereHas('studentEnrollment', fn ($enrollmentQuery) => $enrollmentQuery->where('class_id', $teacherClass->id))
+                    ->orWhere(function ($fallback) use ($teacherClass) {
+                        $fallback->whereNull('student_enrollment_id')
+                            ->whereHas('student', fn ($studentQuery) => $studentQuery->where('class_id', $teacherClass->id));
+                    });
             })
             ->when($this->academicYearId, function ($query) {
                 $query->whereHas('kajianEvent', function ($q) {
@@ -142,7 +146,7 @@ class ReportIndex extends Component
             // Data rows
             foreach ($attendances as $index => $attendance) {
                 $childName = $attendance->student?->name ?? $attendance->parent?->students->first()?->name ?? '-';
-                $className = $attendance->student?->classRoom?->name ?? $attendance->parent?->students->first()?->classRoom?->name ?? '-';
+                $className = $attendance->studentEnrollment?->class_name ?? $attendance->student?->classRoom?->name ?? $attendance->parent?->students->first()?->classRoom?->name ?? '-';
 
                 fputcsv($file, [
                     $index + 1,
@@ -155,7 +159,7 @@ class ReportIndex extends Component
                     $this->getStatusLabel($attendance->status),
                     $this->getMethodLabel($attendance->method),
                     $this->getValidationLabel($attendance->validation_status),
-                    $attendance->created_at?->format('H:i') ?? '-',
+                    $attendance->scanned_at?->format('H:i') ?? '-',
                 ], ';');
             }
 

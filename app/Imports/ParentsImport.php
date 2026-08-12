@@ -6,6 +6,7 @@ use App\Models\ParentModel;
 use App\Models\Role;
 use App\Models\Student;
 use App\Models\User;
+use App\Services\ParentQrCodeService;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
@@ -144,10 +145,12 @@ class ParentsImport implements ToCollection, WithHeadingRow, WithValidation, Ski
         // Check if already linked
         if (!$parent->students()->where('students.id', $student->id)->exists()) {
             $parent->students()->attach($student->id, [
-                'relationship' => $type === 'father' ? 'Ayah' : 'Ibu',
+                'relationship' => 'biological',
                 'is_primary_contact' => true,
             ]);
         }
+
+        app(ParentQrCodeService::class)->syncForParent($parent->fresh('students'));
     }
 
     /**

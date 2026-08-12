@@ -8,8 +8,10 @@ use App\Models\Attendance;
 use App\Models\KajianEvent;
 use App\Models\ParentModel;
 use App\Models\Student;
+use App\Models\StudentEnrollment;
 use App\Models\User;
 use App\Services\CloudinaryService;
+use App\Services\ParentQrCodeService;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\QueryException;
@@ -293,6 +295,11 @@ class HermesAgentController extends Controller
             ], 422);
         }
 
+        $studentEnrollmentId = StudentEnrollment::ensureForEvent(
+            $studentId ? Student::find($studentId) : null,
+            $event
+        )?->id;
+
         $proofFile = $this->storeProofFile($request, $parent, $data['status'], $policy);
         $method = $proofFile ? Attendance::METHOD_UPLOAD : ($data['method'] ?? Attendance::METHOD_MANUAL);
         $validationStatus = $data['validation_status']
@@ -334,6 +341,7 @@ class HermesAgentController extends Controller
 
         $attendance->fill([
             'student_id' => $studentId,
+            'student_enrollment_id' => $studentEnrollmentId,
             'status' => $data['status'],
             'method' => $method,
             'validation_status' => $validationStatus,
@@ -417,6 +425,11 @@ class HermesAgentController extends Controller
             ], 422);
         }
 
+        $studentEnrollmentId = StudentEnrollment::ensureForEvent(
+            $studentId ? Student::find($studentId) : null,
+            $attendance->kajianEvent
+        )?->id;
+
         $finalProofFile = $request->boolean('clear_proof')
             ? null
             : ($proofFile ?: $attendance->proof_file);
@@ -435,6 +448,7 @@ class HermesAgentController extends Controller
 
         $attendance->update([
             'student_id' => $studentId,
+            'student_enrollment_id' => $studentEnrollmentId ?: $attendance->student_enrollment_id,
             'status' => $status,
             'method' => $proofFile ? Attendance::METHOD_UPLOAD : $attendance->method,
             'proof_file' => $finalProofFile,
@@ -467,7 +481,7 @@ class HermesAgentController extends Controller
             ], 409);
         }
 
-        $attendance->loadMissing(['kajianEvent', 'parent.user', 'parent.students.classRoom', 'student.classRoom', 'validator']);
+        $attendance->loadMissing(['kajianEvent', 'parent.user', 'parent.students.classRoom', 'student.classRoom', 'studentEnrollment.academicYear', 'validator']);
         $event = $attendance->kajianEvent;
         $payload = $this->formatAttendance($attendance, detailed: true);
 
@@ -618,7 +632,7 @@ class HermesAgentController extends Controller
         }
 
         if (! empty($data['qr_code'])) {
-            return $query->where('qr_code_string', trim($data['qr_code']))->first();
+            return app(ParentQrCodeService::class)->resolve(trim($data['qr_code']));
         }
 
         return null;
@@ -791,6 +805,12 @@ class HermesAgentController extends Controller
             'event' => $attendance->kajianEvent ? $this->formatEvent($attendance->kajianEvent) : null,
             'parent' => $attendance->parent ? $this->formatParent($attendance->parent) : null,
             'student' => $attendance->student ? $this->formatStudent($attendance->student) : null,
+            'student_enrollment' => $attendance->studentEnrollment ? [
+                'id' => $attendance->studentEnrollment->id,
+                'academic_year' => $attendance->studentEnrollment->academicYear?->name,
+                'class_name' => $attendance->studentEnrollment->class_name,
+                'status' => $attendance->studentEnrollment->status,
+            ] : null,
             'status' => $attendance->status,
             'status_display' => $attendance->status_display,
             'method' => $attendance->method,
@@ -854,7 +874,7 @@ class HermesAgentController extends Controller
 
     protected function formatParent(ParentModel $parent): array
     {
-        $parent->loadMissing(['user', 'students.classRoom']);
+        $parent->loadMissing(['user', 'students.classRoom', 'qrCodes.sourceStudent']);
 
         return [
             'id' => $parent->id,
@@ -867,6 +887,16 @@ class HermesAgentController extends Controller
             'type_display' => $parent->type_display,
             'is_teacher' => $parent->isTeacher(),
             'qr_code' => $parent->qr_code_string,
+            'canonical_qr_code' => $parent->qr_code_string,
+            'qr_codes' => $parent->qrCodes
+                ->where('is_active', true)
+                ->whereNull('revoked_at')
+                ->map(fn ($qr) => [
+                    'code' => $qr->code,
+                    'kind' => $qr->kind,
+                    'source_student_id' => $qr->source_student_id,
+                    'source_student_nis' => $qr->sourceStudent?->nis,
+                ])->values(),
             'students' => $parent->students
                 ->map(fn (Student $student) => $this->formatStudent($student))
                 ->values(),
@@ -885,6 +915,7 @@ class HermesAgentController extends Controller
             'class_name' => $student->classRoom?->name,
             'gender' => $student->gender,
             'is_active' => $student->is_active,
+            'student_status' => $student->student_status ?? ($student->is_active ? 'active' : 'withdrawn'),
         ];
     }
 }

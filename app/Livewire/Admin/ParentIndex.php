@@ -9,7 +9,10 @@ use App\Models\KajianEvent;
 use App\Models\ParentModel;
 use App\Models\Role;
 use App\Models\Student;
+use App\Models\StudentEnrollment;
 use App\Models\User;
+use App\Services\ParentDataExportService;
+use App\Services\ParentQrCodeService;
 use BaconQrCode\Renderer\Image\SvgImageBackEnd;
 use BaconQrCode\Renderer\ImageRenderer;
 use BaconQrCode\Renderer\RendererStyle\RendererStyle;
@@ -59,6 +62,8 @@ class ParentIndex extends Component
 
     public $showCredentialsModal = false;
 
+    public $showLinkChildModal = false;
+
     public $editMode = false;
 
     public $parentId = null;
@@ -91,6 +96,24 @@ class ParentIndex extends Component
     public $is_single_parent = false;
 
     public $selectedChildren = [];
+
+    public $linkParent = null;
+
+    public $linkChildNis = '';
+
+    public $linkChildName = '';
+
+    public $linkChildClassId = '';
+
+    public $linkChildGender = '';
+
+    public $linkChildBirthDate = '';
+
+    public $linkChildAddress = '';
+
+    public $linkChildRelationship = 'biological';
+
+    public $linkChildPrimaryContact = false;
 
     // Manual Attendance Form
     public $manualKajianEventId = '';
@@ -273,7 +296,10 @@ class ParentIndex extends Component
                 ]);
 
                 // Sync children first, then regenerate QR from latest type + first linked student.
-                $parent->students()->sync($this->selectedChildren);
+                // Editing a parent must not detach historical children. New
+                // links are additive; old relations remain available for
+                // attendance history and alumni reporting.
+                $parent->students()->syncWithoutDetaching($this->selectedChildren);
                 $parent->refresh()->syncQrCode();
             });
 
@@ -306,10 +332,14 @@ class ParentIndex extends Component
 
                 // Attach children first, then regenerate QR from first linked student.
                 if (! empty($this->selectedChildren)) {
-                    $parent->students()->attach($this->selectedChildren, [
-                        'relationship' => 'biological',
-                        'is_primary_contact' => $this->type === 'father',
-                    ]);
+                    foreach ($this->selectedChildren as $studentId) {
+                        $parent->students()->syncWithoutDetaching([
+                            $studentId => [
+                                'relationship' => 'biological',
+                                'is_primary_contact' => $this->type === 'father',
+                            ],
+                        ]);
+                    }
                 }
 
                 $parent->refresh()->syncQrCode();
@@ -328,28 +358,126 @@ class ParentIndex extends Component
         $this->showDeleteModal = true;
     }
 
-    public function delete()
+    public function openLinkChildModal(int $parentId): void
     {
-        $parent = ParentModel::with(['user', 'attendances'])->findOrFail($this->parentId);
+        $this->linkParent = ParentModel::with(['user', 'students'])->findOrFail($parentId);
+        $this->linkChildNis = '';
+        $this->linkChildName = '';
+        $this->linkChildClassId = ClassRoom::where('level', '1')->where('is_active', true)->orderBy('name')->value('id') ?? '';
+        $this->linkChildGender = '';
+        $this->linkChildBirthDate = '';
+        $this->linkChildAddress = '';
+        $this->linkChildRelationship = 'biological';
+        $this->linkChildPrimaryContact = false;
+        $this->resetValidation();
+        $this->showLinkChildModal = true;
+    }
 
-        // PROTEKSI: Blokir hapus jika punya riwayat presensi
-        $attendanceCount = $parent->attendances()->count();
-        if ($attendanceCount > 0) {
-            $this->showDeleteModal = false;
-            $this->dispatch('notify', [
-                'type' => 'error',
-                'message' => "Tidak bisa dihapus! {$parent->user->name} memiliki {$attendanceCount} riwayat presensi. Gunakan fitur Nonaktifkan saja.",
-            ]);
+    public function saveLinkedChild(): void
+    {
+        $this->validate([
+            'linkChildNis' => ['required', 'string', 'max:20', 'regex:/^[A-Za-z0-9]+$/'],
+            'linkChildName' => ['nullable', 'string', 'max:100'],
+            'linkChildClassId' => ['required', 'exists:classes,id'],
+            'linkChildGender' => ['nullable', 'in:L,P'],
+            'linkChildBirthDate' => ['nullable', 'date'],
+            'linkChildAddress' => ['nullable', 'string'],
+            'linkChildRelationship' => ['required', 'in:biological,guardian,step'],
+            'linkChildPrimaryContact' => ['boolean'],
+        ]);
+
+        $class = ClassRoom::findOrFail($this->linkChildClassId);
+        if ((string) $class->level !== '1') {
+            $this->addError('linkChildClassId', 'Fitur ini khusus untuk anak baru kelas 1.');
 
             return;
         }
 
-        // Delete user (cascade will handle parent record)
-        $parent->user->delete();
+        try {
+            DB::transaction(function () use ($class) {
+            $student = Student::where('nis', trim($this->linkChildNis))->first();
+
+            if ($student && ($student->student_status ?? null) === 'graduated') {
+                throw new \RuntimeException('NIS tersebut sudah berstatus alumni. Periksa kembali data siswa sebelum menyambungkan.');
+            }
+
+            if (! $student) {
+                if (blank($this->linkChildName)) {
+                    throw new \RuntimeException('Nama siswa wajib diisi untuk NIS baru.');
+                }
+
+                $student = Student::create([
+                    'nis' => trim($this->linkChildNis),
+                    'name' => trim($this->linkChildName),
+                    'class_id' => $class->id,
+                    'gender' => $this->linkChildGender ?: null,
+                    'birth_date' => $this->linkChildBirthDate ?: null,
+                    'address' => $this->linkChildAddress ?: null,
+                    'student_status' => 'active',
+                    'is_active' => true,
+                ]);
+            } else {
+                $student->update([
+                    'class_id' => $student->class_id ?: $class->id,
+                    'student_status' => $student->student_status ?: 'active',
+                    'is_active' => true,
+                ]);
+            }
+
+            $student->load('classRoom');
+            $studentClass = $student->classRoom ?: $class;
+
+            $this->linkParent->students()->syncWithoutDetaching([
+                $student->id => [
+                    'relationship' => $this->linkChildRelationship,
+                    'is_primary_contact' => (bool) $this->linkChildPrimaryContact,
+                ],
+            ]);
+
+            $targetYear = \App\Models\AcademicYear::active();
+            if ($targetYear) {
+                StudentEnrollment::updateOrCreate(
+                    ['student_id' => $student->id, 'academic_year_id' => $targetYear->id],
+                    [
+                        'class_id' => $student->class_id,
+                        'class_name' => $studentClass->name,
+                        'class_level' => $studentClass->level,
+                        'status' => 'enrolled',
+                        'started_at' => $targetYear->start_date,
+                    ]
+                );
+            }
+
+            app(ParentQrCodeService::class)->syncForParent($this->linkParent->fresh('students'));
+            });
+        } catch (\Throwable $exception) {
+            $this->addError('linkChildNis', $exception->getMessage());
+
+            return;
+        }
+
+        $this->showLinkChildModal = false;
+        $this->linkParent = null;
+        $this->dispatch('notify', ['type' => 'success', 'message' => 'Anak berhasil disambungkan. QR utama orang tua tetap sama dan alias anak baru sudah aktif.']);
+    }
+
+    public function downloadFullData(ParentDataExportService $exporter)
+    {
+        return $exporter->download();
+    }
+
+    public function delete()
+    {
+        $parent = ParentModel::with(['user', 'attendances', 'students'])->findOrFail($this->parentId);
+
+        // Parent records are identity and audit data. Never delete them from
+        // the UI; deactivate the account while preserving children, aliases,
+        // attendance, and alumni history.
+        $parent->user?->update(['is_active' => false]);
 
         $this->showDeleteModal = false;
         $this->parentId = null;
-        $this->dispatch('notify', ['type' => 'success', 'message' => 'Data orang tua berhasil dihapus!']);
+        $this->dispatch('notify', ['type' => 'success', 'message' => 'Akun orang tua dinonaktifkan. Semua data lama, relasi, QR, dan histori tetap tersimpan.']);
     }
 
     public function showCard($id)
@@ -433,6 +561,10 @@ class ParentIndex extends Component
             'parent_id' => $this->parentId,
             'kajian_event_id' => $this->manualKajianEventId,
             'student_id' => $event->targetedStudentsForParent($parent)->first()?->id,
+            'student_enrollment_id' => StudentEnrollment::ensureForEvent(
+                $event->targetedStudentsForParent($parent)->first(),
+                $event
+            )?->id,
             'status' => $this->manualStatus,
             'method' => 'manual',
             'proof_file' => $proofPath,
@@ -648,13 +780,22 @@ class ParentIndex extends Component
 
     public function render()
     {
-        $query = ParentModel::with(['user', 'students.classRoom'])
-            ->whereHas('user', function ($query) {
-                if ($this->search) {
-                    $query->where('name', 'like', '%'.$this->search.'%')
-                        ->orWhere('username', 'like', '%'.$this->search.'%')
-                        ->orWhere('email', 'like', '%'.$this->search.'%');
-                }
+        $query = ParentModel::with(['user', 'students.classRoom', 'qrCodes.sourceStudent'])
+            ->when($this->search, function ($query) {
+                $search = '%'.$this->search.'%';
+                $query->where(function ($query) use ($search) {
+                    $query->where('qr_code_string', 'like', $search)
+                        ->orWhereHas('qrCodes', fn ($qrQuery) => $qrQuery->where('code', 'like', $search))
+                        ->orWhereHas('user', function ($userQuery) use ($search) {
+                            $userQuery->where('name', 'like', $search)
+                                ->orWhere('username', 'like', $search)
+                                ->orWhere('email', 'like', $search)
+                                ->orWhere('phone', 'like', $search);
+                        })
+                        ->orWhereHas('students', function ($studentQuery) use ($search) {
+                            $studentQuery->where('name', 'like', $search)->orWhere('nis', 'like', $search);
+                        });
+                });
             });
 
         if ($this->isTeacherMode()) {

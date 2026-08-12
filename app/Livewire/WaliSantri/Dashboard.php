@@ -6,6 +6,7 @@ use App\Models\Attendance;
 use App\Models\KajianEvent;
 use App\Models\KajianFeedback;
 use App\Models\ParentModel;
+use App\Models\StudentEnrollment;
 use App\Services\AiProviderService;
 use App\Services\CloudinaryService;
 use BaconQrCode\Renderer\Image\SvgImageBackEnd;
@@ -308,6 +309,7 @@ class Dashboard extends Component
             $attendance->update([
                 'proof_file' => $path,
                 'notes' => $this->notes,
+                'student_enrollment_id' => $attendance->student_enrollment_id ?: $this->targetedStudentEnrollmentId(),
                 'validation_status' => Attendance::VALIDATION_PENDING,
                 'rejection_reason' => null,
                 'validated_by' => null,
@@ -318,6 +320,7 @@ class Dashboard extends Component
                 'kajian_event_id' => $this->activeEvent->id,
                 'parent_id' => $this->parent->id,
                 'student_id' => $this->targetedStudentIdForActiveEvent(),
+                'student_enrollment_id' => $this->targetedStudentEnrollmentId(),
                 'status' => Attendance::STATUS_HADIR_FISIK,
                 'method' => Attendance::METHOD_UPLOAD,
                 'validation_status' => Attendance::VALIDATION_PENDING,
@@ -377,6 +380,7 @@ class Dashboard extends Component
             'kajian_event_id' => $this->activeEvent->id,
             'parent_id' => $this->parent->id,
             'student_id' => $this->targetedStudentIdForActiveEvent(),
+            'student_enrollment_id' => $this->targetedStudentEnrollmentId(),
             'status' => 'hadir_online',
             'method' => 'upload',
             'validation_status' => 'pending',
@@ -436,6 +440,7 @@ class Dashboard extends Component
             'kajian_event_id' => $this->activeEvent->id,
             'parent_id' => $this->parent->id,
             'student_id' => $this->targetedStudentIdForActiveEvent(),
+            'student_enrollment_id' => $this->targetedStudentEnrollmentId(),
             'status' => 'izin',
             'method' => 'upload',
             'validation_status' => 'pending',
@@ -644,6 +649,14 @@ class Dashboard extends Component
         }
 
         return $this->activeEvent->targetedStudentsForParent($this->parent)->first()?->id;
+    }
+
+    protected function targetedStudentEnrollmentId(): ?int
+    {
+        $studentId = $this->targetedStudentIdForActiveEvent();
+        $student = $studentId ? $this->parent?->students()->find($studentId) : null;
+
+        return StudentEnrollment::ensureForEvent($student, $this->activeEvent)?->id;
     }
 
     protected function activeEventAllowsStatus(string $status): bool

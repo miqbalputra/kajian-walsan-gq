@@ -48,12 +48,6 @@ class ParentModel extends Model
             }
         });
 
-        // Paksa perbaikan kode jika masih menggunakan format lama (WS-) saat di-update
-        static::saving(function ($parent) {
-            if (str_starts_with($parent->qr_code_string, 'WS-')) {
-                $parent->qr_code_string = static::generateForParent($parent);
-            }
-        });
     }
 
     /**
@@ -77,9 +71,10 @@ class ParentModel extends Model
             return static::uniqueQrCode($prefix.$student->nis, $parent->id ?? null);
         }
 
-        // Fallback jika belum ada murid terhubung
+        // Parent-owned QR for new records. Existing legacy QR values are never
+        // replaced; aliases are managed separately by ParentQrCodeService.
         do {
-            $code = 'TMP-'.strtoupper(Str::random(8));
+            $code = 'P-'.strtoupper(Str::random(12));
         } while (static::where('qr_code_string', $code)->exists());
 
         return $code;
@@ -135,6 +130,11 @@ class ParentModel extends Model
     public function attendances(): HasMany
     {
         return $this->hasMany(Attendance::class, 'parent_id');
+    }
+
+    public function qrCodes(): HasMany
+    {
+        return $this->hasMany(ParentQrCode::class, 'parent_id');
     }
 
     /**
@@ -222,7 +222,12 @@ class ParentModel extends Model
      */
     public function scopeByQrCode($query, string $qrCode)
     {
-        return $query->where('qr_code_string', $qrCode);
+        return $query->where(function ($query) use ($qrCode) {
+            $query->where('qr_code_string', $qrCode)
+                ->orWhereHas('qrCodes', function ($qrQuery) use ($qrCode) {
+                    $qrQuery->active()->where('code', $qrCode);
+                });
+        });
     }
 
     /**
@@ -232,13 +237,24 @@ class ParentModel extends Model
     public function scopeTargetedByEvent($query, KajianEvent $event)
     {
         if ($event->targetsAllClasses()) {
-            return $query;
+            return $query->whereHas('students', function ($query) {
+                $query->where('students.is_active', true)
+                    ->where(function ($statusQuery) {
+                        $statusQuery->whereNull('students.student_status')
+                            ->orWhere('students.student_status', 'active');
+                    });
+            });
         }
 
         $targetClassIds = $event->targetClassIds()->all();
 
         return $query->whereHas('students', function ($query) use ($targetClassIds) {
-            $query->whereIn('students.class_id', $targetClassIds);
+            $query->whereIn('students.class_id', $targetClassIds)
+                ->where('students.is_active', true)
+                ->where(function ($statusQuery) {
+                    $statusQuery->whereNull('students.student_status')
+                        ->orWhere('students.student_status', 'active');
+                });
         });
     }
 
@@ -247,7 +263,7 @@ class ParentModel extends Model
      */
     public static function findByQrCode(string $qrCode): ?self
     {
-        return static::byQrCode($qrCode)->first();
+        return app(\App\Services\ParentQrCodeService::class)->resolve($qrCode);
     }
 
     /**
@@ -255,9 +271,9 @@ class ParentModel extends Model
      */
     public function regenerateQrCode(): bool
     {
-        $this->qr_code_string = static::generateForParent($this);
-
-        return $this->save();
+        // QR is parent-owned now. Keep the canonical code and only reconcile
+        // aliases for linked children.
+        return $this->syncQrCode();
     }
 
     /**
@@ -266,16 +282,10 @@ class ParentModel extends Model
      */
     public function syncQrCode(): bool
     {
-        $newCode = static::generateForParent($this);
+        $before = $this->qr_code_string;
+        app(\App\Services\ParentQrCodeService::class)->syncForParent($this);
 
-        // Hanya update jika formatnya berubah (misal dari TMP ke NIS)
-        if ($this->qr_code_string !== $newCode) {
-            $this->qr_code_string = $newCode;
-
-            return $this->save();
-        }
-
-        return false;
+        return $before !== $this->qr_code_string;
     }
 
     /**

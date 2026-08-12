@@ -5,24 +5,27 @@ namespace App\Services;
 use App\Models\Attendance;
 use App\Models\KajianEvent;
 use App\Models\ParentModel;
+use App\Models\StudentEnrollment;
+use App\Services\ParentQrCodeService;
 use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\DB;
 
 class AttendanceScanService
 {
+    public function __construct(private ParentQrCodeService $qrCodes)
+    {
+    }
+
     public function process(KajianEvent $event, string $qrCode, int $userId, ?string $deviceInfo = null): array
     {
         $deviceInfo = $deviceInfo ? mb_substr($deviceInfo, 0, 255) : null;
 
-        $parent = ParentModel::query()
-            ->select(['id', 'user_id', 'type', 'is_teacher'])
-            ->with([
-                'user:id,name',
-                'students:id,name,class_id',
-                'students.classRoom:id,name',
-            ])
-            ->where('qr_code_string', trim($qrCode))
-            ->first();
+        $parent = $this->qrCodes->resolve(trim($qrCode));
+        $parent?->load([
+            'user:id,name',
+            'students:id,name,class_id,student_status,is_active',
+            'students.classRoom:id,name',
+        ]);
 
         if (! $parent) {
             return [
@@ -49,6 +52,7 @@ class AttendanceScanService
 
         $students = $event->targetedStudentsForParent($parent);
         $studentId = $students->first()?->id;
+        $studentEnrollmentId = StudentEnrollment::ensureForEvent($students->first(), $event)?->id;
         $childDisplayNames = $students
             ->map(fn ($student) => $student->name.($student->classRoom ? ' ('.$student->classRoom->name.')' : ''))
             ->values()
@@ -65,6 +69,7 @@ class AttendanceScanService
                 $needsProof = $parent->isWaliTeacher() && ($event->policy['guru_hadir_fisik_requires_proof'] ?? true);
                 $attendance->update([
                     'student_id' => $studentId,
+                    'student_enrollment_id' => $studentEnrollmentId,
                     'status' => Attendance::STATUS_HADIR_FISIK,
                     'method' => Attendance::METHOD_SCAN_QR,
                     'validation_status' => $needsProof ? Attendance::VALIDATION_PENDING : Attendance::VALIDATION_APPROVED,
@@ -86,11 +91,12 @@ class AttendanceScanService
         } else {
             try {
                 $needsProof = $parent->isWaliTeacher() && ($event->policy['guru_hadir_fisik_requires_proof'] ?? true);
-                DB::transaction(function () use ($event, $parent, $studentId, $userId, $deviceInfo, $needsProof) {
+                DB::transaction(function () use ($event, $parent, $studentId, $studentEnrollmentId, $userId, $deviceInfo, $needsProof) {
                     Attendance::create([
                         'kajian_event_id' => $event->id,
                         'parent_id' => $parent->id,
                         'student_id' => $studentId,
+                        'student_enrollment_id' => $studentEnrollmentId,
                         'status' => Attendance::STATUS_HADIR_FISIK,
                         'method' => Attendance::METHOD_SCAN_QR,
                         'validation_status' => $needsProof ? Attendance::VALIDATION_PENDING : Attendance::VALIDATION_APPROVED,
@@ -127,6 +133,7 @@ class AttendanceScanService
         };
 
         $needsProof = $parent->isWaliTeacher() && ($event->policy['guru_hadir_fisik_requires_proof'] ?? true);
+        $event->updateAttendanceCount();
         $message = ($parent->isWaliTeacher() && $needsProof)
             ? "Selamat Datang, {$parentType} {$parent->user->name}. Berhasil mencatat, mohon ingatkan untuk upload catatan kajian di dashboard."
             : "Selamat Datang, {$parentType} {$parent->user->name}. Berhasil mencatat presensi untuk ".($students->count() ?: 1).' santri.';
