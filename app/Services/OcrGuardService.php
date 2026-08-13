@@ -15,6 +15,42 @@ class OcrGuardService
             && filled(config('ocr_guard.url'));
     }
 
+    /**
+     * Lightweight diagnostic used by the admin settings page. It never
+     * exposes the guard token and fails fast when the internal service is down.
+     */
+    public function health(): array
+    {
+        if (! $this->configured()) {
+            return ['status' => 'disabled', 'model' => null];
+        }
+
+        try {
+            $request = Http::acceptJson()
+                ->connectTimeout(1)
+                ->timeout(2);
+
+            if (filled(config('ocr_guard.token'))) {
+                $request = $request->withToken(config('ocr_guard.token'));
+            }
+
+            $response = $request->get(rtrim((string) config('ocr_guard.url'), '/').'/health');
+
+            if (! $response->successful()) {
+                return ['status' => 'unavailable', 'model' => null];
+            }
+
+            $payload = $response->json();
+
+            return [
+                'status' => ($payload['status'] ?? null) === 'ok' ? 'ok' : 'unavailable',
+                'model' => is_string($payload['model'] ?? null) ? $payload['model'] : null,
+            ];
+        } catch (\Throwable) {
+            return ['status' => 'unavailable', 'model' => null];
+        }
+    }
+
     public function proofHash(Attendance $attendance): string
     {
         return hash('sha256', $this->proofBytes($attendance));

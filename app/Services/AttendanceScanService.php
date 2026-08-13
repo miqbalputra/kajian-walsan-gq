@@ -18,14 +18,7 @@ class AttendanceScanService
 
     public function process(KajianEvent $event, string $qrCode, int $userId, ?string $deviceInfo = null): array
     {
-        $deviceInfo = $deviceInfo ? mb_substr($deviceInfo, 0, 255) : null;
-
         $parent = $this->qrCodes->resolve(trim($qrCode));
-        $parent?->load([
-            'user:id,name',
-            'students:id,name,class_id,student_status,is_active',
-            'students.classRoom:id,name',
-        ]);
 
         if (! $parent) {
             return [
@@ -33,6 +26,32 @@ class AttendanceScanService
                 'message' => 'QR Code tidak ditemukan dalam sistem.',
             ];
         }
+
+        return $this->processParent($event, $parent, $userId, Attendance::METHOD_SCAN_QR, $deviceInfo);
+    }
+
+    /**
+     * Record a manual check-in through the same guarded path as QR scans.
+     * Keeping one write path prevents different validation/enrollment rules.
+     */
+    public function processManual(KajianEvent $event, ParentModel $parent, int $userId, ?string $deviceInfo = null): array
+    {
+        return $this->processParent($event, $parent, $userId, Attendance::METHOD_MANUAL, $deviceInfo);
+    }
+
+    private function processParent(
+        KajianEvent $event,
+        ParentModel $parent,
+        int $userId,
+        string $method,
+        ?string $deviceInfo = null
+    ): array {
+        $deviceInfo = $deviceInfo ? mb_substr($deviceInfo, 0, 255) : null;
+        $parent->loadMissing([
+            'user:id,name',
+            'students:id,name,class_id,student_status,is_active',
+            'students.classRoom:id,name',
+        ]);
 
         if ($parent->isPureTeacher()) {
             return [
@@ -52,34 +71,65 @@ class AttendanceScanService
 
         $students = $event->targetedStudentsForParent($parent);
         $studentId = $students->first()?->id;
-        $studentEnrollmentId = StudentEnrollment::ensureForEvent($students->first(), $event)?->id;
         $childDisplayNames = $students
             ->map(fn ($student) => $student->name.($student->classRoom ? ' ('.$student->classRoom->name.')' : ''))
             ->values()
             ->all();
 
-        $attendance = Attendance::withTrashed()
-            ->where('kajian_event_id', $event->id)
-            ->where('parent_id', $parent->id)
-            ->first();
+        $needsProof = $parent->isWaliTeacher() && ($event->policy['guru_hadir_fisik_requires_proof'] ?? true);
 
-        if ($attendance) {
-            if ($attendance->trashed()) {
-                $attendance->restore();
-                $needsProof = $parent->isWaliTeacher() && ($event->policy['guru_hadir_fisik_requires_proof'] ?? true);
-                $attendance->update([
+        try {
+            $recordResult = DB::transaction(function () use (
+                $event,
+                $parent,
+                $studentId,
+                $students,
+                $userId,
+                $deviceInfo,
+                $method,
+                $needsProof
+            ): array {
+                $attendance = Attendance::withTrashed()
+                    ->where('kajian_event_id', $event->id)
+                    ->where('parent_id', $parent->id)
+                    ->lockForUpdate()
+                    ->first();
+
+                if ($attendance && ! $attendance->trashed()) {
+                    return ['action' => 'duplicate'];
+                }
+
+                $studentEnrollmentId = StudentEnrollment::ensureForEvent($students->first(), $event)?->id;
+                $attributes = [
                     'student_id' => $studentId,
                     'student_enrollment_id' => $studentEnrollmentId,
                     'status' => Attendance::STATUS_HADIR_FISIK,
-                    'method' => Attendance::METHOD_SCAN_QR,
+                    'method' => $method,
                     'validation_status' => $needsProof ? Attendance::VALIDATION_PENDING : Attendance::VALIDATION_APPROVED,
                     'validated_by' => $needsProof ? null : $userId,
                     'validated_at' => $needsProof ? null : now(),
                     'rejection_reason' => null,
                     'scanned_at' => now(),
                     'device_info' => $deviceInfo,
+                ];
+
+                if ($attendance) {
+                    $attendance->restore();
+                    $attendance->update($attributes);
+
+                    return ['action' => 'restored'];
+                }
+
+                Attendance::create([
+                    'kajian_event_id' => $event->id,
+                    'parent_id' => $parent->id,
+                    ...$attributes,
                 ]);
-            } else {
+
+                return ['action' => 'created'];
+            }, 2);
+        } catch (QueryException $exception) {
+            if ($this->isDuplicateAttendance($exception)) {
                 return [
                     'status' => 'warning',
                     'message' => $parent->user->name.' sudah tercatat hadir.',
@@ -88,37 +138,18 @@ class AttendanceScanService
                     ],
                 ];
             }
-        } else {
-            try {
-                $needsProof = $parent->isWaliTeacher() && ($event->policy['guru_hadir_fisik_requires_proof'] ?? true);
-                DB::transaction(function () use ($event, $parent, $studentId, $studentEnrollmentId, $userId, $deviceInfo, $needsProof) {
-                    Attendance::create([
-                        'kajian_event_id' => $event->id,
-                        'parent_id' => $parent->id,
-                        'student_id' => $studentId,
-                        'student_enrollment_id' => $studentEnrollmentId,
-                        'status' => Attendance::STATUS_HADIR_FISIK,
-                        'method' => Attendance::METHOD_SCAN_QR,
-                        'validation_status' => $needsProof ? Attendance::VALIDATION_PENDING : Attendance::VALIDATION_APPROVED,
-                        'validated_by' => $needsProof ? null : $userId,
-                        'validated_at' => $needsProof ? null : now(),
-                        'scanned_at' => now(),
-                        'device_info' => $deviceInfo,
-                    ]);
-                }, 2);
-            } catch (QueryException $exception) {
-                if ($this->isDuplicateAttendance($exception)) {
-                    return [
-                        'status' => 'warning',
-                        'message' => $parent->user->name.' sudah tercatat hadir.',
-                        'payload' => [
-                            'parentName' => $parent->user->name,
-                        ],
-                    ];
-                }
 
-                throw $exception;
-            }
+            throw $exception;
+        }
+
+        if (($recordResult['action'] ?? null) === 'duplicate') {
+            return [
+                'status' => 'warning',
+                'message' => $parent->user->name.' sudah tercatat hadir.',
+                'payload' => [
+                    'parentName' => $parent->user->name,
+                ],
+            ];
         }
 
         $childNameDisplay = count($childDisplayNames) > 0

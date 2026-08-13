@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\QueryException;
 
 class StudentEnrollment extends Model
 {
@@ -80,21 +81,30 @@ class StudentEnrollment extends Model
             return null;
         }
 
-        $existing = static::forStudentAndYear($student->id, $event->academic_year_id);
-        if ($existing) {
-            return $existing;
-        }
-
         $student->loadMissing('classRoom');
 
-        return static::create([
+        $attributes = [
             'student_id' => $student->id,
             'academic_year_id' => $event->academic_year_id,
+        ];
+        $values = [
             'class_id' => $student->class_id,
             'class_name' => $student->classRoom?->name,
             'class_level' => $student->classRoom?->level,
             'status' => $student->student_status === 'graduated' ? 'graduated' : 'enrolled',
             'started_at' => $event->academicYear?->start_date,
-        ]);
+        ];
+
+        try {
+            // The unique(student_id, academic_year_id) constraint is the final
+            // guard when two scanners hit the same parent simultaneously.
+            return static::firstOrCreate($attributes, $values);
+        } catch (QueryException $exception) {
+            if (($exception->errorInfo[1] ?? null) !== 1062) {
+                throw $exception;
+            }
+
+            return static::forStudentAndYear($student->id, $event->academic_year_id);
+        }
     }
 }

@@ -259,6 +259,15 @@ class ParentModel extends Model
     }
 
     /**
+     * Scope to actual wali santri profiles. Teacher-only profiles are not
+     * counted in guardian attendance metrics.
+     */
+    public function scopeGuardians($query)
+    {
+        return $query->whereIn('type', ['father', 'mother']);
+    }
+
+    /**
      * Find parent by QR code string.
      */
     public static function findByQrCode(string $qrCode): ?self

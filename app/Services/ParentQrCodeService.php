@@ -74,16 +74,15 @@ class ParentQrCodeService
         $candidate = $base;
         $counter = 1;
 
-        while (($existing = ParentQrCode::where('code', $candidate)->first()) && $existing->parent_id !== $parent->id) {
+        while (($existing = ParentQrCode::where('code', $candidate)->first())
+            && ! ($existing->parent_id === $parent->id && $existing->source_student_id === $student->id)) {
             $suffix = '-'.$parent->id.'-'.$counter++;
             $candidate = Str::limit($base, 100 - strlen($suffix), '').$suffix;
         }
 
         $existing = ParentQrCode::where('code', $candidate)->first();
         if ($existing) {
-            if ($existing->parent_id === $parent->id && $existing->source_student_id !== $student->id) {
-                $existing->update(['source_student_id' => $student->id, 'is_active' => true, 'revoked_at' => null]);
-            }
+            $existing->update(['is_active' => true, 'revoked_at' => null]);
 
             return $existing;
         }

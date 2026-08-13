@@ -32,8 +32,12 @@ class Dashboard extends Component
 
     public function openDetail($id)
     {
-        $this->selectedStudent = Student::with(['parents.user', 'attendances.kajianEvent', 'attendances.parent.user'])
-            ->findOrFail($id);
+        $query = Student::with(['parents.user', 'attendances.kajianEvent', 'attendances.parent.user']);
+        if (! auth()->user()->isAdmin()) {
+            $query->where('class_id', auth()->user()->managedClass?->id);
+        }
+
+        $this->selectedStudent = $query->findOrFail($id);
         $this->showDetailModal = true;
     }
 
@@ -52,15 +56,18 @@ class Dashboard extends Component
                 ->layout('components.layouts.wali-kelas', ['title' => 'Dashboard']);
         }
 
-        $students = Student::where('class_id', $class->id)
+        $students = Student::active()
+            ->where('class_id', $class->id)
             ->with(['parents.user', 'attendances.kajianEvent'])
             ->when($this->search, function ($q) {
-                $q->where('name', 'like', '%' . $this->search . '%')
-                    ->orWhere('nis', 'like', '%' . $this->search . '%');
+                $q->where(function ($searchQuery) {
+                    $searchQuery->where('name', 'like', '%' . $this->search . '%')
+                        ->orWhere('nis', 'like', '%' . $this->search . '%');
+                });
             })
             ->paginate(10);
 
-        $totalStudents = $class->students()->count();
+        $totalStudents = $class->students()->active()->count();
         $kajianEvents = KajianEvent::orderBy('date', 'desc')->get();
 
         // Stats
@@ -81,7 +88,7 @@ class Dashboard extends Component
 
     private function calculateAttendanceRate($classId)
     {
-        $totalStudents = Student::where('class_id', $classId)->count();
+        $totalStudents = Student::active()->where('class_id', $classId)->count();
         if ($totalStudents == 0)
             return 0;
 
@@ -90,8 +97,15 @@ class Dashboard extends Component
             return 0;
 
         $presentCount = Attendance::where('kajian_event_id', $latestEvent->id)
-            ->whereHas('student', function ($q) use ($classId) {
-                $q->where('class_id', $classId);
+            ->where(function ($q) use ($classId) {
+                $q->whereHas('studentEnrollment', function ($enrollmentQuery) use ($classId) {
+                    $enrollmentQuery->where('class_id', $classId);
+                })->orWhere(function ($legacyQuery) use ($classId) {
+                    $legacyQuery->whereNull('student_enrollment_id')
+                        ->whereHas('student', function ($studentQuery) use ($classId) {
+                            $studentQuery->where('class_id', $classId);
+                        });
+                });
             })
             ->where('validation_status', 'approved')
             ->count();
@@ -101,7 +115,7 @@ class Dashboard extends Component
 
     private function getTopAttendees($classId)
     {
-        return Student::where('class_id', $classId)
+        return Student::active()->where('class_id', $classId)
             ->withCount([
                 'attendances' => function ($q) {
                     $q->where('validation_status', 'approved');
@@ -115,7 +129,7 @@ class Dashboard extends Component
     private function getNeedsAttention($classId)
     {
         // Students with 0 or few attendances
-        return Student::where('class_id', $classId)
+        return Student::active()->where('class_id', $classId)
             ->withCount([
                 'attendances' => function ($q) {
                     $q->where('validation_status', 'approved');

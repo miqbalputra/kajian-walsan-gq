@@ -217,6 +217,44 @@
             </div>
         </div>
 
+        <!-- Local OCR Guardrail Status -->
+        <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+            <div class="px-6 py-4 bg-gradient-to-r from-emerald-600 to-teal-600">
+                <div class="flex items-center justify-between gap-3">
+                    <div class="flex items-center gap-3">
+                        <span class="material-symbols-rounded text-white text-2xl">document_scanner</span>
+                        <div>
+                            <h2 class="text-lg font-bold text-white">OCR Lokal Guardrail</h2>
+                            <p class="text-emerald-100 text-sm">RapidOCR offline untuk menyaring foto dokumen</p>
+                        </div>
+                    </div>
+                    <button type="button" wire:click="refreshOcrStatus"
+                        class="px-3 py-2 text-xs font-bold text-white border border-white/40 rounded-lg hover:bg-white/10">
+                        Cek Status
+                    </button>
+                </div>
+            </div>
+            <div class="p-6">
+                <div class="flex flex-wrap items-center gap-3 text-sm">
+                    <span class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full font-bold
+                        {{ $ocr_guard_status === 'ok' ? 'bg-emerald-100 text-emerald-700' : ($ocr_guard_status === 'disabled' ? 'bg-slate-100 text-slate-600' : 'bg-amber-100 text-amber-700') }}">
+                        <span class="w-2 h-2 rounded-full {{ $ocr_guard_status === 'ok' ? 'bg-emerald-500' : ($ocr_guard_status === 'disabled' ? 'bg-slate-400' : 'bg-amber-500') }}"></span>
+                        {{ $ocr_guard_status === 'ok' ? 'Aktif dan terhubung' : ($ocr_guard_status === 'disabled' ? 'Nonaktif' : 'Tidak terhubung') }}
+                    </span>
+                    @if($ocr_guard_model)
+                        <span class="text-gray-600">Model: <strong>{{ $ocr_guard_model }}</strong></span>
+                    @endif
+                </div>
+                <p class="text-xs text-gray-500 mt-3">
+                    Pengaturan OCR, URL internal, token, dan mode shadow dikelola melalui Environment Variables Coolify.
+                    OCR tidak memakai API key LLM dan upload tetap diproses melalui queue.
+                </p>
+                @if($ocr_guard_url)
+                    <p class="text-[11px] text-gray-400 mt-1">Endpoint: {{ $ocr_guard_url }}</p>
+                @endif
+            </div>
+        </div>
+
         <!-- Save Button -->
         <div class="flex justify-end">
             <button type="submit"

@@ -4,6 +4,7 @@ namespace App\Livewire\Admin;
 
 use App\Models\Setting;
 use App\Services\AiProviderService;
+use App\Services\OcrGuardService;
 use Illuminate\Support\Facades\Crypt;
 use Livewire\Component;
 use Livewire\Attributes\Layout;
@@ -30,6 +31,13 @@ class Settings extends Component
     public array $ai_models = [];
     public ?string $aiModelMessage = null;
 
+    // Local OCR guardrail is configured through deployment environment
+    // variables; these fields are read-only diagnostics for administrators.
+    public bool $ocr_guard_enabled = false;
+    public string $ocr_guard_url = '';
+    public string $ocr_guard_status = 'disabled';
+    public ?string $ocr_guard_model = null;
+
     public bool $saved = false;
 
     public function mount(): void
@@ -46,6 +54,12 @@ class Settings extends Component
         if ($this->ai_model) {
             $this->ai_models = [$this->ai_model];
         }
+
+        $this->ocr_guard_enabled = (bool) config('ocr_guard.enabled', false);
+        $this->ocr_guard_url = (string) config('ocr_guard.url', '');
+        $ocrHealth = app(OcrGuardService::class)->health();
+        $this->ocr_guard_status = $ocrHealth['status'];
+        $this->ocr_guard_model = $ocrHealth['model'];
     }
 
     public function save(): void
@@ -131,6 +145,14 @@ class Settings extends Component
             $this->ai_models = $this->ai_model ? [$this->ai_model] : [];
             $this->aiModelMessage = $exception->getMessage();
         }
+    }
+
+    public function refreshOcrStatus(): void
+    {
+        $ocrHealth = app(OcrGuardService::class)->health();
+        $this->ocr_guard_enabled = (bool) config('ocr_guard.enabled', false);
+        $this->ocr_guard_status = $ocrHealth['status'];
+        $this->ocr_guard_model = $ocrHealth['model'];
     }
 
     public function render()

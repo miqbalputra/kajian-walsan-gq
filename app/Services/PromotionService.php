@@ -49,7 +49,11 @@ class PromotionService
             ->orderBy('name')
             ->get();
 
-        $targetClasses = ClassRoom::orderBy('level')->orderBy('name')->get()->keyBy('id');
+        $targetClasses = ClassRoom::where('is_active', true)
+            ->orderBy('level')
+            ->orderBy('name')
+            ->get()
+            ->keyBy('id');
 
         $rows = [];
         foreach ($students as $student) {
@@ -168,6 +172,21 @@ class PromotionService
                 $sourceEnrollment = StudentEnrollment::where('student_id', $student->id)
                     ->where('academic_year_id', $sourceYear->id)
                     ->first();
+
+                // Older installations may not have a snapshot for every
+                // student yet. Create it from the pre-promotion state before
+                // closing the source year so no historical class is lost.
+                if (! $sourceEnrollment) {
+                    $sourceEnrollment = StudentEnrollment::create([
+                        'student_id' => $student->id,
+                        'academic_year_id' => $sourceYear->id,
+                        'class_id' => $beforeClass?->id,
+                        'class_name' => $beforeClass?->name,
+                        'class_level' => $beforeClass?->level,
+                        'status' => $beforeStatus === 'graduated' ? 'graduated' : 'enrolled',
+                        'started_at' => $sourceYear->start_date,
+                    ]);
+                }
 
                 if ($action === 'graduate') {
                     $sourceEnrollment?->update([

@@ -5,7 +5,6 @@ namespace App\Livewire\Panitia;
 use App\Models\Attendance;
 use App\Models\KajianEvent;
 use App\Models\ParentModel;
-use App\Models\StudentEnrollment;
 use App\Services\AttendanceScanService;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\RateLimiter;
@@ -123,80 +122,21 @@ class Scanner extends Component
             return;
         }
 
-        $parent = ParentModel::with('user', 'students.classRoom')->findOrFail($parentId);
+        $parent = ParentModel::findOrFail($parentId);
+        $result = app(AttendanceScanService::class)->processManual(
+            $this->activeEvent,
+            $parent,
+            auth()->id(),
+            request()->userAgent()
+        );
 
-        if ($parent->isPureTeacher()) {
-            $this->dispatch('scan-warning', message: 'Guru murni tidak perlu presensi QR/manual. Silakan upload catatan kajian dari dashboard.');
-            $this->showManualModal = false;
-
-            return;
+        if ($result['status'] === 'success') {
+            $this->dispatch('scan-success', $result['payload'] + ['message' => $result['message']]);
+        } elseif ($result['status'] === 'warning') {
+            $this->dispatch('scan-warning', message: $result['message']);
+        } else {
+            $this->dispatch('scan-error', message: $result['message']);
         }
-
-        $this->activeEvent->loadMissing('targetClasses');
-        if (! $this->activeEvent->targetsParent($parent)) {
-            $this->dispatch('scan-error', message: 'Wali santri tidak termasuk kelas sasaran kegiatan ini.');
-            $this->showManualModal = false;
-
-            return;
-        }
-
-        // Check if already checked in
-        $existingAttendance = Attendance::where('kajian_event_id', $this->activeEvent->id)
-            ->where('parent_id', $parent->id)
-            ->first();
-
-        if ($existingAttendance) {
-            $this->dispatch('scan-warning', message: $parent->user->name.' sudah tercatat hadir.');
-            $this->showManualModal = false;
-
-            return;
-        }
-
-        $students = $this->activeEvent->targetedStudentsForParent($parent);
-        $childDisplayNames = [];
-
-        foreach ($students as $student) {
-            $childDisplayNames[] = $student->name.($student->classRoom ? ' ('.$student->classRoom->name.')' : '');
-        }
-
-        // Record single attendance for manual check-in
-        $policy = $this->activeEvent->policy;
-        $needsProof = $parent->isWaliTeacher() && ($policy['guru_hadir_fisik_requires_proof'] ?? true);
-        Attendance::create([
-            'kajian_event_id' => $this->activeEvent->id,
-            'parent_id' => $parent->id,
-            'student_id' => $students->first()?->id,
-            'student_enrollment_id' => StudentEnrollment::ensureForEvent($students->first(), $this->activeEvent)?->id,
-            'status' => 'hadir_fisik',
-            'method' => 'manual',
-            'validation_status' => $needsProof ? 'pending' : 'approved',
-            'validated_by' => $needsProof ? null : auth()->id(),
-            'validated_at' => $needsProof ? null : now(),
-        ]);
-
-        $this->activeEvent->updateAttendanceCount();
-
-        $parentType = match ($parent->type) {
-            'father' => 'Bapak',
-            'mother' => 'Ibu',
-            'teacher' => 'Ustadz/ah',
-            default => 'Peserta',
-        };
-
-        $childNameDisplay = count($childDisplayNames) > 0
-            ? (count($childDisplayNames).' Santri: '.implode(', ', $childDisplayNames))
-            : 'Tidak ada data santri';
-
-        $message = ($parent->isWaliTeacher() && $needsProof)
-            ? "Selamat Datang, {$parentType} {$parent->user->name}! Berhasil mencatat, mohon ingatkan untuk upload catatan kajian."
-            : "Selamat Datang, {$parentType} {$parent->user->name}! Berhasil mencatat presensi untuk ".($students->count() ?: 1).' santri.';
-
-        $this->dispatch('scan-success', [
-            'message' => $message,
-            'parentName' => $parent->user->name,
-            'parentType' => $parent->type_display,
-            'childName' => $childNameDisplay,
-        ]);
 
         $this->showManualModal = false;
         $this->searchQuery = '';
@@ -234,6 +174,7 @@ class Scanner extends Component
         ]);
 
         $attendance->delete();
+        $this->activeEvent->updateAttendanceCount();
         session()->flash('message', 'Presensi berhasil dibatalkan.');
     }
 
