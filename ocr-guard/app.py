@@ -148,8 +148,13 @@ def run_ocr(data: bytes) -> dict[str, Any]:
             "image_height": image.height,
         }
 
-    text_values = [str(value).strip() for value in texts if str(value).strip()]
-    score_values = [float(value) for value in scores[: len(text_values)]]
+    pairs = [
+        (str(text).strip(), float(score))
+        for text, score in zip(texts, scores)
+        if str(text).strip()
+    ]
+    text_values = [text for text, _score in pairs]
+    score_values = [score for _text, score in pairs]
     text_chars = len(" ".join(text_values))
     text_boxes = len(text_values)
     confidence = int(round((sum(score_values) / len(score_values)) * 100)) if score_values else 0

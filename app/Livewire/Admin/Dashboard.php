@@ -116,6 +116,7 @@ class Dashboard extends Component
             $q->where('status', 'closed')
                 ->orWhere('date', '<=', now()->toDateString());
         })
+            ->with('targetClasses')
             ->orderByDesc('date')
             ->take(6)
             ->get()
@@ -175,16 +176,7 @@ class Dashboard extends Component
     private function getAttendanceByStatus(): array
     {
         // Only completed events should contribute to the distribution.
-        $pastEvents = KajianEvent::where(function ($q) {
-            $q->where('status', 'closed')
-                ->orWhere(function ($sq) {
-                    $sq->where('date', '<', now()->toDateString())
-                        ->orWhere(function ($ssq) {
-                            $ssq->where('date', '=', now()->toDateString())
-                                ->where('time_end', '<', now()->toTimeString());
-                        });
-                });
-        })->get();
+        $pastEvents = $this->completedEvents();
         $pastEventIds = $pastEvents->pluck('id');
 
         $stats = Attendance::whereIn('kajian_event_id', $pastEventIds)
@@ -227,8 +219,7 @@ class Dashboard extends Component
         $percentages = [];
         $colors = [];
 
-        $completedEventIds = $this->completedEventIds();
-        $totalEvents = $completedEventIds->count();
+        $completedEvents = $this->completedEvents();
         $colorPalette = ['#10B981', '#3B82F6', '#8B5CF6', '#F59E0B', '#EF4444', '#EC4899', '#14B8A6', '#6366F1'];
 
         foreach ($classes as $index => $class) {
@@ -245,8 +236,13 @@ class Dashboard extends Component
                 ->pluck('parent_id')
                 ->unique();
 
-            $totalPossible = $parentIds->count() * $totalEvents;
-            $actualAttendance = Attendance::whereIn('kajian_event_id', $completedEventIds)
+            $eventIdsForClass = $completedEvents
+                ->filter(fn (KajianEvent $event) => $event->targetsAllClasses()
+                    || $event->targetClassIds()->contains((int) $class->id))
+                ->pluck('id');
+
+            $totalPossible = $parentIds->count() * $eventIdsForClass->count();
+            $actualAttendance = Attendance::whereIn('kajian_event_id', $eventIdsForClass)
                 ->whereIn('parent_id', $parentIds)
                 ->whereIn('status', ['hadir_fisik', 'hadir_online'])
                 ->where('validation_status', 'approved')
@@ -277,27 +273,53 @@ class Dashboard extends Component
         $attendanceData = [];
         $targetData = [];
 
-        $totalParents = ParentModel::guardians()->count();
+        $events = KajianEvent::whereYear('date', $year)
+            ->where(function ($query) {
+                $query->where('status', 'closed')
+                    ->orWhere(function ($query) {
+                        $query->where('date', '<', today())
+                            ->orWhere(function ($query) {
+                                $query->whereDate('date', today())
+                                    ->where('time_end', '<', now()->toTimeString());
+                            });
+                    });
+            })
+            ->with('targetClasses')
+            ->get();
+
+        $guardians = ParentModel::guardians()->with('students')->get();
+        $attendanceByEvent = Attendance::whereIn('kajian_event_id', $events->pluck('id'))
+            ->whereIn('status', ['hadir_fisik', 'hadir_online'])
+            ->where('validation_status', 'approved')
+            ->get(['kajian_event_id', 'parent_id'])
+            ->groupBy('kajian_event_id');
+
+        $monthStats = $events->groupBy(fn (KajianEvent $event) => $event->date->month)
+            ->map(function ($monthEvents) use ($guardians, $attendanceByEvent) {
+                $possible = 0;
+                $attended = 0;
+
+                foreach ($monthEvents as $event) {
+                    $possible += $guardians->filter(fn (ParentModel $parent) => $event->targetsParent($parent))->count();
+                    $targetedParentIds = $guardians
+                        ->filter(fn (ParentModel $parent) => $event->targetsParent($parent))
+                        ->pluck('id');
+                    $attended += $attendanceByEvent
+                        ->get($event->id, collect())
+                        ->whereIn('parent_id', $targetedParentIds)
+                        ->count();
+                }
+
+                return compact('possible', 'attended');
+            });
 
         for ($month = 1; $month <= 12; $month++) {
             $monthName = Carbon::create($year, $month, 1)->translatedFormat('M');
             $months[] = $monthName;
 
-            // Count kajian events in this month
-            $eventsInMonth = KajianEvent::whereYear('date', $year)
-                ->whereMonth('date', $month)
-                ->count();
-
-            // Total possible attendances
-            $totalPossible = $totalParents * $eventsInMonth;
-
-            // Actual attendances
-            $actualAttendance = Attendance::whereHas('kajianEvent', function ($q) use ($year, $month) {
-                $q->whereYear('date', $year)->whereMonth('date', $month);
-            })
-                ->whereIn('status', ['hadir_fisik', 'hadir_online'])
-                ->where('validation_status', 'approved')
-                ->count();
+            $stats = $monthStats->get($month, ['possible' => 0, 'attended' => 0]);
+            $totalPossible = $stats['possible'];
+            $actualAttendance = $stats['attended'];
 
             $percentage = $totalPossible > 0
                 ? round(($actualAttendance / $totalPossible) * 100)
@@ -324,8 +346,7 @@ class Dashboard extends Component
             ->get();
 
         $classStats = [];
-        $completedEventIds = $this->completedEventIds();
-        $totalEvents = $completedEventIds->count();
+        $completedEvents = $this->completedEvents();
 
         foreach ($classes as $class) {
             if ($class->students_count === 0)
@@ -337,8 +358,13 @@ class Dashboard extends Component
                 ->pluck('parent_id')
                 ->unique();
 
-            $totalPossible = $parentIds->count() * $totalEvents;
-            $actualAttendance = Attendance::whereIn('kajian_event_id', $completedEventIds)
+            $eventIdsForClass = $completedEvents
+                ->filter(fn (KajianEvent $event) => $event->targetsAllClasses()
+                    || $event->targetClassIds()->contains((int) $class->id))
+                ->pluck('id');
+
+            $totalPossible = $parentIds->count() * $eventIdsForClass->count();
+            $actualAttendance = Attendance::whereIn('kajian_event_id', $eventIdsForClass)
                 ->whereIn('parent_id', $parentIds)
                 ->whereIn('status', ['hadir_fisik', 'hadir_online'])
                 ->where('validation_status', 'approved')
@@ -366,7 +392,8 @@ class Dashboard extends Component
      */
     private function getParentsNeedingAttention(): array
     {
-        $lastTwoEvents = KajianEvent::where('date', '<=', today())
+        $lastTwoEvents = KajianEvent::with('targetClasses')
+            ->where('date', '<=', today())
             ->orderByDesc('date')
             ->take(2)
             ->get();
@@ -376,21 +403,25 @@ class Dashboard extends Component
         }
 
         $eventIds = $lastTwoEvents->pluck('id');
-        $eventCount = $lastTwoEvents->count();
-
-        // Find parents who don't have (approved) attendance for these events
-        $parents = ParentModel::guardians()->with(['user', 'students.classRoom'])
-            ->whereDoesntHave('attendances', function ($q) use ($eventIds) {
-                $q->whereIn('kajian_event_id', $eventIds)
+        $parents = ParentModel::guardians()
+            ->with(['user', 'students.classRoom', 'attendances' => function ($query) use ($eventIds) {
+                $query->whereIn('kajian_event_id', $eventIds)
                     ->whereIn('status', ['hadir_fisik', 'hadir_online', 'izin'])
                     ->where('validation_status', 'approved');
+            }])
+            ->get()
+            ->filter(function (ParentModel $parent) use ($lastTwoEvents) {
+                $targetedEvents = $lastTwoEvents->filter(fn (KajianEvent $event) => $event->targetsParent($parent));
+
+                return $targetedEvents->isNotEmpty()
+                    && $targetedEvents->every(fn (KajianEvent $event) => ! $parent->attendances->contains('kajian_event_id', $event->id));
             })
             ->take(5)
-            ->get();
+            ->values();
 
         return [
             'data' => $parents->toArray(),
-            'count' => $eventCount
+            'count' => $lastTwoEvents->count()
         ];
     }
 
@@ -399,9 +430,9 @@ class Dashboard extends Component
         return ParentModel::guardians()->targetedByEvent($event)->count();
     }
 
-    private function completedEventIds()
+    private function completedEvents()
     {
-        return KajianEvent::where(function ($q) {
+        return KajianEvent::with('targetClasses')->where(function ($q) {
             $q->where('status', 'closed')
                 ->orWhere(function ($sq) {
                     $sq->where('date', '<', now()->toDateString())
@@ -410,6 +441,7 @@ class Dashboard extends Component
                                 ->where('time_end', '<', now()->toTimeString());
                         });
                 });
-        })->pluck('id');
+        })->get();
     }
+
 }

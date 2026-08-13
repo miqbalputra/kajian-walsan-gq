@@ -23,7 +23,23 @@ class AttendanceTrash extends Component
     public function restore($id)
     {
         $attendance = Attendance::onlyTrashed()->findOrFail($id);
+
+        $duplicate = Attendance::query()
+            ->where('kajian_event_id', $attendance->kajian_event_id)
+            ->where('parent_id', $attendance->parent_id)
+            ->exists();
+
+        if ($duplicate) {
+            $this->dispatch('notify', [
+                'type' => 'error',
+                'message' => 'Tidak dapat restore karena presensi aktif untuk wali dan kajian yang sama sudah ada.',
+            ]);
+
+            return;
+        }
+
         $attendance->restore();
+        $attendance->kajianEvent?->updateAttendanceCount();
 
         $this->dispatch('notify', ['type' => 'success', 'message' => 'Presensi berhasil dikembalikan!']);
     }

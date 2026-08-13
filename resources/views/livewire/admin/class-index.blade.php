@@ -75,10 +75,12 @@
                         <span class="material-symbols-rounded text-lg">edit</span>
                         Edit
                     </button>
+                    @if($class->is_active)
                     <button wire:click="confirmDelete({{ $class->id }})"
                         class="p-2 text-red-600 hover:bg-red-50 rounded-xl transition-colors">
-                        <span class="material-symbols-rounded text-lg">delete</span>
+                        <span class="material-symbols-rounded text-lg">archive</span>
                     </button>
+                    @endif
                 </div>
             </div>
         @empty
@@ -178,13 +180,13 @@
                     <div class="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
                         <span class="material-symbols-rounded text-red-600 text-3xl">delete</span>
                     </div>
-                    <h3 class="text-xl font-bold text-gray-900 mb-2">Hapus Kelas?</h3>
-                    <p class="text-gray-500 mb-6">Data kelas akan dihapus permanen.</p>
+                    <h3 class="text-xl font-bold text-gray-900 mb-2">Nonaktifkan Kelas?</h3>
+                    <p class="text-gray-500 mb-6">Kelas tidak dipakai untuk input baru, tetapi histori enrollment dan presensi tetap tersimpan.</p>
                     <div class="flex gap-3">
                         <button wire:click="$set('showDeleteModal', false)"
                             class="flex-1 px-4 py-2.5 border border-gray-200 rounded-xl font-medium text-gray-700 hover:bg-gray-50">Batal</button>
                         <button wire:click="delete"
-                            class="flex-1 px-4 py-2.5 bg-red-500 text-white rounded-xl font-medium hover:bg-red-600">Hapus</button>
+                            class="flex-1 px-4 py-2.5 bg-red-500 text-white rounded-xl font-medium hover:bg-red-600">Nonaktifkan</button>
                     </div>
                 </div>
             </div>

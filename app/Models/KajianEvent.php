@@ -185,6 +185,7 @@ class KajianEvent extends Model
     public function scopeOpenForAttendance($query)
     {
         return $query->where('status', 'open')
+            ->whereDate('date', '<=', today())
             ->orderByDesc('date')
             ->orderByDesc('time_start')
             ->orderByDesc('id');
@@ -236,7 +237,7 @@ class KajianEvent extends Model
      */
     public function targetsParent(ParentModel $parent): bool
     {
-        if ($parent->isPureTeacher() || $this->targetsAllClasses()) {
+        if ($parent->isPureTeacher()) {
             return true;
         }
 

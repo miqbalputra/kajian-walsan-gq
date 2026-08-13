@@ -134,11 +134,11 @@
                                             <span class="material-symbols-rounded text-xl">link_off</span>
                                         </button>
                                     @endif
-                                    @if($user->id !== auth()->id())
+                                    @if($user->id !== auth()->id() && $user->is_active)
                                         <button wire:click="confirmDelete({{ $user->id }})"
                                             class="p-2 text-gray-600 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                                            title="Hapus User">
-                                            <span class="material-symbols-rounded text-xl">delete</span>
+                                            title="Nonaktifkan User">
+                                            <span class="material-symbols-rounded text-xl">person_off</span>
                                         </button>
                                     @endif
                                 </div>
@@ -276,8 +276,8 @@
                     <div class="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
                         <span class="material-symbols-rounded text-red-600 text-3xl">delete</span>
                     </div>
-                    <h3 class="text-xl font-bold text-gray-900 mb-2">Hapus User?</h3>
-                    <p class="text-gray-500 mb-6">Akun dan data user akan dihapus permanen. Aksi ini tidak dapat dibatalkan.
+                    <h3 class="text-xl font-bold text-gray-900 mb-2">Nonaktifkan User?</h3>
+                    <p class="text-gray-500 mb-6">Akun tidak dapat login, tetapi data wali, relasi anak, dan histori tetap tersimpan.
                     </p>
 
                     <div class="flex gap-3">
@@ -287,7 +287,7 @@
                         </button>
                         <button wire:click="delete"
                             class="flex-1 px-4 py-2.5 bg-red-500 text-white rounded-xl font-medium hover:bg-red-600 transition-colors">
-                            Hapus
+                            Nonaktifkan
                         </button>
                     </div>
                 </div>

@@ -3,6 +3,7 @@
 namespace App\Livewire\WaliSantri;
 
 use App\Models\Attendance;
+use App\Models\AttendanceProofHistory;
 use App\Models\KajianEvent;
 use App\Models\KajianFeedback;
 use App\Models\ParentModel;
@@ -299,8 +300,6 @@ class Dashboard extends Component
             return;
         }
 
-        $this->clearDeletedAttendanceForActiveEvent();
-
         $cloudinary = app(CloudinaryService::class);
         $result = $cloudinary->upload($this->proofPhoto, 'teacher-attendance-notes');
         $path = $result['url'];
@@ -316,7 +315,7 @@ class Dashboard extends Component
                 'validated_at' => null,
             ]);
         } else {
-            $attendance = Attendance::create([
+            $attendance = $this->createOrReviveAttendance([
                 'kajian_event_id' => $this->activeEvent->id,
                 'parent_id' => $this->parent->id,
                 'student_id' => $this->targetedStudentIdForActiveEvent(),
@@ -368,8 +367,6 @@ class Dashboard extends Component
             return;
         }
 
-        $this->clearDeletedAttendanceForActiveEvent();
-
         // Upload via CloudinaryService (or local fallback)
         $cloudinary = app(CloudinaryService::class);
         $result = $cloudinary->upload(
@@ -379,7 +376,7 @@ class Dashboard extends Component
         $path = $result['url'];
 
         // Create attendance
-        $attendance = Attendance::create([
+        $attendance = $this->createOrReviveAttendance([
             'kajian_event_id' => $this->activeEvent->id,
             'parent_id' => $this->parent->id,
             'student_id' => $this->targetedStudentIdForActiveEvent(),
@@ -431,8 +428,6 @@ class Dashboard extends Component
             return;
         }
 
-        $this->clearDeletedAttendanceForActiveEvent();
-
         // Upload via CloudinaryService (or local fallback)
         $cloudinary = app(CloudinaryService::class);
         $result = $cloudinary->upload(
@@ -442,7 +437,7 @@ class Dashboard extends Component
         $path = $result['url'];
 
         // Create attendance with izin status
-        $attendance = Attendance::create([
+        $attendance = $this->createOrReviveAttendance([
             'kajian_event_id' => $this->activeEvent->id,
             'parent_id' => $this->parent->id,
             'student_id' => $this->targetedStudentIdForActiveEvent(),
@@ -512,10 +507,7 @@ class Dashboard extends Component
             return;
         }
 
-        // Hapus foto lama dari Cloudinary (jika ada)
-        if ($attendance->proof_file) {
-            $this->deleteOldProofFile($attendance->proof_file);
-        }
+        $oldProofFile = $attendance->proof_file;
 
         // Upload file baru via Cloudinary/local
         $cloudinary = app(CloudinaryService::class);
@@ -527,6 +519,10 @@ class Dashboard extends Component
         };
         $result = $cloudinary->upload($this->reuploadFile, $folder);
         $path = $result['url'];
+
+        if ($oldProofFile && $oldProofFile !== $path) {
+            $this->archiveProofHistory($attendance, $oldProofFile, 'reupload');
+        }
 
         // Update record
         $attendance->update([
@@ -594,18 +590,20 @@ class Dashboard extends Component
             return;
         }
 
-        if ($attendance->proof_file) {
-            $this->deleteOldProofFile($attendance->proof_file);
-        }
-
         if ($attendance->method === Attendance::METHOD_UPLOAD) {
-            $attendance->forceDelete();
+            // Soft delete saja. Bukti dan record tetap tersedia di tempat
+            // sampah agar histori tidak hilang dan bisa direstore admin.
+            $attendance->delete();
             session()->flash('message', 'Kiriman berhasil dibatalkan. Silakan pilih presensi dari awal.');
 
             return;
         }
 
         if ($attendance->method === Attendance::METHOD_SCAN_QR && $attendance->status === Attendance::STATUS_HADIR_FISIK) {
+            if ($attendance->proof_file) {
+                $this->archiveProofHistory($attendance, $attendance->proof_file, 'cancel_upload');
+            }
+
             $attendance->update([
                 'proof_file' => null,
                 'notes' => null,
@@ -684,41 +682,38 @@ class Dashboard extends Component
         return in_array($status, $this->activeEvent->policy['statuses'] ?? [], true);
     }
 
-    protected function clearDeletedAttendanceForActiveEvent(): void
+    protected function createOrReviveAttendance(array $attributes): Attendance
     {
-        if (! $this->activeEvent || ! $this->parent) {
-            return;
+        $attendance = Attendance::onlyTrashed()
+            ->where('kajian_event_id', $attributes['kajian_event_id'])
+            ->where('parent_id', $attributes['parent_id'])
+            ->latest('deleted_at')
+            ->first();
+
+        if ($attendance) {
+            if ($attendance->proof_file) {
+                $this->archiveProofHistory($attendance, $attendance->proof_file, 'revive_upload');
+            }
+
+            $attendance->restore();
+            $attendance->fill($attributes);
+            $attendance->save();
+
+            return $attendance;
         }
 
-        Attendance::onlyTrashed()
-            ->where('kajian_event_id', $this->activeEvent->id)
-            ->where('parent_id', $this->parent->id)
-            ->get()
-            ->each(function (Attendance $attendance) {
-                if ($attendance->proof_file) {
-                    $this->deleteOldProofFile($attendance->proof_file);
-                }
-
-                $attendance->forceDelete();
-            });
+        return Attendance::create($attributes);
     }
 
-    /**
-     * Hapus file lama dari Cloudinary (jika URL Cloudinary).
-     * Untuk local file, biarkan saja (tidak kritis).
-     */
-    protected function deleteOldProofFile(string $url): void
+    protected function archiveProofHistory(Attendance $attendance, string $proofFile, string $source): void
     {
-        if (! CloudinaryService::isCloudinaryUrl($url)) {
-            return;
-        }
-
-        // Extract public_id dari Cloudinary URL
-        // Format: https://res.cloudinary.com/{cloud}/image/upload/v{ver}/{public_id}.{ext}
-        if (preg_match('#/upload/(?:v\d+/)?(.+?)(?:\.[a-z0-9]+)?$#i', $url, $m)) {
-            $publicId = $m[1];
-            app(CloudinaryService::class)->delete($publicId);
-        }
+        AttendanceProofHistory::firstOrCreate([
+            'attendance_id' => $attendance->id,
+            'proof_file' => $proofFile,
+            'source' => $source,
+        ], [
+            'created_at' => now(),
+        ]);
     }
 
     public function openFeedbackModal($eventId)

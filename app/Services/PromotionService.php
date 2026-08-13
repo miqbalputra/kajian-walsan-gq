@@ -40,14 +40,47 @@ class PromotionService
 
     public function preview(int $sourceYearId, array $classMapping, array $overrides = []): array
     {
-        $students = Student::with('classRoom')
-            ->where('is_active', true)
-            ->where(function ($query) {
-                $query->whereNull('student_status')->orWhere('student_status', 'active');
-            })
-            ->orderBy('class_id')
-            ->orderBy('name')
-            ->get();
+        $sourceYear = AcademicYear::findOrFail($sourceYearId);
+        $sourceEnrollments = StudentEnrollment::with('student.classRoom')
+            ->where('academic_year_id', $sourceYearId)
+            ->whereIn('status', ['enrolled', 'retained'])
+            ->get()
+            ->keyBy('student_id');
+
+        if ($sourceYear->is_active) {
+            // Backward compatibility for active-year data created before the
+            // enrollment snapshot migration completed.
+            $students = Student::with('classRoom')
+                ->where('is_active', true)
+                ->where(function ($query) {
+                    $query->whereNull('student_status')->orWhere('student_status', 'active');
+                })
+                ->orderBy('class_id')
+                ->orderBy('name')
+                ->get();
+
+            $studentContexts = $students->map(function (Student $student) use ($sourceEnrollments) {
+                $enrollment = $sourceEnrollments->get($student->id);
+
+                return [
+                    'student' => $student,
+                    'source_class_id' => $enrollment?->class_id ?? $student->class_id,
+                    'source_class_name' => $enrollment?->class_name ?? $student->classRoom?->name,
+                    'source_level' => $enrollment?->class_level ?? $student->classRoom?->level,
+                ];
+            });
+        } else {
+            // Historical years must never fall back to students.class_id,
+            // which contains the current class rather than the old class.
+            $studentContexts = $sourceEnrollments->values()->map(function (StudentEnrollment $enrollment) {
+                return [
+                    'student' => $enrollment->student,
+                    'source_class_id' => $enrollment->class_id,
+                    'source_class_name' => $enrollment->class_name,
+                    'source_level' => $enrollment->class_level,
+                ];
+            })->filter(fn (array $context) => $context['student'] instanceof Student);
+        }
 
         $targetClasses = ClassRoom::where('is_active', true)
             ->orderBy('level')
@@ -56,20 +89,25 @@ class PromotionService
             ->keyBy('id');
 
         $rows = [];
-        foreach ($students as $student) {
-            $sourceLevel = (int) ($student->classRoom?->level ?? 0);
+        foreach ($studentContexts as $context) {
+            /** @var Student $student */
+            $student = $context['student'];
+            $sourceLevel = (int) ($context['source_level'] ?? 0);
             $defaultAction = $sourceLevel >= 6 ? 'graduate' : 'promote';
-            $defaultTarget = $sourceLevel >= 6 ? null : ($classMapping[$student->class_id] ?? null);
+            $defaultTarget = $sourceLevel >= 6 ? null : ($classMapping[$context['source_class_id']] ?? null);
 
             if ($sourceLevel < 6 && ! $defaultTarget) {
                 $defaultAction = 'defer';
             }
 
-            $override = $overrides[$student->id] ?? [];
+            $override = is_array($overrides[$student->id] ?? null) ? $overrides[$student->id] : [];
             $action = $override['action'] ?? $defaultAction;
+            if (! in_array($action, ['promote', 'retain', 'move', 'graduate', 'defer'], true)) {
+                $action = 'defer';
+            }
             $targetClassId = match ($action) {
                 'graduate', 'defer' => null,
-                'retain' => $student->class_id,
+                'retain' => $context['source_class_id'],
                 default => array_key_exists('target_class_id', $override)
                     ? ($override['target_class_id'] ?: null)
                     : $defaultTarget,
@@ -81,9 +119,9 @@ class PromotionService
                 'student_id' => $student->id,
                 'nis' => $student->nis,
                 'name' => $student->name,
-                'source_class_id' => $student->class_id,
-                'source_class_name' => $student->classRoom?->name,
-                'source_level' => $student->classRoom?->level,
+                'source_class_id' => $context['source_class_id'],
+                'source_class_name' => $context['source_class_name'],
+                'source_level' => $context['source_level'],
                 'action' => $action,
                 'target_class_id' => $targetClass?->id,
                 'target_class_name' => $targetClass?->name,
@@ -164,14 +202,23 @@ class PromotionService
 
             foreach ($preview['rows'] as $row) {
                 $student = Student::with('classRoom')->lockForUpdate()->findOrFail($row['student_id']);
-                $beforeClass = $student->classRoom;
-                $beforeStatus = $student->student_status ?? ($student->is_active ? 'active' : 'withdrawn');
-                $beforeIsActive = (bool) $student->is_active;
                 $action = $row['action'];
 
                 $sourceEnrollment = StudentEnrollment::where('student_id', $student->id)
                     ->where('academic_year_id', $sourceYear->id)
+                    ->lockForUpdate()
                     ->first();
+
+                $beforeClassId = $sourceEnrollment?->class_id ?? $row['source_class_id'];
+                $beforeClassName = $sourceEnrollment?->class_name ?? $row['source_class_name'];
+                $beforeStatus = $sourceEnrollment
+                    ? ($sourceEnrollment->status === 'graduated'
+                        ? 'graduated'
+                        : (in_array($sourceEnrollment->status, ['enrolled', 'retained'], true) ? 'active' : 'withdrawn'))
+                    : ($student->student_status ?? ($student->is_active ? 'active' : 'withdrawn'));
+                $beforeIsActive = $sourceEnrollment
+                    ? in_array($sourceEnrollment->status, ['enrolled', 'retained'], true)
+                    : (bool) $student->is_active;
 
                 // Older installations may not have a snapshot for every
                 // student yet. Create it from the pre-promotion state before
@@ -180,9 +227,9 @@ class PromotionService
                     $sourceEnrollment = StudentEnrollment::create([
                         'student_id' => $student->id,
                         'academic_year_id' => $sourceYear->id,
-                        'class_id' => $beforeClass?->id,
-                        'class_name' => $beforeClass?->name,
-                        'class_level' => $beforeClass?->level,
+                        'class_id' => $beforeClassId,
+                        'class_name' => $beforeClassName,
+                        'class_level' => $row['source_level'],
                         'status' => $beforeStatus === 'graduated' ? 'graduated' : 'enrolled',
                         'started_at' => $sourceYear->start_date,
                     ]);
@@ -234,9 +281,9 @@ class PromotionService
                 $student->refresh()->load('classRoom');
                 $batch->changes()->create([
                     'student_id' => $student->id,
-                    'before_class_id' => $beforeClass?->id,
+                    'before_class_id' => $beforeClassId,
                     'after_class_id' => $student->class_id,
-                    'before_class_name' => $beforeClass?->name,
+                    'before_class_name' => $beforeClassName,
                     'after_class_name' => $student->classRoom?->name,
                     'before_status' => $beforeStatus,
                     'after_status' => $student->student_status,

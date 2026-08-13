@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Jobs\ReviewAttendanceProof;
 use App\Models\Attendance;
+use App\Models\AttendanceProofHistory;
 use App\Models\KajianEvent;
 use App\Models\ParentModel;
 use App\Models\Student;
@@ -323,9 +324,9 @@ class HermesAgentController extends Controller
                 'kajian_event_id' => $event->id,
                 'parent_id' => $parent->id,
             ]);
-        } elseif ($attendance->trashed()) {
-            $attendance->restore();
         }
+
+        $wasTrashed = (bool) $attendance?->trashed();
 
         $finalProofFile = $proofFile ?: ($data['keep_existing_proof'] ?? true ? $attendance->proof_file : null);
         $finalNotes = $data['notes'] ?? $attendance->notes;
@@ -337,6 +338,10 @@ class HermesAgentController extends Controller
                 'message' => 'Presensi tidak memenuhi aturan aplikasi.',
                 'errors' => $policyErrors,
             ], 422);
+        }
+
+        if ($wasTrashed) {
+            $attendance->restore();
         }
 
         $attendance->fill([
@@ -445,6 +450,16 @@ class HermesAgentController extends Controller
         }
 
         $validationStatus = $data['validation_status'] ?? ($proofFile ? Attendance::VALIDATION_PENDING : $attendance->validation_status);
+
+        $oldProofFile = $attendance->proof_file;
+
+        if ($oldProofFile && $finalProofFile && $oldProofFile !== $finalProofFile) {
+            AttendanceProofHistory::firstOrCreate([
+                'attendance_id' => $attendance->id,
+                'proof_file' => $oldProofFile,
+                'source' => 'hermes_update',
+            ], ['created_at' => now()]);
+        }
 
         $attendance->update([
             'student_id' => $studentId,

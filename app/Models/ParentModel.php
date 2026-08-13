@@ -51,8 +51,8 @@ class ParentModel extends Model
     }
 
     /**
-     * Generate a QR code string based on parent type and child NIS.
-     * Fallback to random if no child is linked yet.
+     * Generate the initial parent-owned QR code.
+     * Child NIS values are aliases managed by ParentQrCodeService.
      */
     public static function generateForParent($parent): string
     {
@@ -276,7 +276,8 @@ class ParentModel extends Model
     }
 
     /**
-     * Regenerate QR code string based on child NIS.
+     * Legacy method name retained for compatibility. It now only syncs
+     * aliases and never replaces the parent-owned canonical QR.
      */
     public function regenerateQrCode(): bool
     {
@@ -286,8 +287,8 @@ class ParentModel extends Model
     }
 
     /**
-     * Sync QR code string with linked student NIS.
-     * Useful when a student is newly linked or NIS is updated.
+     * Reconcile aliases for linked students without changing the canonical
+     * parent QR code.
      */
     public function syncQrCode(): bool
     {

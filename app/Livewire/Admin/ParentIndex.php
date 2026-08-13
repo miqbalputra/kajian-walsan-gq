@@ -295,7 +295,8 @@ class ParentIndex extends Component
                     'is_single_parent' => $this->is_single_parent,
                 ]);
 
-                // Sync children first, then regenerate QR from latest type + first linked student.
+                // Sync children first, then reconcile aliases without replacing
+                // the permanent parent-owned QR.
                 // Editing a parent must not detach historical children. New
                 // links are additive; old relations remain available for
                 // attendance history and alumni reporting.
@@ -330,7 +331,8 @@ class ParentIndex extends Component
                     'is_single_parent' => $this->is_single_parent,
                 ]);
 
-                // Attach children first, then regenerate QR from first linked student.
+                // Attach children first, then create aliases without replacing
+                // the permanent parent-owned QR.
                 if (! empty($this->selectedChildren)) {
                     foreach ($this->selectedChildren as $studentId) {
                         $parent->students()->syncWithoutDetaching([

@@ -68,7 +68,7 @@
                             </button>
                             <button wire:click="confirmDelete({{ $kajian->id }})"
                                 class="p-1.5 text-gray-600 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors">
-                                <span class="material-symbols-rounded text-lg">delete</span>
+                                <span class="material-symbols-rounded text-lg">archive</span>
                             </button>
                         </div>
                     </div>
@@ -370,8 +370,8 @@
                     <div class="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
                         <span class="material-symbols-rounded text-red-600 text-3xl">delete</span>
                     </div>
-                    <h3 class="text-xl font-bold text-gray-900 mb-2">Hapus Kegiatan?</h3>
-                    <p class="text-gray-500 mb-6">Data kegiatan dan presensi terkait akan dihapus permanen.</p>
+                    <h3 class="text-xl font-bold text-gray-900 mb-2">Arsipkan Kegiatan?</h3>
+                    <p class="text-gray-500 mb-6">Kegiatan ditutup dan disembunyikan dari proses aktif. Histori presensi serta file bukti tetap tersimpan.</p>
 
                     <div class="flex gap-3">
                         <button wire:click="$set('showDeleteModal', false)"
@@ -380,7 +380,7 @@
                         </button>
                         <button wire:click="delete"
                             class="flex-1 px-4 py-2.5 bg-red-500 text-white rounded-xl font-medium hover:bg-red-600 transition-colors">
-                            Hapus
+                            Arsipkan
                         </button>
                     </div>
                 </div>

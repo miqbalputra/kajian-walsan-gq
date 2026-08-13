@@ -24,11 +24,6 @@ else
     echo "APP_KEY already set; skipping key generation."
 fi
 
-# Pulse migrations pernah dipublish saat runtime pada deploy lama.
-# Kalau tabel Pulse sudah ada tapi migration file baru muncul lagi, migrate gagal "table already exists".
-# Jangan jalankan migration Pulse runtime; aplikasi utama tetap aman.
-find /var/www/html/database/migrations -type f -iname '*pulse*' -delete 2>/dev/null || true
-
 # Jalankan migrations aplikasi
 php artisan migrate --force --no-interaction
 

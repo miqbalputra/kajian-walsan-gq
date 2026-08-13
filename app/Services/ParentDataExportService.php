@@ -38,7 +38,12 @@ class ParentDataExportService
                 foreach ($parents as $parent) {
                     $activeChildren = $parent->students->filter(fn ($student) => ($student->student_status ?? 'active') === 'active' && $student->is_active)->count();
                     $alumniChildren = $parent->students->filter(fn ($student) => ($student->student_status ?? null) === 'graduated')->count();
-                    $aliases = $parent->qrCodes->where('is_active', true)->whereNull('revoked_at')->pluck('code')->implode(' | ');
+                    $aliases = $parent->qrCodes
+                        ->where('kind', '!=', 'canonical')
+                        ->where('is_active', true)
+                        ->whereNull('revoked_at')
+                        ->pluck('code')
+                        ->implode(' | ');
 
                     $parentSheet->fromArray([[
                         $parent->id,

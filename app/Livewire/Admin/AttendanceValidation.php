@@ -53,6 +53,7 @@ class AttendanceValidation extends Component
             'validated_by' => auth()->id(),
             'validated_at' => now(),
         ]);
+        $attendance->kajianEvent?->updateAttendanceCount();
 
         // Kirim notifikasi WhatsApp via n8n
         try {
@@ -85,6 +86,7 @@ class AttendanceValidation extends Component
             'validated_by' => auth()->id(),
             'validated_at' => now(),
         ]);
+        $this->selectedAttendance->kajianEvent?->updateAttendanceCount();
 
         // Kirim notifikasi WhatsApp via n8n
         try {
@@ -107,6 +109,7 @@ class AttendanceValidation extends Component
             'validated_by' => null,
             'validated_at' => null,
         ]);
+        $attendance->kajianEvent?->updateAttendanceCount();
 
         $this->dispatch('notify', ['type' => 'info', 'message' => 'Status presensi dikembalikan ke pending.']);
     }
@@ -139,6 +142,7 @@ class AttendanceValidation extends Component
                     ]);
                 }
             }
+            $fresh->kajianEvent?->updateAttendanceCount();
 
             $message = $fresh->validation_status === Attendance::VALIDATION_APPROVED
                 ? "AI menyetujui presensi ({$result['confidence']}%)."
@@ -192,8 +196,16 @@ class AttendanceValidation extends Component
             return;
         }
 
-        $attendances = Attendance::where('method', 'upload')
-            ->whereHas('parent', fn ($query) => $query->where('type', '!=', 'teacher'))
+        $attendances = Attendance::where(function ($query) {
+                $query->where('method', Attendance::METHOD_UPLOAD)
+                    ->orWhere(function ($query) {
+                        // Guru/wali guru boleh scan QR dulu lalu mengunggah
+                        // catatan. Metodenya tetap scan_qr, tetapi bukti tetap
+                        // harus masuk antrean validasi.
+                        $query->where('method', Attendance::METHOD_SCAN_QR)
+                            ->whereNotNull('proof_file');
+                    });
+            })
             ->where('validation_status', Attendance::VALIDATION_PENDING)
             ->whereNotNull('proof_file')
             ->oldest()
@@ -223,8 +235,13 @@ class AttendanceValidation extends Component
     public function render()
     {
         $attendances = Attendance::with(['parent.user', 'parent.students', 'kajianEvent'])
-            ->whereIn('method', ['upload']) // Only those with uploaded proofs
-            ->whereHas('parent', fn ($query) => $query->where('type', '!=', 'teacher'))
+            ->where(function ($query) {
+                $query->where('method', Attendance::METHOD_UPLOAD)
+                    ->orWhere(function ($query) {
+                        $query->where('method', Attendance::METHOD_SCAN_QR)
+                            ->whereNotNull('proof_file');
+                    });
+            })
             ->when($this->statusFilter, function ($query) {
                 $query->where('validation_status', $this->statusFilter);
             })

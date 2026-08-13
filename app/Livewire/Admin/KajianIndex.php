@@ -234,10 +234,12 @@ class KajianIndex extends Component
     public function delete()
     {
         $kajian = KajianEvent::findOrFail($this->kajianId);
-        $kajian->delete();
+        // Kegiatan memiliki relasi cascade ke presensi, feedback, dan target
+        // kelas. Arsipkan dengan status closed agar histori tidak ikut hilang.
+        $kajian->update(['status' => 'closed']);
         $this->showDeleteModal = false;
         $this->kajianId = null;
-        $this->dispatch('notify', ['type' => 'success', 'message' => 'Kegiatan berhasil dihapus!']);
+        $this->dispatch('notify', ['type' => 'success', 'message' => 'Kegiatan diarsipkan. Histori presensi tetap tersimpan.']);
     }
 
     public function sendReminder($id)
@@ -262,8 +264,10 @@ class KajianIndex extends Component
     {
         $kajians = KajianEvent::with(['academicYear', 'targetClasses'])
             ->when($this->search, function ($query) {
-                $query->where('title', 'like', '%'.$this->search.'%')
-                    ->orWhere('speaker', 'like', '%'.$this->search.'%');
+                $query->where(function ($query) {
+                    $query->where('title', 'like', '%'.$this->search.'%')
+                        ->orWhere('speaker', 'like', '%'.$this->search.'%');
+                });
             })
             ->when($this->statusFilter, function ($query) {
                 $query->where('status', $this->statusFilter);

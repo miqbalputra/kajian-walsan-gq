@@ -69,15 +69,22 @@ class ClassIndex extends Component
             'is_active' => $this->is_active,
         ];
 
+        $nameQuery = ClassRoom::where('name', $this->name);
+        if ($this->editMode && $this->classId) {
+            $nameQuery->where('id', '!=', $this->classId);
+        }
+
+        if ($nameQuery->exists()) {
+            $this->addError('name', 'Nama kelas sudah digunakan.');
+
+            return;
+        }
+
         if ($this->editMode) {
             $class = ClassRoom::findOrFail($this->classId);
             $class->update($data);
             $this->dispatch('notify', ['type' => 'success', 'message' => 'Kelas berhasil diperbarui!']);
         } else {
-            if (ClassRoom::where('name', $this->name)->exists()) {
-                $this->addError('name', 'Nama kelas sudah digunakan.');
-                return;
-            }
             ClassRoom::create($data);
             $this->dispatch('notify', ['type' => 'success', 'message' => 'Kelas berhasil ditambahkan!']);
         }
@@ -95,15 +102,17 @@ class ClassIndex extends Component
     public function delete()
     {
         $class = ClassRoom::findOrFail($this->classId);
-        $class->delete();
+        // Kelas dirujuk enrollment dan histori kegiatan. Nonaktifkan agar
+        // label kelas lama tetap dapat ditelusuri.
+        $class->update(['is_active' => false]);
         $this->showDeleteModal = false;
         $this->classId = null;
-        $this->dispatch('notify', ['type' => 'success', 'message' => 'Kelas berhasil dihapus!']);
+        $this->dispatch('notify', ['type' => 'success', 'message' => 'Kelas dinonaktifkan. Histori siswa tetap tersimpan.']);
     }
 
     public function render()
     {
-        $classes = ClassRoom::with(['teacher', 'students'])
+        $classes = ClassRoom::with('teacher')
             ->withCount('students')
             ->when($this->search, function ($query) {
                 $query->where('name', 'like', '%' . $this->search . '%');

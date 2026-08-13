@@ -69,6 +69,8 @@ class AttendanceProofReviewService
     protected function reviewWithExternalProvider(Attendance $attendance): array
     {
         $result = $this->externalProvider->autoReviewAttendance($attendance);
+        $attendance->refresh();
+        $attendance->kajianEvent?->updateAttendanceCount();
 
         // Fallback provider tetap dicatat agar seluruh pemeriksaan bukti punya
         // histori yang dapat diaudit, meskipun OCR lokal sedang dinonaktifkan.
@@ -156,6 +158,7 @@ class AttendanceProofReviewService
             }
 
             $attendance->update($updates);
+            $attendance->kajianEvent?->updateAttendanceCount();
 
             return $decision;
         }
@@ -193,6 +196,7 @@ class AttendanceProofReviewService
             }
 
             $attendance->update($updates);
+            $attendance->kajianEvent?->updateAttendanceCount();
             $review->update([
                 'model' => $ocr['model'],
                 'status' => 'completed',

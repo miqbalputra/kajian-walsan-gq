@@ -94,6 +94,14 @@ class Student extends Model
      */
     public function getSiblingsAttribute()
     {
+        if ($this->relationLoaded('parents')) {
+            return $this->parents
+                ->flatMap(fn (ParentModel $parent) => $parent->relationLoaded('students') ? $parent->students : collect())
+                ->reject(fn (Student $student) => $student->id === $this->id)
+                ->unique('id')
+                ->values();
+        }
+
         $parentIds = $this->parents()->pluck('parents.id');
 
         if ($parentIds->isEmpty()) {

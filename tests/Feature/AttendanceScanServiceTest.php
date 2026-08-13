@@ -68,6 +68,25 @@ class AttendanceScanServiceTest extends TestCase
             'method' => Attendance::METHOD_SCAN_QR,
             'validation_status' => Attendance::VALIDATION_APPROVED,
         ]);
+
+        // A cancelled upload must be restorable for a fresh QR scan without
+        // carrying the cancelled proof into the new attendance record.
+        $attendance = Attendance::firstOrFail();
+        $attendance->update(['proof_file' => 'old-proof.jpg', 'notes' => 'old']);
+        $attendance->delete();
+
+        $restored = $service->process($event, $alias, $operator->id, 'test-agent');
+
+        $this->assertSame('success', $restored['status']);
+        $this->assertDatabaseHas('attendance_proof_histories', [
+            'attendance_id' => $attendance->id,
+            'proof_file' => 'old-proof.jpg',
+            'source' => 'qr_restore',
+        ]);
+        $this->assertDatabaseHas('attendances', [
+            'id' => $attendance->id,
+            'proof_file' => null,
+        ]);
     }
 
     public function test_manual_check_in_uses_same_duplicate_guard_as_qr(): void

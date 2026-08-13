@@ -144,26 +144,14 @@ class UserIndex extends Component
 
     public function delete()
     {
-        $user = User::with(['parentProfile.attendances', 'role'])->findOrFail($this->userId);
-
-        // PROTEKSI: Blokir hapus wali santri yang punya riwayat presensi
-        if ($user->isWaliSantri() && $user->parentProfile) {
-            $attendanceCount = $user->parentProfile->attendances()->count();
-            if ($attendanceCount > 0) {
-                $this->showDeleteModal = false;
-                $this->dispatch('notify', [
-                    'type' => 'error',
-                    'message' => "Tidak bisa dihapus! {$user->name} memiliki {$attendanceCount} riwayat presensi. Gunakan fitur Nonaktifkan saja."
-                ]);
-                return;
-            }
-        }
-
-        $user->delete();
+        $user = User::findOrFail($this->userId);
+        // User terhubung ke wali, presensi, feedback, dan event pembuat.
+        // Nonaktifkan akun supaya seluruh relasi dan histori tetap utuh.
+        $user->update(['is_active' => false]);
 
         $this->showDeleteModal = false;
         $this->userId = null;
-        $this->dispatch('notify', ['type' => 'success', 'message' => 'User berhasil dihapus!']);
+        $this->dispatch('notify', ['type' => 'success', 'message' => 'User dinonaktifkan. Data dan histori tetap tersimpan.']);
     }
 
     /**

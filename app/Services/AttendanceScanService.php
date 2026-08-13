@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\Attendance;
+use App\Models\AttendanceProofHistory;
 use App\Models\KajianEvent;
 use App\Models\ParentModel;
 use App\Models\StudentEnrollment;
@@ -114,8 +115,25 @@ class AttendanceScanService
                 ];
 
                 if ($attendance) {
+                    if ($attendance->proof_file) {
+                        AttendanceProofHistory::firstOrCreate([
+                            'attendance_id' => $attendance->id,
+                            'proof_file' => $attendance->proof_file,
+                            'source' => 'qr_restore',
+                        ], ['created_at' => now()]);
+                    }
+
                     $attendance->restore();
-                    $attendance->update($attributes);
+                    $attendance->update($attributes + [
+                        'proof_file' => null,
+                        'notes' => null,
+                        'ai_validation_status' => null,
+                        'ai_validation_confidence' => null,
+                        'ai_validation_reason' => null,
+                        'ai_validation_model' => null,
+                        'ai_validation_payload' => null,
+                        'ai_validated_at' => null,
+                    ]);
 
                     return ['action' => 'restored'];
                 }
