@@ -66,6 +66,7 @@
                     class="w-full px-4 py-2.5 bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-slate-800 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all dark:text-white">
                     <option value="">Semua Sumber</option>
                     <option value="google_form">Google Form Mustawa 1</option>
+                    <option value="public_form">Form Publik Mustawa 1</option>
                     <option value="upload">Upload Bukti</option>
                     <option value="scan_qr">Scan QR + Bukti</option>
                 </select>
@@ -147,9 +148,12 @@
                                         @if($attendance->method === \App\Models\Attendance::METHOD_GOOGLE_FORM)
                                             <span class="ml-1 text-[9px] bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded uppercase font-black">Google Form</span>
                                         @endif
+                                        @if($attendance->method === \App\Models\Attendance::METHOD_PUBLIC_FORM)
+                                            <span class="ml-1 text-[9px] bg-sky-100 text-sky-700 px-1.5 py-0.5 rounded uppercase font-black">Form Mustawa 1</span>
+                                        @endif
                                     </p>
                                     <p class="text-xs text-gray-500 dark:text-gray-400">Anak:
-                                        {{ $attendance->parent?->students->first()?->name ?? '-' }}
+                                        {{ $attendance->student?->name ?? $attendance->parent?->students->first()?->name ?? '-' }}
                                     </p>
                                 </div>
                             </td>

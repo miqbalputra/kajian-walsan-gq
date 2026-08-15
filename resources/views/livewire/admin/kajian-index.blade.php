@@ -20,6 +20,46 @@
         </div>
     @endif
 
+    <!-- Form khusus wali Mustawa 1 yang benar-benar baru -->
+    <section class="mb-6 rounded-2xl border border-sky-100 bg-gradient-to-br from-sky-50 to-white p-5 shadow-sm">
+        <div class="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+            <div class="min-w-0">
+                <div class="flex items-center gap-2">
+                    <span class="material-symbols-rounded rounded-xl bg-sky-600 p-2 text-white">link</span>
+                    <div>
+                        <h2 class="font-bold text-slate-900">Form Presensi Mustawa 1 Baru</h2>
+                        <p class="text-sm text-slate-600">Khusus wali tanpa anak atau histori anak Mustawa 2–6. Kehadiran fisik tetap dicatat panitia.</p>
+                    </div>
+                </div>
+            </div>
+
+            @if($publicMustawaOneLink)
+                @php($publicMustawaOneUrl = route('public.mustawa-one-form.show', ['token' => $publicMustawaOneLink->token]))
+                <div class="flex w-full max-w-2xl flex-col gap-2 sm:flex-row" x-data>
+                    <input x-ref="mustawaOneLink" type="text" readonly value="{{ $publicMustawaOneUrl }}"
+                        class="min-w-0 flex-1 rounded-xl border border-sky-200 bg-white px-3 py-2.5 text-xs text-slate-700 focus:outline-none">
+                    <button type="button" x-on:click="navigator.clipboard.writeText($refs.mustawaOneLink.value); $el.innerText = 'Tersalin'; setTimeout(() => $el.innerText = 'Salin Link', 1500)"
+                        class="inline-flex items-center justify-center gap-1 rounded-xl bg-sky-600 px-4 py-2.5 text-sm font-bold text-white hover:bg-sky-700">
+                        <span class="material-symbols-rounded text-lg">content_copy</span>
+                        Salin Link
+                    </button>
+                    <button wire:click="rotateMustawaOnePublicFormLink"
+                        wire:confirm="Rotasi link? Link lama akan langsung tidak dapat digunakan."
+                        class="inline-flex items-center justify-center gap-1 rounded-xl border border-sky-200 bg-white px-4 py-2.5 text-sm font-bold text-sky-700 hover:bg-sky-100">
+                        <span class="material-symbols-rounded text-lg">refresh</span>
+                        Rotasi
+                    </button>
+                </div>
+            @else
+                <button wire:click="createMustawaOnePublicFormLink"
+                    class="inline-flex items-center justify-center gap-2 rounded-xl bg-sky-600 px-4 py-2.5 text-sm font-bold text-white hover:bg-sky-700">
+                    <span class="material-symbols-rounded text-lg">add_link</span>
+                    Buat Link Form
+                </button>
+            @endif
+        </div>
+    </section>
+
     <!-- Filters -->
     <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 mb-6">
         <div class="flex flex-col sm:flex-row gap-4">

@@ -5,9 +5,11 @@ namespace App\Livewire\Admin;
 use App\Models\AcademicYear;
 use App\Models\ClassRoom;
 use App\Models\KajianEvent;
+use App\Models\PublicAttendanceLink;
 use App\Services\WebPushService;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 use Livewire\Component;
 use Livewire\WithPagination;
 
@@ -225,6 +227,67 @@ class KajianIndex extends Component
         $this->dispatch('notify', ['type' => 'success', 'message' => 'Status kegiatan diubah menjadi '.ucfirst($newStatus).'!']);
     }
 
+    public function createMustawaOnePublicFormLink(): void
+    {
+        DB::transaction(function (): void {
+            $link = PublicAttendanceLink::query()
+                ->active()
+                ->forMustawaOneNew()
+                ->lockForUpdate()
+                ->first();
+
+            if (! $link) {
+                PublicAttendanceLink::create([
+                    'audience' => PublicAttendanceLink::AUDIENCE_MUSTAWA_ONE_NEW,
+                    'token' => $this->newPublicFormToken(),
+                    'is_active' => true,
+                    'created_by' => auth()->id(),
+                ]);
+            }
+        });
+
+        $this->dispatch('notify', [
+            'type' => 'success',
+            'message' => 'Link Form Mustawa 1 sudah dibuat. Salin lalu bagikan hanya ke grup Mustawa 1 baru.',
+        ]);
+    }
+
+    public function rotateMustawaOnePublicFormLink(): void
+    {
+        DB::transaction(function (): void {
+            PublicAttendanceLink::query()
+                ->active()
+                ->forMustawaOneNew()
+                ->lockForUpdate()
+                ->get()
+                ->each(fn (PublicAttendanceLink $link) => $link->update([
+                    'is_active' => false,
+                    'revoked_at' => now(),
+                ]));
+
+            PublicAttendanceLink::create([
+                'audience' => PublicAttendanceLink::AUDIENCE_MUSTAWA_ONE_NEW,
+                'token' => $this->newPublicFormToken(),
+                'is_active' => true,
+                'created_by' => auth()->id(),
+            ]);
+        });
+
+        $this->dispatch('notify', [
+            'type' => 'success',
+            'message' => 'Link lama sudah dinonaktifkan dan link baru siap dibagikan.',
+        ]);
+    }
+
+    private function newPublicFormToken(): string
+    {
+        do {
+            $token = Str::random(48);
+        } while (PublicAttendanceLink::where('token', $token)->exists());
+
+        return $token;
+    }
+
     public function confirmDelete($id)
     {
         $this->kajianId = $id;
@@ -277,6 +340,11 @@ class KajianIndex extends Component
 
         $academicYears = AcademicYear::orderBy('name', 'desc')->get();
         $allClasses = ClassRoom::where('is_active', true)->orderBy('name')->get();
+        $publicMustawaOneLink = PublicAttendanceLink::query()
+            ->active()
+            ->forMustawaOneNew()
+            ->latest('id')
+            ->first();
 
         return view('livewire.admin.kajian-index', [
             'kajians' => $kajians,
@@ -286,6 +354,7 @@ class KajianIndex extends Component
                 'value' => $key,
                 'label' => $cfg['label'] ?? ucfirst($key),
             ])->values(),
+            'publicMustawaOneLink' => $publicMustawaOneLink,
         ])->layout('components.layouts.admin', ['title' => 'Manajemen Kegiatan']);
     }
 }

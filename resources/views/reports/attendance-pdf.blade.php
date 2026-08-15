@@ -330,6 +330,8 @@
                     <td class="text-center text-slate" style="font-size: 8pt;">
                         @if($attendance->method === 'scan_qr') Scan QR
                         @elseif($attendance->method === 'manual') Manual
+                        @elseif($attendance->method === 'google_form') Google Form M1
+                        @elseif($attendance->method === 'public_form') Form Publik M1
                         @else Upload @endif
                     </td>
                 </tr>

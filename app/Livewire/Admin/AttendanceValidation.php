@@ -52,6 +52,7 @@ class AttendanceValidation extends Component
     {
         $this->selectedAttendance = Attendance::with([
             'parent.user',
+            'student',
             'kajianEvent',
             'googleFormSubmissions',
         ])->findOrFail($id);
@@ -230,7 +231,10 @@ class AttendanceValidation extends Component
         }
 
         $attendances = Attendance::where(function ($query) {
-                $query->where('method', Attendance::METHOD_UPLOAD)
+                $query->whereIn('method', [
+                    Attendance::METHOD_UPLOAD,
+                    Attendance::METHOD_PUBLIC_FORM,
+                ])
                     ->orWhere(function ($query) {
                         // Guru/wali guru boleh scan QR dulu lalu mengunggah
                         // catatan. Metodenya tetap scan_qr, tetapi bukti tetap
@@ -267,10 +271,13 @@ class AttendanceValidation extends Component
 
     public function render()
     {
-        $attendances = Attendance::with(['parent.user', 'parent.students', 'kajianEvent'])
+        $attendances = Attendance::with(['parent.user', 'parent.students', 'student', 'kajianEvent'])
             ->where(function ($query) {
                 $query->where('method', Attendance::METHOD_GOOGLE_FORM)
-                    ->orWhere('method', Attendance::METHOD_UPLOAD)
+                    ->orWhereIn('method', [
+                        Attendance::METHOD_UPLOAD,
+                        Attendance::METHOD_PUBLIC_FORM,
+                    ])
                     ->orWhere(function ($query) {
                         $query->where('method', Attendance::METHOD_SCAN_QR)
                             ->whereNotNull('proof_file');

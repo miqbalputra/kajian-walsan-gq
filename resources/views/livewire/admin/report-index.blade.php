@@ -160,6 +160,8 @@
                             <td class="px-4 py-3 text-xs text-gray-500">
                                 @if($attendance->method === 'scan_qr') Scan QR
                                 @elseif($attendance->method === 'manual') Manual
+                                @elseif($attendance->method === 'google_form') Google Form M1
+                                @elseif($attendance->method === 'public_form') Form Publik M1
                                 @else Upload @endif
                             </td>
                             <td class="px-4 py-3">

@@ -6,6 +6,7 @@ use App\Http\Controllers\Auth\QrLoginController;
 use App\Http\Controllers\HomeController;
 use App\Http\Controllers\PanitiaAttendanceScanController;
 use App\Http\Controllers\PushSubscriptionController;
+use App\Http\Controllers\PublicMustawaOneAttendanceController;
 use App\Http\Middleware\InjectPwaInstallPrompt;
 use App\Livewire\Admin\AnnouncementIndex;
 use App\Livewire\Admin\ArchiveIndex;
@@ -57,6 +58,14 @@ Route::get('/__deploy-version', function () {
 })->name('deploy.version');
 
 Route::get('/', [HomeController::class, 'index'])->name('home');
+
+// Form khusus wali Mustawa 1 yang benar-benar baru. URL menggunakan token
+// yang dikelola admin agar tidak bercampur dengan alur login wali reguler.
+Route::get('/f/mustawa-1/{token}', [PublicMustawaOneAttendanceController::class, 'show'])
+    ->name('public.mustawa-one-form.show');
+Route::post('/f/mustawa-1/{token}', [PublicMustawaOneAttendanceController::class, 'store'])
+    ->middleware('throttle:mustawa1-public-form')
+    ->name('public.mustawa-one-form.store');
 
 // QR Code Login Routes (Guest only)
 Route::middleware('guest')->group(function () {
