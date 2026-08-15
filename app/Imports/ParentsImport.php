@@ -7,6 +7,7 @@ use App\Models\Role;
 use App\Models\Student;
 use App\Models\User;
 use App\Services\ParentQrCodeService;
+use App\Services\ParentLoginAliasService;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
@@ -151,6 +152,7 @@ class ParentsImport implements ToCollection, WithHeadingRow, WithValidation, Ski
         }
 
         app(ParentQrCodeService::class)->syncForParent($parent->fresh('students'));
+        app(ParentLoginAliasService::class)->syncForParent($parent->fresh('students'));
     }
 
     /**

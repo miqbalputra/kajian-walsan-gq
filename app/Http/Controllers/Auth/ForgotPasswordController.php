@@ -5,6 +5,8 @@ namespace App\Http\Controllers\Auth;
 use App\Http\Controllers\Controller;
 use App\Jobs\SendPasswordResetWebhook;
 use App\Models\User;
+use App\Models\UserLoginAlias;
+use App\Services\ParentLoginAliasService;
 use Illuminate\Auth\Events\PasswordReset;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -88,6 +90,8 @@ class ForgotPasswordController extends Controller
                     'remember_token' => Str::random(60),
                 ])->save();
 
+                app(ParentLoginAliasService::class)->syncPassword($user, $password);
+
                 event(new PasswordReset($user));
             }
         );
@@ -111,11 +115,22 @@ class ForgotPasswordController extends Controller
         }
 
         $userByUsername = User::where('is_active', true)
-            ->where('username', $identifier)
+            ->whereRaw('LOWER(username) = ?', [Str::lower($identifier)])
             ->first();
 
         if ($userByUsername) {
             return $userByUsername;
+        }
+
+        $userByAlias = UserLoginAlias::query()
+            ->active()
+            ->whereRaw('LOWER(username) = ?', [Str::lower($identifier)])
+            ->whereHas('user', fn ($query) => $query->where('is_active', true))
+            ->with('user')
+            ->first();
+
+        if ($userByAlias?->user) {
+            return $userByAlias->user;
         }
 
         $phoneCandidates = $this->phoneCandidates($identifier);

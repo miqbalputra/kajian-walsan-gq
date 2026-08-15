@@ -12,7 +12,9 @@ use App\Models\Student;
 use App\Models\StudentEnrollment;
 use App\Models\User;
 use App\Services\ParentDataExportService;
+use App\Services\ParentLoginAliasService;
 use App\Services\ParentQrCodeService;
+use App\Services\StudentFamilyImportService;
 use BaconQrCode\Renderer\Image\SvgImageBackEnd;
 use BaconQrCode\Renderer\ImageRenderer;
 use BaconQrCode\Renderer\RendererStyle\RendererStyle;
@@ -59,6 +61,8 @@ class ParentIndex extends Component
     public $showBatchPrintModal = false;
 
     public $showImportModal = false;
+
+    public $showStudentFamilyImportModal = false;
 
     public $showCredentialsModal = false;
 
@@ -147,6 +151,16 @@ class ParentIndex extends Component
     public $importFile;
 
     public $importedCredentials = [];
+
+    public $studentFamilyImportFile;
+
+    public $studentFamilyImportStoredPath = null;
+
+    public $studentFamilyImportPreview = [];
+
+    public $studentFamilyImportResult = [];
+
+    public $studentFamilyImportCredentials = [];
 
     protected function rules()
     {
@@ -450,7 +464,9 @@ class ParentIndex extends Component
                 );
             }
 
-            app(ParentQrCodeService::class)->syncForParent($this->linkParent->fresh('students'));
+            $linkedParent = $this->linkParent->fresh('students');
+            app(ParentQrCodeService::class)->syncForParent($linkedParent);
+            app(ParentLoginAliasService::class)->syncForParent($linkedParent);
             });
         } catch (\Throwable $exception) {
             $this->addError('linkChildNis', $exception->getMessage());
@@ -778,6 +794,81 @@ class ParentIndex extends Component
         } catch (\Exception $e) {
             $this->addError('importFile', 'Gagal import: '.$e->getMessage());
         }
+    }
+
+    public function openStudentFamilyImportModal(): void
+    {
+        $this->reset([
+            'studentFamilyImportFile',
+            'studentFamilyImportStoredPath',
+            'studentFamilyImportPreview',
+            'studentFamilyImportResult',
+            'studentFamilyImportCredentials',
+        ]);
+        $this->resetValidation();
+        $this->showStudentFamilyImportModal = true;
+    }
+
+    public function previewStudentFamilyImport(StudentFamilyImportService $importer): void
+    {
+        $this->validate([
+            'studentFamilyImportFile' => 'required|file|mimes:xlsx,xls,csv|max:10240',
+        ]);
+
+        $storedPath = $this->studentFamilyImportFile->store('imports');
+        $this->studentFamilyImportStoredPath = $storedPath;
+        $preview = $importer->preview(storage_path('app/'.$storedPath));
+        unset($preview['rows']);
+        $this->studentFamilyImportPreview = $preview;
+        $this->studentFamilyImportResult = [];
+        $this->studentFamilyImportCredentials = [];
+    }
+
+    public function confirmStudentFamilyImport(StudentFamilyImportService $importer): void
+    {
+        if (! $this->studentFamilyImportStoredPath) {
+            $this->addError('studentFamilyImportFile', 'Silakan upload dan preview file terlebih dahulu.');
+
+            return;
+        }
+
+        if (! empty($this->studentFamilyImportPreview['errors'])) {
+            $this->addError('studentFamilyImportFile', 'Perbaiki error pada preview sebelum import.');
+
+            return;
+        }
+
+        try {
+            $result = $importer->import(storage_path('app/'.$this->studentFamilyImportStoredPath));
+            $this->studentFamilyImportResult = $result;
+            $this->studentFamilyImportCredentials = $result['credentials'] ?? [];
+            $this->studentFamilyImportPreview = [];
+            $this->studentFamilyImportFile = null;
+            $this->dispatch('notify', [
+                'type' => 'success',
+                'message' => "Import selesai: {$result['created_students']} siswa baru, {$result['linked_relations']} relasi diproses.",
+            ]);
+            $this->resetPage();
+        } catch (\Throwable $exception) {
+            report($exception);
+            $this->addError('studentFamilyImportFile', 'Import dibatalkan: '.$exception->getMessage());
+        }
+    }
+
+    public function closeStudentFamilyImportModal(): void
+    {
+        if ($this->studentFamilyImportStoredPath) {
+            \Illuminate\Support\Facades\Storage::disk('local')->delete($this->studentFamilyImportStoredPath);
+        }
+
+        $this->showStudentFamilyImportModal = false;
+        $this->reset([
+            'studentFamilyImportFile',
+            'studentFamilyImportStoredPath',
+            'studentFamilyImportPreview',
+            'studentFamilyImportResult',
+            'studentFamilyImportCredentials',
+        ]);
     }
 
     public function render()

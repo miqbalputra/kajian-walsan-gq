@@ -7,6 +7,7 @@ use App\Actions\Fortify\ResetUserPassword;
 use App\Actions\Fortify\UpdateUserPassword;
 use App\Actions\Fortify\UpdateUserProfileInformation;
 use App\Models\User;
+use App\Models\UserLoginAlias;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
@@ -38,13 +39,27 @@ class FortifyServiceProvider extends ServiceProvider
         // Custom authentication logic - support username or email
         Fortify::authenticateUsing(function (Request $request) {
             $login = trim((string) $request->input('username'));
+            $normalizedLogin = Str::lower($login);
 
             $user = User::where(function ($query) use ($login) {
-                $query->where('username', $login)
+                $query->whereRaw('LOWER(username) = ?', [Str::lower($login)])
                     ->orWhereRaw('LOWER(email) = ?', [Str::lower($login)]);
             })
                 ->where('is_active', true)
                 ->first();
+
+            $alias = null;
+            if (! $user) {
+                $alias = UserLoginAlias::query()
+                    ->active()
+                    ->with('user')
+                    ->whereRaw('LOWER(username) = ?', [$normalizedLogin])
+                    ->first();
+                $user = $alias?->user;
+                if ($user && ! $user->is_active) {
+                    $user = null;
+                }
+            }
 
             if ($user) {
                 // Check if password is a valid bcrypt hash before attempting verification
@@ -54,7 +69,8 @@ class FortifyServiceProvider extends ServiceProvider
                     return null;
                 }
 
-                if (Hash::check($request->password, $user->password)) {
+                $passwordHash = $alias?->password ?? $user->password;
+                if (Hash::check($request->password, $passwordHash)) {
                     return $user;
                 }
             }

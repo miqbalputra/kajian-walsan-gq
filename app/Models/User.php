@@ -81,6 +81,11 @@ class User extends Authenticatable
         return $this->hasOne(ParentModel::class, 'user_id');
     }
 
+    public function loginAliases(): HasMany
+    {
+        return $this->hasMany(UserLoginAlias::class);
+    }
+
     /**
      * Get kajian events created by this user.
      */

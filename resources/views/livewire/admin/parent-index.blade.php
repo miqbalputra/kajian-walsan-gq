@@ -18,6 +18,13 @@
                 <span class="material-symbols-rounded">upload_file</span>
                 Import
             </button>
+            @unless($isTeacherMode)
+                <button wire:click="openStudentFamilyImportModal"
+                    class="inline-flex shrink-0 items-center justify-center gap-2 px-4 py-3 bg-emerald-600 text-white rounded-xl font-semibold hover:bg-emerald-700 transition-colors">
+                    <span class="material-symbols-rounded">family_history</span>
+                    Import Santri + Relasi
+                </button>
+            @endunless
             <button wire:click="openCreateModal"
                 class="inline-flex shrink-0 items-center justify-center gap-2 px-6 py-3 bg-primary-500 text-white rounded-xl font-semibold hover:bg-primary-600 transition-colors shadow-lg shadow-primary-500/25">
                 <span class="material-symbols-rounded">add</span>
@@ -31,6 +38,95 @@
         <div class="mb-4 p-4 bg-green-50 border border-green-200 text-green-700 rounded-xl flex items-center gap-3">
             <span class="material-symbols-rounded">check_circle</span>
             {{ session('message') }}
+        </div>
+    @endif
+
+    <!-- Combined student + family import modal -->
+    @if($showStudentFamilyImportModal)
+        <div class="fixed inset-0 z-50 overflow-y-auto" aria-modal="true">
+            <div class="flex items-center justify-center min-h-screen px-4 py-8">
+                <div class="fixed inset-0 bg-black/60" wire:click="closeStudentFamilyImportModal"></div>
+                <div class="relative bg-white rounded-2xl shadow-xl max-w-3xl w-full p-6 z-10">
+                    <div class="flex items-center justify-between mb-5">
+                        <div>
+                            <h3 class="text-xl font-bold text-gray-900">Import Santri Baru + Relasi Wali</h3>
+                            <p class="text-sm text-gray-500">Siswa, enrollment, wali lama/baru, QR alias, dan login BPK/IBU.</p>
+                        </div>
+                        <button wire:click="closeStudentFamilyImportModal" class="p-2 hover:bg-gray-100 rounded-full">
+                            <span class="material-symbols-rounded">close</span>
+                        </button>
+                    </div>
+
+                    <div class="bg-emerald-50 border border-emerald-200 rounded-xl p-4 mb-5 text-sm text-emerald-800 space-y-1">
+                        <p><strong>Aturan aman:</strong> NIS duplikat dan kecocokan wali yang ambigu menghentikan seluruh batch.</p>
+                        <p>Wali lama tidak kehilangan username/password lama. Username BPK/IBU per anak ditambahkan sebagai login alternatif.</p>
+                        <p>File harus memiliki kolom NIS, nama, kelas, tahun ajaran, serta Parent ID ayah/ibu untuk wali lama.</p>
+                    </div>
+
+                    <div class="border-2 border-dashed border-gray-200 rounded-xl p-6 text-center mb-5">
+                        <input type="file" wire:model="studentFamilyImportFile" accept=".xlsx,.xls,.csv"
+                            class="block w-full text-sm text-gray-600">
+                        @error('studentFamilyImportFile')
+                            <p class="text-sm text-red-600 mt-2">{{ $message }}</p>
+                        @enderror
+                    </div>
+
+                    @if(empty($studentFamilyImportPreview) && empty($studentFamilyImportResult))
+                        <button wire:click="previewStudentFamilyImport" wire:loading.attr="disabled"
+                            class="w-full px-4 py-3 bg-violet-600 text-white rounded-xl font-bold hover:bg-violet-700 disabled:opacity-50">
+                            Preview Tanpa Mengubah Database
+                        </button>
+                    @endif
+
+                    @if(!empty($studentFamilyImportPreview))
+                        <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
+                            <div class="bg-gray-50 rounded-xl p-3"><p class="text-xs text-gray-500">Baris</p><p class="text-xl font-bold">{{ $studentFamilyImportPreview['total_rows'] ?? 0 }}</p></div>
+                            <div class="bg-blue-50 rounded-xl p-3"><p class="text-xs text-blue-600">Siswa baru</p><p class="text-xl font-bold text-blue-800">{{ $studentFamilyImportPreview['new_students'] ?? 0 }}</p></div>
+                            <div class="bg-emerald-50 rounded-xl p-3"><p class="text-xs text-emerald-600">Wali lama</p><p class="text-xl font-bold text-emerald-800">{{ $studentFamilyImportPreview['matched_parents'] ?? 0 }}</p></div>
+                            <div class="bg-violet-50 rounded-xl p-3"><p class="text-xs text-violet-600">Wali baru</p><p class="text-xl font-bold text-violet-800">{{ $studentFamilyImportPreview['new_parents'] ?? 0 }}</p></div>
+                        </div>
+
+                        @if(!empty($studentFamilyImportPreview['errors']))
+                            <div class="bg-red-50 border border-red-200 rounded-xl p-4 mb-4 text-sm text-red-800">
+                                <p class="font-bold mb-2">Import belum boleh dilanjutkan:</p>
+                                <ul class="list-disc pl-5 space-y-1">
+                                    @foreach($studentFamilyImportPreview['errors'] as $error)
+                                        <li>{{ $error }}</li>
+                                    @endforeach
+                                </ul>
+                            </div>
+                        @else
+                            <div class="flex gap-3">
+                                <button wire:click="closeStudentFamilyImportModal" class="flex-1 px-4 py-3 border border-gray-200 rounded-xl font-semibold">Batal</button>
+                                <button wire:click="confirmStudentFamilyImport" wire:loading.attr="disabled"
+                                    class="flex-1 px-4 py-3 bg-emerald-600 text-white rounded-xl font-bold hover:bg-emerald-700 disabled:opacity-50">
+                                    Konfirmasi Import Transaksional
+                                </button>
+                            </div>
+                        @endif
+                    @endif
+
+                    @if(!empty($studentFamilyImportResult))
+                        <div class="bg-emerald-50 border border-emerald-200 rounded-xl p-4 mb-4 text-sm text-emerald-800">
+                            Import berhasil. Siswa baru: {{ $studentFamilyImportResult['created_students'] ?? 0 }}; relasi diproses: {{ $studentFamilyImportResult['linked_relations'] ?? 0 }}.
+                        </div>
+                        @if(!empty($studentFamilyImportCredentials))
+                            <div class="overflow-x-auto border rounded-xl">
+                                <table class="w-full text-sm">
+                                    <thead class="bg-gray-50"><tr><th class="p-3 text-left">Nama</th><th class="p-3 text-left">Username</th><th class="p-3 text-left">Password awal</th></tr></thead>
+                                    <tbody class="divide-y">
+                                        @foreach($studentFamilyImportCredentials as $credential)
+                                            <tr><td class="p-3">{{ $credential['nama'] ?? '-' }}</td><td class="p-3 font-mono">{{ $credential['username'] ?? '-' }}</td><td class="p-3 font-mono">{{ $credential['password'] ?? 'Password akun saat ini' }}</td></tr>
+                                        @endforeach
+                                    </tbody>
+                                </table>
+                            </div>
+                            <p class="text-xs text-amber-700 mt-3">Simpan kredensial ini di tempat aman. Password tidak diekspor ulang setelah halaman ditutup.</p>
+                        @endif
+                        <button wire:click="closeStudentFamilyImportModal" class="w-full mt-5 px-4 py-3 bg-gray-900 text-white rounded-xl font-bold">Selesai</button>
+                    @endif
+                </div>
+            </div>
         </div>
     @endif
 
