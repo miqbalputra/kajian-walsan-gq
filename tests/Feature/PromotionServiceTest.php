@@ -4,10 +4,14 @@ namespace Tests\Feature;
 
 use App\Models\AcademicYear;
 use App\Models\ClassRoom;
+use App\Models\ParentModel;
+use App\Models\Role;
 use App\Models\Student;
 use App\Models\StudentEnrollment;
+use App\Models\User;
 use App\Services\PromotionService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Hash;
 use Tests\TestCase;
 
 class PromotionServiceTest extends TestCase
@@ -113,5 +117,41 @@ class PromotionServiceTest extends TestCase
             'before_class_id' => $sourceClass->id,
             'after_class_id' => $targetClass->id,
         ]);
+    }
+
+    public function test_graduating_last_child_archives_parent_login_without_removing_relation(): void
+    {
+        $sourceYear = AcademicYear::active();
+        $targetYear = AcademicYear::create([
+            'name' => '2027/2028',
+            'start_date' => '2027-07-01',
+            'end_date' => '2028-06-30',
+            'is_active' => false,
+        ]);
+        $sourceClass = ClassRoom::create(['name' => 'Mustawa 6 Ikhwan', 'level' => '6', 'is_active' => true]);
+        $student = Student::create([
+            'nis' => 'PROMO-6001',
+            'name' => 'Santri Lulus',
+            'class_id' => $sourceClass->id,
+            'is_active' => true,
+            'student_status' => 'active',
+        ]);
+        $user = User::create([
+            'name' => 'Ayah Santri Lulus',
+            'username' => 'bpk-promo-6001',
+            'email' => 'bpk-promo-6001@example.test',
+            'password' => Hash::make('password'),
+            'role_id' => Role::where('name', 'wali_santri')->value('id'),
+            'is_active' => true,
+        ]);
+        $parent = ParentModel::create(['user_id' => $user->id, 'type' => 'father']);
+        $parent->students()->attach($student->id, ['relationship' => 'biological']);
+
+        app(PromotionService::class)->apply($sourceYear, $targetYear, [$sourceClass->id => null], []);
+
+        $this->assertDatabaseHas('students', ['id' => $student->id, 'student_status' => 'graduated', 'is_active' => 0]);
+        $this->assertDatabaseHas('parent_student', ['parent_id' => $parent->id, 'student_id' => $student->id]);
+        $this->assertFalse($parent->fresh()->user->is_active);
+        $this->assertDatabaseHas('parent_archive_records', ['parent_id' => $parent->id, 'login_disabled' => 1]);
     }
 }

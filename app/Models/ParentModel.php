@@ -137,6 +137,21 @@ class ParentModel extends Model
         return $this->hasMany(ParentQrCode::class, 'parent_id');
     }
 
+    public function archiveRecords(): HasMany
+    {
+        return $this->hasMany(ParentArchiveRecord::class, 'parent_id');
+    }
+
+    public function hasActiveChildren(): bool
+    {
+        return $this->students()->active()->exists();
+    }
+
+    public function isArchivedGuardian(): bool
+    {
+        return $this->isGuardian() && ! $this->hasActiveChildren();
+    }
+
     /**
      * Check if this parent is the father.
      */
@@ -265,6 +280,16 @@ class ParentModel extends Model
     public function scopeGuardians($query)
     {
         return $query->whereIn('type', ['father', 'mother']);
+    }
+
+    public function scopeWithActiveChild($query)
+    {
+        return $query->whereHas('students', fn ($studentQuery) => $studentQuery->active());
+    }
+
+    public function scopeArchivedGuardians($query)
+    {
+        return $query->guardians()->whereDoesntHave('students', fn ($studentQuery) => $studentQuery->active());
     }
 
     /**

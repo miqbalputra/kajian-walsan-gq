@@ -19,6 +19,7 @@ class StudentFamilyImportService
     public function __construct(
         private readonly ParentLoginAliasService $loginAliases,
         private readonly ParentQrCodeService $qrCodes,
+        private readonly ParentArchiveService $parentArchives,
     ) {}
 
     /**
@@ -228,6 +229,7 @@ class StudentFamilyImportService
                 }
 
                 $parent->syncQrCode();
+                $this->parentArchives->syncForParent($parent, null);
             }
         });
 

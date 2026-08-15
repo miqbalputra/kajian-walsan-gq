@@ -1,6 +1,6 @@
 <div>
     <!-- Stats Grid -->
-    <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-5 gap-4 mb-6">
+    <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-6 gap-4 mb-6">
         <!-- Total Kajian -->
         <div class="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 hover:shadow-md transition-shadow">
             <div class="flex items-center gap-4">
@@ -14,6 +14,19 @@
                 </div>
             </div>
         </div>
+
+        <!-- Wali Arsip -->
+        <a href="{{ route('admin.archive.index', ['tab' => 'parents']) }}" class="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 hover:shadow-md transition-shadow">
+            <div class="flex items-center gap-4">
+                <div class="w-14 h-14 bg-gradient-to-br from-rose-400 to-rose-600 rounded-xl flex items-center justify-center shadow-lg shadow-rose-200">
+                    <span class="material-symbols-rounded text-white text-3xl">inventory_2</span>
+                </div>
+                <div>
+                    <p class="text-3xl font-bold text-gray-900">{{ $totalWaliArsip }}</p>
+                    <p class="text-sm text-gray-500">Wali Arsip</p>
+                </div>
+            </div>
+        </a>
 
         <!-- Total Siswa -->
         <div class="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 hover:shadow-md transition-shadow">

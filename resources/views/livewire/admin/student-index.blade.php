@@ -123,7 +123,7 @@
                             <td class="px-6 py-4">
                                 <span
                                     class="px-2 py-1 rounded-lg text-xs font-medium {{ ($student->student_status ?? '') === 'graduated' ? 'bg-amber-100 text-amber-700' : ($student->is_active ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-700') }}">
-                                    {{ ($student->student_status ?? '') === 'graduated' ? 'Alumni/Lulus' : ($student->is_active ? 'Aktif' : 'Nonaktif') }}
+                                    {{ match($student->student_status) { 'graduated' => 'Alumni/Lulus', 'transferred' => 'Pindah', 'withdrawn' => 'Keluar', default => ($student->is_active ? 'Aktif' : 'Nonaktif') } }}
                                 </span>
                             </td>
                             <td class="px-6 py-4">
@@ -132,10 +132,12 @@
                                         class="p-2 text-gray-600 hover:text-primary-600 hover:bg-primary-50 rounded-lg transition-colors">
                                         <span class="material-symbols-rounded text-xl">edit</span>
                                     </button>
+                                    @if($student->is_active && ($student->student_status ?? 'active') === 'active')
                                     <button wire:click="confirmDelete({{ $student->id }})"
                                         class="p-2 text-gray-600 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors">
-                                        <span class="material-symbols-rounded text-xl">delete</span>
+                                        <span class="material-symbols-rounded text-xl">inventory_2</span>
                                     </button>
+                                    @endif
                                 </div>
                             </td>
                         </tr>
@@ -431,8 +433,8 @@
                         <div class="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
                             <span class="material-symbols-rounded text-red-600 text-3xl">delete</span>
                         </div>
-                        <h3 class="text-xl font-bold text-gray-900 mb-2">Hapus Siswa?</h3>
-                        <p class="text-gray-500 mb-6">Siswa akan diarsipkan sebagai nonaktif. Data, relasi, dan histori tidak akan dihapus.</p>
+                        <h3 class="text-xl font-bold text-gray-900 mb-2">Arsipkan Siswa?</h3>
+                        <p class="text-gray-500 mb-6">Siswa akan diarsipkan sebagai keluar. Data, relasi, presensi, QR, dan histori tidak akan dihapus.</p>
 
                         <div class="flex gap-3">
                             <button wire:click="$set('showDeleteModal', false)"

@@ -68,6 +68,16 @@ class Student extends Model
         return $this->hasMany(StudentEnrollment::class);
     }
 
+    public function exitRecords(): HasMany
+    {
+        return $this->hasMany(StudentExitRecord::class);
+    }
+
+    public function openExitRecord(): ?StudentExitRecord
+    {
+        return $this->exitRecords()->open()->latest('id')->first();
+    }
+
     public function graduationAcademicYear(): BelongsTo
     {
         return $this->belongsTo(AcademicYear::class, 'graduation_academic_year_id');

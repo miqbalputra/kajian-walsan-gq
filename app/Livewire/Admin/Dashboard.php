@@ -19,7 +19,8 @@ class Dashboard extends Component
         $dashboard = Cache::remember('admin-dashboard:summary', now()->addSeconds(15), function () {
             $totalKajian = KajianEvent::count();
             $totalSiswa = Student::active()->count();
-            $totalWaliSantri = ParentModel::guardians()->count();
+            $totalWaliSantri = ParentModel::guardians()->withActiveChild()->count();
+            $totalWaliArsip = ParentModel::archivedGuardians()->count();
             $pendingValidation = Attendance::where('validation_status', 'pending')->count();
 
             // Only completed/current events should be used as the latest
@@ -47,6 +48,7 @@ class Dashboard extends Component
                 'totalKajian' => $totalKajian,
                 'totalSiswa' => $totalSiswa,
                 'totalWaliSantri' => $totalWaliSantri,
+                'totalWaliArsip' => $totalWaliArsip,
                 'pendingValidation' => $pendingValidation,
                 'lastEventAttendance' => $lastEventAttendance,
                 'lastEvent' => $lastEvent,

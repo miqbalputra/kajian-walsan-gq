@@ -262,6 +262,17 @@
                                             Guru
                                         </span>
                                     @endif
+                                    @if($parent->isArchivedGuardian())
+                                        <span class="px-2 py-1 bg-rose-100 text-rose-700 rounded-lg text-xs font-medium inline-flex items-center gap-1">
+                                            <span class="material-symbols-rounded text-[14px]">inventory_2</span>
+                                            Arsip
+                                        </span>
+                                    @else
+                                        <span class="px-2 py-1 bg-green-100 text-green-700 rounded-lg text-xs font-medium inline-flex items-center gap-1">
+                                            <span class="material-symbols-rounded text-[14px]">check_circle</span>
+                                            Aktif
+                                        </span>
+                                    @endif
                                 </div>
                             </td>
                             <td class="px-6 py-4">
@@ -547,8 +558,8 @@
                     <div class="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
                         <span class="material-symbols-rounded text-red-600 text-3xl">delete</span>
                     </div>
-                    <h3 class="text-xl font-bold text-gray-900 mb-2">Nonaktifkan Akun Orang Tua?</h3>
-                    <p class="text-gray-500 mb-6">Akun akan dinonaktifkan. Data, relasi anak, QR, dan histori tidak akan dihapus.</p>
+                    <h3 class="text-xl font-bold text-gray-900 mb-2">Arsipkan Akun Orang Tua?</h3>
+                    <p class="text-gray-500 mb-6">Akun hanya dapat diarsipkan jika tidak memiliki anak aktif. Data, relasi anak, QR, dan histori tidak akan dihapus.</p>
 
                     <div class="flex gap-3">
                         <button wire:click="$set('showDeleteModal', false)"
@@ -557,7 +568,7 @@
                         </button>
                         <button wire:click="delete"
                             class="flex-1 px-4 py-2.5 bg-red-500 text-white rounded-xl font-medium hover:bg-red-600 transition-colors">
-                            Nonaktifkan
+                            Arsipkan
                         </button>
                     </div>
                 </div>

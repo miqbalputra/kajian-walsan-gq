@@ -6,11 +6,14 @@ use App\Models\AcademicYear;
 use App\Models\ClassRoom;
 use App\Models\PromotionBatch;
 use App\Models\PromotionChange;
+use App\Models\ParentModel;
 use App\Models\Student;
 use App\Models\StudentEnrollment;
+use App\Models\User;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
+use App\Services\ParentArchiveService;
 
 class PromotionService
 {
@@ -293,6 +296,11 @@ class PromotionService
                 ]);
             }
 
+            $this->syncParentArchiveState(
+                collect($preview['rows'])->pluck('student_id')->all(),
+                $adminId ? User::find($adminId) : null,
+            );
+
             $batch->update([
                 'status' => 'applied',
                 'applied_at' => now(),
@@ -339,12 +347,32 @@ class PromotionService
                     ->update(['ended_at' => null, 'status' => $change->before_status === 'graduated' ? 'graduated' : 'enrolled']);
             }
 
+            $this->syncParentArchiveState(
+                $batch->changes->pluck('student_id')->all(),
+                null,
+            );
+
             $batch->update(['status' => 'rolled_back', 'rolled_back_at' => now()]);
 
             $batch->sourceAcademicYear?->setAsActive();
 
             return $batch->fresh();
         });
+    }
+
+    private function syncParentArchiveState(array $studentIds, ?User $actor = null): void
+    {
+        $parentIds = DB::table('parent_student')
+            ->whereIn('student_id', $studentIds)
+            ->pluck('parent_id');
+
+        if ($parentIds->isEmpty()) {
+            return;
+        }
+
+        $archiveService = app(ParentArchiveService::class);
+        ParentModel::whereIn('id', $parentIds)->get()
+            ->each(fn (ParentModel $parent) => $archiveService->syncForParent($parent, $actor));
     }
 
     private function summarize(array $rows): array

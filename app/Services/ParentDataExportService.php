@@ -26,7 +26,7 @@ class ParentDataExportService
         $parentSheet->setTitle('Wali');
         $this->writeHeader($parentSheet, [
             'Parent ID', 'User ID', 'Nama', 'Tipe', 'Username', 'Email', 'Telepon', 'NIK',
-            'Pekerjaan', 'Alamat', 'Akun Aktif', 'Jumlah Anak Aktif', 'Jumlah Anak Alumni',
+            'Pekerjaan', 'Alamat', 'Status Wali', 'Akun Aktif', 'Jumlah Anak Aktif', 'Jumlah Anak Alumni', 'Jumlah Anak Pindah', 'Jumlah Anak Keluar',
             'QR Utama', 'QR Alias', 'Dibuat',
         ], $headerStyle);
 
@@ -38,6 +38,8 @@ class ParentDataExportService
                 foreach ($parents as $parent) {
                     $activeChildren = $parent->students->filter(fn ($student) => ($student->student_status ?? 'active') === 'active' && $student->is_active)->count();
                     $alumniChildren = $parent->students->filter(fn ($student) => ($student->student_status ?? null) === 'graduated')->count();
+                    $transferredChildren = $parent->students->where('student_status', 'transferred')->count();
+                    $withdrawnChildren = $parent->students->where('student_status', 'withdrawn')->count();
                     $aliases = $parent->qrCodes
                         ->where('kind', '!=', 'canonical')
                         ->where('is_active', true)
@@ -56,9 +58,12 @@ class ParentDataExportService
                         $parent->nik,
                         $parent->occupation,
                         $parent->address,
+                        $activeChildren > 0 ? 'Aktif' : 'Arsip',
                         $parent->user?->is_active ? 'Aktif' : 'Tidak Aktif',
                         $activeChildren,
                         $alumniChildren,
+                        $transferredChildren,
+                        $withdrawnChildren,
                         $parent->qr_code_string,
                         $aliases,
                         optional($parent->created_at)->format('Y-m-d H:i:s'),
@@ -71,11 +76,12 @@ class ParentDataExportService
         $this->writeHeader($studentSheet, [
             'Student ID', 'NIS', 'Nama', 'Status', 'Kelas Saat Ini', 'Jenis Kelamin',
             'Tempat Lahir', 'Tanggal Lahir', 'Alamat', 'Mulai Lulus', 'Tahun Lulus',
+            'Jenis Keluar', 'Tanggal Keluar', 'Alasan Keluar', 'Tujuan Keluar', 'Dibuat Arsip', 'Dipulihkan',
             'Histori Tahun/Kelas',
         ], $headerStyle);
 
         $studentRow = 2;
-        Student::with(['classRoom', 'enrollments.academicYear', 'graduationAcademicYear'])
+        Student::with(['classRoom', 'enrollments.academicYear', 'graduationAcademicYear', 'exitRecords'])
             ->orderBy('id')
             ->chunkById(200, function ($students) use ($studentSheet, &$studentRow) {
                 foreach ($students as $student) {
@@ -83,6 +89,7 @@ class ParentDataExportService
                         ->sortBy(fn ($enrollment) => $enrollment->academicYear?->name)
                         ->map(fn ($enrollment) => ($enrollment->academicYear?->name ?? '-').' / '.($enrollment->class_name ?? '-').' ['.$enrollment->status.']')
                         ->implode(' | ');
+                    $exit = $student->exitRecords->sortByDesc('id')->first();
 
                     $studentSheet->fromArray([[
                         $student->id,
@@ -96,6 +103,12 @@ class ParentDataExportService
                         $student->address,
                         optional($student->graduated_at)->format('Y-m-d H:i:s'),
                         $student->graduationAcademicYear?->name,
+                        $exit?->exit_type,
+                        optional($exit?->effective_date)->format('Y-m-d'),
+                        $exit?->reason,
+                        $exit?->destination,
+                        optional($exit?->archived_at)->format('Y-m-d H:i:s'),
+                        optional($exit?->restored_at)->format('Y-m-d H:i:s'),
                         $history,
                     ]], null, 'A'.$studentRow++);
                 }
@@ -105,12 +118,12 @@ class ParentDataExportService
         $relationSheet->setTitle('Relasi');
         $this->writeHeader($relationSheet, [
             'Parent ID', 'Nama Wali', 'Tipe Wali', 'Student ID', 'NIS', 'Nama Anak',
-            'Status Anak', 'Kelas Saat Ini', 'Hubungan', 'Primary Contact',
+            'Status Anak', 'Kelas Saat Ini', 'Jenis Keluar', 'Tanggal Keluar', 'Alasan Keluar', 'Tujuan Keluar', 'Hubungan', 'Primary Contact',
             'Tahun Ajaran/Kelas', 'QR Alias Anak',
         ], $headerStyle);
 
         $relationRow = 2;
-        ParentModel::with(['user', 'students.classRoom', 'students.enrollments.academicYear', 'qrCodes'])
+        ParentModel::with(['user', 'students.classRoom', 'students.enrollments.academicYear', 'students.exitRecords', 'qrCodes'])
             ->whereIn('type', ['father', 'mother'])
             ->orderBy('id')
             ->chunkById(200, function ($parents) use ($relationSheet, &$relationRow) {
@@ -126,6 +139,7 @@ class ParentDataExportService
                             ->whereNull('revoked_at')
                             ->pluck('code')
                             ->implode(' | ');
+                        $exit = $student->exitRecords->sortByDesc('id')->first();
                         $pivot = $student->pivot;
 
                         $relationSheet->fromArray([[
@@ -137,6 +151,10 @@ class ParentDataExportService
                             $student->name,
                             $student->student_status ?? ($student->is_active ? 'active' : 'withdrawn'),
                             $student->classRoom?->name,
+                            $exit?->exit_type,
+                            optional($exit?->effective_date)->format('Y-m-d'),
+                            $exit?->reason,
+                            $exit?->destination,
                             $pivot?->relationship,
                             $pivot?->is_primary_contact ? 'Ya' : 'Tidak',
                             $history,

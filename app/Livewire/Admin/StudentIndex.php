@@ -5,6 +5,7 @@ namespace App\Livewire\Admin;
 use App\Imports\StudentsImport;
 use App\Models\ClassRoom;
 use App\Models\Student;
+use App\Services\StudentArchiveService;
 use Livewire\Component;
 use Livewire\WithPagination;
 use Maatwebsite\Excel\Facades\Excel;
@@ -147,22 +148,25 @@ class StudentIndex extends Component
         $this->showDeleteModal = true;
     }
 
-    public function delete()
+    public function delete(StudentArchiveService $archiveService)
     {
-        $student = Student::findOrFail($this->studentId);
-        // Preserve the student, parent relation, and attendance history.
-        $student->update([
-            'class_id' => null,
-            'student_status' => 'withdrawn',
-            'is_active' => false,
-        ]);
-        $student->enrollments()->whereNull('ended_at')->update([
-            'status' => 'withdrawn',
-            'ended_at' => now()->toDateString(),
-        ]);
-        $this->showDeleteModal = false;
-        $this->studentId = null;
-        $this->dispatch('notify', ['type' => 'success', 'message' => 'Siswa diarsipkan sebagai nonaktif. Histori dan relasi tetap tersimpan.']);
+        try {
+            $archiveService->archive(
+                Student::findOrFail($this->studentId),
+                [
+                    'exit_type' => 'withdrawn',
+                    'effective_date' => today()->toDateString(),
+                    'reason' => 'Diarsipkan dari daftar siswa',
+                ],
+                auth()->user(),
+            );
+            $this->showDeleteModal = false;
+            $this->studentId = null;
+            $this->dispatch('notify', ['type' => 'success', 'message' => 'Siswa diarsipkan sebagai keluar. Histori dan relasi tetap tersimpan.']);
+        } catch (\Throwable $exception) {
+            report($exception);
+            $this->addError('archive', $exception->getMessage());
+        }
     }
 
     /**

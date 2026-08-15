@@ -12,6 +12,7 @@ use App\Models\Student;
 use App\Models\StudentEnrollment;
 use App\Models\User;
 use App\Services\ParentDataExportService;
+use App\Services\ParentArchiveService;
 use App\Services\ParentLoginAliasService;
 use App\Services\ParentQrCodeService;
 use App\Services\StudentFamilyImportService;
@@ -317,6 +318,7 @@ class ParentIndex extends Component
                 // attendance history and alumni reporting.
                 $parent->students()->syncWithoutDetaching($this->selectedChildren);
                 $parent->refresh()->syncQrCode();
+                app(ParentArchiveService::class)->syncForParent($parent->fresh(), auth()->user());
             });
 
             $this->dispatch('notify', ['type' => 'success', 'message' => 'Data orang tua berhasil diperbarui!']);
@@ -468,6 +470,7 @@ class ParentIndex extends Component
             $linkedParent = $this->linkParent->fresh('students');
             app(ParentQrCodeService::class)->syncForParent($linkedParent);
             app(ParentLoginAliasService::class)->syncForParent($linkedParent);
+            app(ParentArchiveService::class)->syncForParent($linkedParent, auth()->user());
             });
         } catch (\Throwable $exception) {
             $this->addError('linkChildNis', $exception->getMessage());
@@ -485,18 +488,28 @@ class ParentIndex extends Component
         return $exporter->download();
     }
 
-    public function delete()
+    public function delete(ParentArchiveService $archiveService)
     {
         $parent = ParentModel::with(['user', 'attendances', 'students'])->findOrFail($this->parentId);
 
+        if ($parent->isGuardian() && $parent->hasActiveChildren()) {
+            $this->showDeleteModal = false;
+            $this->addError('parent', 'Wali yang masih memiliki anak aktif tidak dapat diarsipkan. Arsipkan anaknya terlebih dahulu jika memang sudah pindah/keluar.');
+
+            return;
+        }
+
         // Parent records are identity and audit data. Never delete them from
-        // the UI; deactivate the account while preserving children, aliases,
-        // attendance, and alumni history.
-        $parent->user?->update(['is_active' => false]);
+        // the UI; reconcile archive state while preserving all relations.
+        if ($parent->isGuardian()) {
+            $archiveService->syncForParent($parent, auth()->user());
+        } else {
+            $parent->user?->update(['is_active' => false]);
+        }
 
         $this->showDeleteModal = false;
         $this->parentId = null;
-        $this->dispatch('notify', ['type' => 'success', 'message' => 'Akun orang tua dinonaktifkan. Semua data lama, relasi, QR, dan histori tetap tersimpan.']);
+        $this->dispatch('notify', ['type' => 'success', 'message' => 'Akun orang tua diarsipkan tanpa menghapus relasi, QR, dan histori.']);
     }
 
     public function showCard($id)

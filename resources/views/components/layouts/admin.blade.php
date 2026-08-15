@@ -79,6 +79,11 @@
                     <span class="material-symbols-rounded">upgrade</span>
                     Kenaikan Kelas
                 </a>
+                <a href="{{ route('admin.archive.index') }}"
+                    class="flex items-center gap-3 px-4 py-3 rounded-xl font-medium transition-colors {{ request()->routeIs('admin.archive.*') ? 'bg-primary-50 dark:bg-primary-900/20 text-primary-600 dark:text-primary-400' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-slate-800' }}">
+                    <span class="material-symbols-rounded">inventory_2</span>
+                    Arsip Santri & Wali
+                </a>
                 <a href="{{ route('admin.parents.index', ['typeFilter' => 'teacher']) }}"
                     class="flex items-center gap-3 px-4 py-3 rounded-xl font-medium transition-colors {{ (request()->get('typeFilter') === 'teacher') ? 'bg-primary-50 dark:bg-primary-900/20 text-primary-600 dark:text-primary-400' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-slate-800' }}">
                     <span class="material-symbols-rounded">person_book</span>

@@ -8,6 +8,7 @@ use App\Http\Controllers\PanitiaAttendanceScanController;
 use App\Http\Controllers\PushSubscriptionController;
 use App\Http\Middleware\InjectPwaInstallPrompt;
 use App\Livewire\Admin\AnnouncementIndex;
+use App\Livewire\Admin\ArchiveIndex;
 use App\Livewire\Admin\AttendanceTrash;
 use App\Livewire\Admin\AttendanceValidation;
 use App\Livewire\Admin\ChatAi;
@@ -100,6 +101,7 @@ Route::middleware('auth')->group(function () {
         Route::get('/students', StudentIndex::class)->name('students.index');
         Route::get('/parents', ParentIndex::class)->name('parents.index');
         Route::get('/promotion', PromotionWizard::class)->name('promotion.index');
+        Route::get('/archive', ArchiveIndex::class)->name('archive.index');
         Route::get('/parents/{parent}/kartu/download', function (ParentModel $parent) {
             $parent->loadMissing('user', 'students.classRoom');
             abort_if($parent->isPureTeacher() || blank($parent->qr_code_string), 404);
