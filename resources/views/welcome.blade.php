@@ -249,42 +249,32 @@
                 </div>
             </button>
 
-            <!-- Action Buttons Grid -->
-            <div class="grid grid-cols-2 gap-3 w-full mb-5">
-                <!-- Login Panitia Button -->
-                <a href="{{ route('login') }}"
-                    class="group relative overflow-hidden bg-gradient-to-br from-white via-emerald-50 to-cyan-50 p-4 rounded-3xl shadow-2xl border border-white/70 transition-all duration-300 hover:shadow-emerald-500/25 hover:-translate-y-1 min-h-[164px]">
-                    <div class="absolute inset-x-0 bottom-0 h-1.5 bg-gradient-to-r from-emerald-500 to-cyan-400"></div>
-                    <div class="relative z-10 flex h-full flex-col justify-between gap-4">
-                        <div
-                            class="w-13 h-13 rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-600 text-white flex items-center justify-center shadow-lg shadow-emerald-500/30 group-hover:scale-110 transition-transform duration-300 shrink-0">
-                            <span class="material-symbols-rounded text-3xl">admin_panel_settings</span>
-                        </div>
-                        <div class="min-w-0 text-left">
-                            <p class="text-[10px] font-black uppercase tracking-widest text-emerald-700 mb-1">Petugas</p>
-                            <h3 class="font-black text-slate-900 text-[15px] leading-tight group-hover:text-emerald-700">Masuk Admin</h3>
-                            <p class="text-slate-500 text-[11px] leading-snug mt-1">Panitia dan pengelola kajian</p>
-                        </div>
-                        <span class="absolute top-5 right-4 material-symbols-rounded text-emerald-500">arrow_forward_ios</span>
-                    </div>
+            <!-- Login Actions -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 w-full mb-5">
+                <a href="{{ route('login') }}" aria-label="Masuk sebagai petugas"
+                    class="group flex items-center gap-4 w-full rounded-2xl bg-white px-4 py-4 text-left shadow-lg shadow-black/10 border border-white/70 motion-safe:transition-colors motion-safe:duration-200 hover:bg-emerald-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-primary-700">
+                    <span class="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-emerald-50 text-emerald-700 border border-emerald-100 group-hover:bg-emerald-100">
+                        <span class="material-symbols-rounded text-2xl" aria-hidden="true">admin_panel_settings</span>
+                    </span>
+                    <span class="min-w-0 flex-1">
+                        <span class="block text-xs font-semibold text-emerald-700">Petugas</span>
+                        <span class="mt-0.5 block text-base font-bold leading-tight text-slate-900">Masuk sebagai petugas</span>
+                        <span class="mt-1 block text-xs leading-snug text-slate-500">Kelola jadwal dan presensi</span>
+                    </span>
+                    <span class="material-symbols-rounded shrink-0 text-xl text-emerald-600" aria-hidden="true">chevron_right</span>
                 </a>
 
-                <!-- Login Wali Santri Button -->
-                <a href="{{ route('login') }}"
-                    class="group relative overflow-hidden bg-gradient-to-br from-amber-50 via-white to-sky-50 p-4 rounded-3xl shadow-2xl border border-white/70 transition-all duration-300 hover:shadow-amber-500/25 hover:-translate-y-1 min-h-[164px]">
-                    <div class="absolute inset-x-0 bottom-0 h-1.5 bg-gradient-to-r from-amber-400 to-sky-500"></div>
-                    <div class="relative z-10 flex h-full flex-col justify-between gap-4">
-                        <div
-                            class="w-13 h-13 rounded-2xl bg-gradient-to-br from-amber-400 to-sky-500 text-white flex items-center justify-center shadow-lg shadow-sky-500/25 group-hover:scale-110 transition-transform duration-300 shrink-0">
-                            <span class="material-symbols-rounded text-3xl">family_restroom</span>
-                        </div>
-                        <div class="min-w-0 text-left">
-                            <p class="text-[10px] font-black uppercase tracking-widest text-sky-700 mb-1">Wali Santri</p>
-                            <h3 class="font-black text-slate-900 text-[15px] leading-tight group-hover:text-sky-700">Masuk Akun</h3>
-                            <p class="text-slate-500 text-[11px] leading-snug mt-1">QR, jadwal, riwayat, dan izin</p>
-                        </div>
-                        <span class="absolute top-5 right-4 material-symbols-rounded text-sky-500">arrow_forward_ios</span>
-                    </div>
+                <a href="{{ route('login') }}" aria-label="Masuk sebagai wali santri"
+                    class="group flex items-center gap-4 w-full rounded-2xl bg-white px-4 py-4 text-left shadow-lg shadow-black/10 border border-white/70 motion-safe:transition-colors motion-safe:duration-200 hover:bg-sky-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-primary-700">
+                    <span class="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-sky-50 text-sky-700 border border-sky-100 group-hover:bg-sky-100">
+                        <span class="material-symbols-rounded text-2xl" aria-hidden="true">family_restroom</span>
+                    </span>
+                    <span class="min-w-0 flex-1">
+                        <span class="block text-xs font-semibold text-sky-700">Wali santri</span>
+                        <span class="mt-0.5 block text-base font-bold leading-tight text-slate-900">Masuk ke akun</span>
+                        <span class="mt-1 block text-xs leading-snug text-slate-500">Jadwal, riwayat, dan izin</span>
+                    </span>
+                    <span class="material-symbols-rounded shrink-0 text-xl text-sky-600" aria-hidden="true">chevron_right</span>
                 </a>
             </div>
 
