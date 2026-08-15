@@ -21,6 +21,7 @@ use BaconQrCode\Renderer\RendererStyle\RendererStyle;
 use BaconQrCode\Writer;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Storage;
 use Livewire\Component;
 use Livewire\WithFileUploads;
 use Livewire\WithPagination;
@@ -815,9 +816,12 @@ class ParentIndex extends Component
             'studentFamilyImportFile' => 'required|file|mimes:xlsx,xls,csv|max:10240',
         ]);
 
-        $storedPath = $this->studentFamilyImportFile->store('imports');
+        // Laravel's local disk uses storage/app/private as its root. Keep the
+        // stored path and the reader on the same disk instead of rebuilding a
+        // path under storage/app, which would make the upload appear missing.
+        $storedPath = $this->studentFamilyImportFile->store('imports', 'local');
         $this->studentFamilyImportStoredPath = $storedPath;
-        $preview = $importer->preview(storage_path('app/'.$storedPath));
+        $preview = $importer->preview(Storage::disk('local')->path($storedPath));
         unset($preview['rows']);
         $this->studentFamilyImportPreview = $preview;
         $this->studentFamilyImportResult = [];
@@ -839,7 +843,7 @@ class ParentIndex extends Component
         }
 
         try {
-            $result = $importer->import(storage_path('app/'.$this->studentFamilyImportStoredPath));
+            $result = $importer->import(Storage::disk('local')->path($this->studentFamilyImportStoredPath));
             $this->studentFamilyImportResult = $result;
             $this->studentFamilyImportCredentials = $result['credentials'] ?? [];
             $this->studentFamilyImportPreview = [];
@@ -858,7 +862,7 @@ class ParentIndex extends Component
     public function closeStudentFamilyImportModal(): void
     {
         if ($this->studentFamilyImportStoredPath) {
-            \Illuminate\Support\Facades\Storage::disk('local')->delete($this->studentFamilyImportStoredPath);
+            Storage::disk('local')->delete($this->studentFamilyImportStoredPath);
         }
 
         $this->showStudentFamilyImportModal = false;
