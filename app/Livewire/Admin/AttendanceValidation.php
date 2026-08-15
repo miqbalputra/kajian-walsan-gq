@@ -3,7 +3,9 @@
 namespace App\Livewire\Admin;
 
 use App\Models\Attendance;
+use App\Models\GoogleFormSubmission;
 use App\Services\AttendanceProofReviewService;
+use App\Services\GoogleFormAttendanceService;
 use App\Services\WhatsAppNotificationService;
 use Illuminate\Support\Facades\Log;
 use Livewire\Component;
@@ -16,6 +18,8 @@ class AttendanceValidation extends Component
     public $search = '';
     public $statusFilter = 'pending';
     public $ocrFilter = '';
+
+    public $sourceFilter = '';
     public $perPage = 10;
 
     // Modal state
@@ -39,10 +43,39 @@ class AttendanceValidation extends Component
         $this->resetPage();
     }
 
+    public function updatingSourceFilter()
+    {
+        $this->resetPage();
+    }
+
     public function viewProof($id)
     {
-        $this->selectedAttendance = Attendance::with('parent.user')->findOrFail($id);
+        $this->selectedAttendance = Attendance::with([
+            'parent.user',
+            'kajianEvent',
+            'googleFormSubmissions',
+        ])->findOrFail($id);
         $this->showProofModal = true;
+    }
+
+    public function retryGoogleFormSubmission(int $id): void
+    {
+        $submission = GoogleFormSubmission::findOrFail($id);
+
+        if (! $submission->isRetryable()) {
+            $this->dispatch('notify', [
+                'type' => 'info',
+                'message' => 'Submission tersebut sudah selesai diproses.',
+            ]);
+
+            return;
+        }
+
+        $result = app(GoogleFormAttendanceService::class)->retry($submission);
+        $this->dispatch('notify', [
+            'type' => $result['status'] === GoogleFormSubmission::STATUS_PROCESSED ? 'success' : 'warning',
+            'message' => $result['message'],
+        ]);
     }
 
     public function approve($id)
@@ -236,7 +269,8 @@ class AttendanceValidation extends Component
     {
         $attendances = Attendance::with(['parent.user', 'parent.students', 'kajianEvent'])
             ->where(function ($query) {
-                $query->where('method', Attendance::METHOD_UPLOAD)
+                $query->where('method', Attendance::METHOD_GOOGLE_FORM)
+                    ->orWhere('method', Attendance::METHOD_UPLOAD)
                     ->orWhere(function ($query) {
                         $query->where('method', Attendance::METHOD_SCAN_QR)
                             ->whereNotNull('proof_file');
@@ -248,6 +282,9 @@ class AttendanceValidation extends Component
             ->when($this->ocrFilter, function ($query) {
                 $query->where('ai_validation_status', $this->ocrFilter);
             })
+            ->when($this->sourceFilter, function ($query) {
+                $query->where('method', $this->sourceFilter);
+            })
             ->when($this->search, function ($query) {
                 $query->whereHas('parent.user', function ($q) {
                     $q->where('name', 'like', '%' . $this->search . '%');
@@ -255,6 +292,19 @@ class AttendanceValidation extends Component
             })
             ->orderByDesc('created_at')
             ->paginate($this->perPage);
+
+        $unresolvedSubmissions = GoogleFormSubmission::with([
+            'student.classRoom',
+            'parent.user',
+            'event',
+        ])
+            ->whereIn('processing_status', [
+                GoogleFormSubmission::STATUS_UNRESOLVED,
+                GoogleFormSubmission::STATUS_FAILED,
+            ])
+            ->latest('received_at')
+            ->limit(20)
+            ->get();
 
         $ocrStats = [
             'queued' => Attendance::where('ai_validation_status', 'queued')->count(),
@@ -267,6 +317,7 @@ class AttendanceValidation extends Component
         return view('livewire.admin.attendance-validation', [
             'attendances' => $attendances,
             'ocrStats' => $ocrStats,
+            'unresolvedSubmissions' => $unresolvedSubmissions,
         ])->layout('components.layouts.admin', ['title' => 'Validasi Presensi']);
     }
 }

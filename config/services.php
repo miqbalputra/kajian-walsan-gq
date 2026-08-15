@@ -54,4 +54,8 @@ return [
         'url' => env('OCR_GUARD_URL', 'http://ocr-guard:9005'),
         'token' => env('OCR_GUARD_TOKEN', ''),
     ],
+
+    'google_forms' => [
+        'webhook_secret' => env('GOOGLE_FORM_WEBHOOK_SECRET', ''),
+    ],
 ];

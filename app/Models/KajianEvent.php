@@ -76,6 +76,11 @@ class KajianEvent extends Model
     /**
      * Get all feedbacks for this event.
      */
+    public function googleFormSubmissions(): HasMany
+    {
+        return $this->hasMany(GoogleFormSubmission::class, 'kajian_event_id');
+    }
+
     public function feedbacks(): HasMany
     {
         return $this->hasMany(KajianFeedback::class, 'kajian_event_id');

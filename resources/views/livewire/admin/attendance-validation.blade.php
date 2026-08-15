@@ -61,8 +61,50 @@
                     <option value="needs_review">Perlu Review Admin</option>
                 </select>
             </div>
+            <div class="sm:w-56">
+                <select wire:model.live="sourceFilter"
+                    class="w-full px-4 py-2.5 bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-slate-800 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all dark:text-white">
+                    <option value="">Semua Sumber</option>
+                    <option value="google_form">Google Form Mustawa 1</option>
+                    <option value="upload">Upload Bukti</option>
+                    <option value="scan_qr">Scan QR + Bukti</option>
+                </select>
+            </div>
         </div>
     </div>
+
+    @if($unresolvedSubmissions->isNotEmpty())
+        <div class="bg-amber-50 dark:bg-amber-950/20 rounded-2xl border border-amber-200 dark:border-amber-900/50 p-4 mb-6">
+            <div class="flex items-center justify-between gap-3 mb-3">
+                <div>
+                    <h2 class="font-bold text-amber-900 dark:text-amber-200">Submission Google Form perlu dicocokkan</h2>
+                    <p class="text-xs text-amber-700 dark:text-amber-300">Perbaiki data wali atau event, lalu jalankan retry.</p>
+                </div>
+                <span class="px-2 py-1 rounded-lg bg-amber-200 text-amber-800 text-xs font-bold">{{ $unresolvedSubmissions->count() }}</span>
+            </div>
+            <div class="space-y-2">
+                @foreach($unresolvedSubmissions as $submission)
+                    <div class="bg-white/80 dark:bg-slate-900/70 rounded-xl px-3 py-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                        <div class="min-w-0">
+                            <p class="text-sm font-bold text-slate-900 dark:text-white truncate">
+                                {{ $submission->payload['student_name'] ?? '-' }} · {{ $submission->payload['parent_name'] ?? '-' }}
+                            </p>
+                            <p class="text-xs text-slate-600 dark:text-slate-300">
+                                {{ $submission->event_date?->format('d/m/Y') ?? '-' }} · {{ $submission->error_message ?: $submission->processing_status }}
+                            </p>
+                        </div>
+                        <button wire:click="retryGoogleFormSubmission({{ $submission->id }})"
+                            wire:loading.attr="disabled" wire:target="retryGoogleFormSubmission({{ $submission->id }})"
+                            class="inline-flex items-center justify-center gap-1 px-3 py-2 rounded-lg bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold disabled:opacity-60">
+                            <span class="material-symbols-rounded text-base" wire:loading.remove wire:target="retryGoogleFormSubmission({{ $submission->id }})">refresh</span>
+                            <span class="material-symbols-rounded text-base animate-spin" wire:loading wire:target="retryGoogleFormSubmission({{ $submission->id }})">progress_activity</span>
+                            Retry
+                        </button>
+                    </div>
+                @endforeach
+            </div>
+        </div>
+    @endif
 
     <!-- Table -->
     <div
@@ -99,8 +141,11 @@
                                 <div>
                                     <p class="font-medium text-gray-900 dark:text-white">
                                         {{ $attendance->parent?->user?->name }}
-                                        @if($attendance->parent?->isTeacher())
+                                @if($attendance->parent?->isTeacher())
                                             <span class="ml-1 text-[9px] bg-indigo-100 text-indigo-700 px-1.5 py-0.5 rounded uppercase font-black">Guru</span>
+                                        @endif
+                                        @if($attendance->method === \App\Models\Attendance::METHOD_GOOGLE_FORM)
+                                            <span class="ml-1 text-[9px] bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded uppercase font-black">Google Form</span>
                                         @endif
                                     </p>
                                     <p class="text-xs text-gray-500 dark:text-gray-400">Anak:
@@ -143,7 +188,7 @@
                                 <button wire:click="viewProof({{ $attendance->id }})"
                                     class="inline-flex items-center gap-1 text-primary-600 hover:text-primary-700 font-medium text-sm">
                                     <span class="material-symbols-rounded text-lg">visibility</span>
-                                    Lihat File
+                                    {{ $attendance->proof_file ? 'Lihat File' : 'Lihat Detail' }}
                                 </button>
                             </td>
                             <td class="px-6 py-4">
@@ -156,12 +201,14 @@
                                                 <span class="material-symbols-rounded">refresh</span>
                                             </button>
                                         @endif
-                                        <button wire:click="reviewWithAi({{ $attendance->id }})"
-                                            wire:loading.attr="disabled" wire:target="reviewWithAi({{ $attendance->id }})"
-                                            class="p-2 text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"
-                                            title="Cek dengan AI">
-                                            <span class="material-symbols-rounded">auto_awesome</span>
-                                        </button>
+                                        @if($attendance->proof_file)
+                                            <button wire:click="reviewWithAi({{ $attendance->id }})"
+                                                wire:loading.attr="disabled" wire:target="reviewWithAi({{ $attendance->id }})"
+                                                class="p-2 text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"
+                                                title="Cek dengan AI">
+                                                <span class="material-symbols-rounded">auto_awesome</span>
+                                            </button>
+                                        @endif
                                         <button wire:click="approve({{ $attendance->id }})"
                                             class="p-2 text-green-600 hover:bg-green-50 rounded-lg transition-colors"
                                             title="Setujui">
@@ -225,27 +272,47 @@
                     </div>
 
                     <div class="flex-1 overflow-auto bg-gray-50 rounded-xl border border-gray-200 p-2 min-h-[400px]">
-                        @php
-                            $proofUrl = \App\Services\CloudinaryService::getDisplayUrl($selectedAttendance->proof_file);
-                            $extension = pathinfo($selectedAttendance->proof_file, PATHINFO_EXTENSION);
-                            // Cloudinary URLs: detect type from URL or extension
-                            $isImage = in_array(strtolower($extension), ['jpg', 'jpeg', 'png', 'gif', 'webp'])
-                                || str_contains($proofUrl, '/image/upload/');
-                            $isPdf = strtolower($extension) === 'pdf'
-                                || str_contains($proofUrl, '.pdf');
-                        @endphp
+                        @if($selectedAttendance->proof_file)
+                            @php
+                                $proofUrl = \App\Services\CloudinaryService::getDisplayUrl($selectedAttendance->proof_file);
+                                $extension = pathinfo($selectedAttendance->proof_file, PATHINFO_EXTENSION);
+                                $isImage = in_array(strtolower($extension), ['jpg', 'jpeg', 'png', 'gif', 'webp'])
+                                    || str_contains($proofUrl, '/image/upload/');
+                                $isPdf = strtolower($extension) === 'pdf'
+                                    || str_contains($proofUrl, '.pdf');
+                            @endphp
 
-                        @if($isImage)
-                            <img src="{{ $proofUrl }}" class="max-w-full h-auto mx-auto rounded-lg shadow-sm" alt="Bukti">
-                        @elseif($isPdf)
-                            <iframe src="{{ $proofUrl }}" class="w-full h-full min-h-[600px] rounded-lg"
-                                frameborder="0"></iframe>
+                            @if($isImage)
+                                <img src="{{ $proofUrl }}" class="max-w-full h-auto mx-auto rounded-lg shadow-sm" alt="Bukti">
+                            @elseif($isPdf)
+                                <iframe src="{{ $proofUrl }}" class="w-full h-full min-h-[600px] rounded-lg"
+                                    frameborder="0"></iframe>
+                            @else
+                                <div class="flex flex-col items-center justify-center h-full gap-4 text-gray-500">
+                                    <span class="material-symbols-rounded text-6xl">file_present</span>
+                                    <p>File tidak dapat dipratinjau langsung.</p>
+                                    <a href="{{ $proofUrl }}" target="_blank"
+                                        class="px-4 py-2 bg-primary-500 text-white rounded-xl font-medium">Download File</a>
+                                </div>
+                            @endif
                         @else
-                            <div class="flex flex-col items-center justify-center h-full gap-4 text-gray-500">
-                                <span class="material-symbols-rounded text-6xl">file_present</span>
-                                <p>File tidak dapat dipratinjau langsung.</p>
-                                <a href="{{ $proofUrl }}" target="_blank"
-                                    class="px-4 py-2 bg-primary-500 text-white rounded-xl font-medium">Download File</a>
+                            @php $formSubmission = $selectedAttendance->googleFormSubmissions->sortByDesc('created_at')->first(); @endphp
+                            <div class="min-h-[400px] flex flex-col justify-center max-w-xl mx-auto p-6">
+                                <div class="flex items-center gap-3 mb-5">
+                                    <span class="material-symbols-rounded text-4xl text-amber-600">assignment</span>
+                                    <div>
+                                        <p class="font-bold text-slate-900">Respons Google Form Mustawa 1</p>
+                                        <p class="text-xs text-slate-500">Tidak ada file upload pada prosedur ini.</p>
+                                    </div>
+                                </div>
+                                @if($formSubmission)
+                                    <dl class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
+                                        <div class="rounded-xl bg-white border border-slate-200 p-3"><dt class="text-xs text-slate-500">Nama wali</dt><dd class="font-semibold text-slate-900">{{ $formSubmission->payload['parent_name'] ?? '-' }}</dd></div>
+                                        <div class="rounded-xl bg-white border border-slate-200 p-3"><dt class="text-xs text-slate-500">Nomor HP</dt><dd class="font-semibold text-slate-900">{{ $formSubmission->payload['parent_phone'] ?? '-' }}</dd></div>
+                                        <div class="rounded-xl bg-white border border-slate-200 p-3"><dt class="text-xs text-slate-500">Ananda</dt><dd class="font-semibold text-slate-900">{{ $formSubmission->payload['student_name'] ?? '-' }}</dd></div>
+                                        <div class="rounded-xl bg-white border border-slate-200 p-3"><dt class="text-xs text-slate-500">Status</dt><dd class="font-semibold text-slate-900">{{ ($formSubmission->payload['status'] ?? '') === 'izin' ? 'Berhalangan' : 'Menyimak Online' }}</dd></div>
+                                    </dl>
+                                @endif
                             </div>
                         @endif
                     </div>
@@ -278,10 +345,12 @@
                                 class="flex-1 px-4 py-3 border border-red-200 text-red-600 rounded-xl font-medium hover:bg-red-50 transition-colors">
                                 Tolak Pengajuan
                             </button>
-                            <button wire:click="reviewWithAi({{ $selectedAttendance->id }})"
-                                class="flex-1 px-4 py-3 bg-indigo-600 text-white rounded-xl font-medium hover:bg-indigo-700 transition-colors shadow-lg shadow-indigo-600/20">
-                                Cek AI
-                            </button>
+                            @if($selectedAttendance->proof_file)
+                                <button wire:click="reviewWithAi({{ $selectedAttendance->id }})"
+                                    class="flex-1 px-4 py-3 bg-indigo-600 text-white rounded-xl font-medium hover:bg-indigo-700 transition-colors shadow-lg shadow-indigo-600/20">
+                                    Cek AI
+                                </button>
+                            @endif
                             <button wire:click="approve({{ $selectedAttendance->id }})"
                                 class="flex-1 px-4 py-3 bg-green-600 text-white rounded-xl font-medium hover:bg-green-700 transition-colors shadow-lg shadow-green-600/20">
                                 Setujui Presensi

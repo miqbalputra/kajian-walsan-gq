@@ -57,6 +57,7 @@ class Attendance extends Model
     public const METHOD_SCAN_QR = 'scan_qr';
     public const METHOD_MANUAL = 'manual';
     public const METHOD_UPLOAD = 'upload';
+    public const METHOD_GOOGLE_FORM = 'google_form';
 
     /**
      * Validation status options.
@@ -102,6 +103,11 @@ class Attendance extends Model
     public function proofHistories(): HasMany
     {
         return $this->hasMany(AttendanceProofHistory::class)->latest('created_at');
+    }
+
+    public function googleFormSubmissions(): HasMany
+    {
+        return $this->hasMany(GoogleFormSubmission::class, 'attendance_id');
     }
 
     /**
@@ -167,6 +173,7 @@ class Attendance extends Model
             self::METHOD_SCAN_QR => 'Scan QR',
             self::METHOD_MANUAL => 'Input Manual',
             self::METHOD_UPLOAD => 'Upload Bukti',
+            self::METHOD_GOOGLE_FORM => 'Google Form Mustawa 1',
             default => '-',
         };
     }
