@@ -117,6 +117,7 @@ class StudentFamilyImportService
         $updatedStudents = 0;
         $createdParents = 0;
         $linkedRelations = 0;
+        $warnings = [];
 
         DB::transaction(function () use (
             $rows,
@@ -128,6 +129,7 @@ class StudentFamilyImportService
             &$updatedStudents,
             &$createdParents,
             &$linkedRelations,
+            &$warnings,
         ): void {
             $role = Role::where('name', 'wali_santri')->first();
             if (! $role) {
@@ -191,6 +193,7 @@ class StudentFamilyImportService
                         $families,
                         $credentials,
                         $createdParents,
+                        $warnings,
                     );
 
                     if (! $parent) {
@@ -234,6 +237,7 @@ class StudentFamilyImportService
             'created_parents' => $createdParents,
             'linked_relations' => $linkedRelations,
             'credentials' => $credentials,
+            'warnings' => array_values(array_unique($warnings)),
         ];
     }
 
@@ -245,6 +249,7 @@ class StudentFamilyImportService
         array &$families,
         array &$credentials,
         int &$createdParents,
+        array &$warnings,
     ): ?ParentModel {
         $parentId = $this->integerOrNull($row["parent_id_{$prefix}"] ?? null);
         if ($parentId) {
@@ -280,8 +285,14 @@ class StudentFamilyImportService
         }
 
         $email = $this->nullable($row["email_{$prefix}"] ?? null);
+        $sourceEmail = $email;
         if ($email && User::whereRaw('LOWER(email) = ?', [Str::lower($email)])->exists()) {
-            throw new \RuntimeException("Email {$email} sudah dipakai. Isi Parent ID lama agar tidak terjadi duplikasi akun.");
+            // A family may intentionally provide one shared email for both
+            // parents. The users.email column is unique, so keep the first
+            // account on the supplied email and give the next new account a
+            // deterministic internal address instead of aborting the batch.
+            $email = $this->uniqueEmail($username.'@kajian.griyaquran.web.id');
+            $warnings[] = "Email {$sourceEmail} dipakai lebih dari satu akun atau sudah terdaftar; {$name} dibuat dengan email unik {$email}. Username/password tetap mengikuti format NIS.";
         }
 
         $email = $email ?: $this->uniqueEmail($username.'@kajian.griyaquran.web.id');
@@ -311,6 +322,7 @@ class StudentFamilyImportService
             'parent_id' => $parent->id,
             'username' => $username,
             'password' => $username,
+            'email' => $email,
             'student_id' => null,
         ];
 

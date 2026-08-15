@@ -117,6 +117,42 @@ class StudentFamilyImportServiceTest extends TestCase
         $this->assertAuthenticatedAs($oldUser->fresh());
     }
 
+    public function test_shared_email_between_new_parents_gets_a_unique_second_email_without_aborting_batch(): void
+    {
+        $role = Role::where('name', 'wali_santri')->firstOrFail();
+        AcademicYear::create([
+            'name' => '2027/2028',
+            'start_date' => '2027-07-01',
+            'end_date' => '2028-06-30',
+            'is_active' => true,
+        ]);
+        ClassRoom::create([
+            'name' => 'Mustawa 1 Akhwat',
+            'level' => '1',
+            'is_active' => true,
+        ]);
+
+        $path = $this->makeCsv([
+            'nis', 'nama', 'kelas', 'tahun_ajaran', 'jenis_kelamin', 'family_key',
+            'nama_ayah', 'email_ayah', 'nama_ibu', 'email_ibu',
+        ], [[
+            '0214470999', 'Santri Email Bersama', 'Mustawa 1 Akhwat', '2027/2028', 'P',
+            'shared-email-family', 'Ayah Bersama', 'shared@example.test', 'Ibu Bersama', 'shared@example.test',
+        ]]);
+
+        $importer = app(StudentFamilyImportService::class);
+        $preview = $importer->preview($path);
+        $this->assertSame([], $preview['errors']);
+
+        $result = $importer->import($path);
+
+        $this->assertSame(2, $result['created_parents']);
+        $this->assertNotEmpty($result['warnings']);
+        $this->assertSame(1, User::where('email', 'shared@example.test')->count());
+        $this->assertDatabaseHas('users', ['username' => 'BPK0214470999', 'email' => 'shared@example.test']);
+        $this->assertDatabaseHas('users', ['username' => 'IBU0214470999', 'email' => 'IBU0214470999@kajian.griyaquran.web.id']);
+    }
+
     /**
      * @param array<int, string> $headers
      * @param array<int, array<int, string>> $rows

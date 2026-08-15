@@ -110,6 +110,16 @@
                         <div class="bg-emerald-50 border border-emerald-200 rounded-xl p-4 mb-4 text-sm text-emerald-800">
                             Import berhasil. Siswa baru: {{ $studentFamilyImportResult['created_students'] ?? 0 }}; relasi diproses: {{ $studentFamilyImportResult['linked_relations'] ?? 0 }}.
                         </div>
+                        @if(!empty($studentFamilyImportResult['warnings']))
+                            <div class="bg-amber-50 border border-amber-200 rounded-xl p-4 mb-4 text-sm text-amber-800">
+                                <p class="font-bold mb-2">Catatan import:</p>
+                                <ul class="list-disc pl-5 space-y-1">
+                                    @foreach($studentFamilyImportResult['warnings'] as $warning)
+                                        <li>{{ $warning }}</li>
+                                    @endforeach
+                                </ul>
+                            </div>
+                        @endif
                         @if(!empty($studentFamilyImportCredentials))
                             <div class="overflow-x-auto border rounded-xl">
                                 <table class="w-full text-sm">
