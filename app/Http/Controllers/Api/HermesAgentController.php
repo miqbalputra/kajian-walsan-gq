@@ -13,7 +13,6 @@ use App\Models\StudentEnrollment;
 use App\Models\User;
 use App\Services\CloudinaryService;
 use App\Services\ParentQrCodeService;
-use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\QueryException;
 use Illuminate\Http\JsonResponse;
@@ -161,6 +160,7 @@ class HermesAgentController extends Controller
                 Attendance::STATUS_HADIR_ONLINE,
                 Attendance::STATUS_IZIN,
                 Attendance::STATUS_ALPHA,
+                'not_started',
             ])],
             'validation_status' => ['nullable', Rule::in([
                 Attendance::VALIDATION_APPROVED,
@@ -267,6 +267,13 @@ class HermesAgentController extends Controller
             return response()->json([
                 'success' => false,
                 'message' => 'Tidak ada kajian aktif. Kirim kajian_event_id untuk memilih kajian tertentu.',
+            ], 422);
+        }
+
+        if (! $event->isOpen()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Presensi kajian ini sudah ditutup. Buka kembali presensi sebelum mengubah data.',
             ], 422);
         }
 
@@ -404,6 +411,14 @@ class HermesAgentController extends Controller
         $data = $request->validate($this->attendanceMutationRules(requireStatus: false, requireTarget: false));
 
         $attendance->loadMissing(['parent.students', 'kajianEvent']);
+
+        if (! $attendance->kajianEvent?->isOpen()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Presensi kajian ini sudah ditutup. Buka kembali presensi sebelum mengubah data.',
+            ], 422);
+        }
+
         $status = $data['status'] ?? $attendance->status;
         $policy = $attendance->kajianEvent?->policy ?? config('event_categories.kajian');
         $proofFile = $this->storeProofFile($request, $attendance->parent, $status, $policy);
@@ -500,6 +515,13 @@ class HermesAgentController extends Controller
         $event = $attendance->kajianEvent;
         $payload = $this->formatAttendance($attendance, detailed: true);
 
+        if (! $event?->isOpen()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Presensi kajian ini sudah ditutup. Buka kembali presensi sebelum menghapus data.',
+            ], 422);
+        }
+
         $attendance->delete();
         $event?->updateAttendanceCount();
 
@@ -518,6 +540,14 @@ class HermesAgentController extends Controller
                 'message' => 'Presensi ini belum terhapus, jadi tidak perlu direstore.',
                 'data' => $this->formatAttendance($attendance, detailed: true),
             ], 409);
+        }
+
+        $attendance->loadMissing('kajianEvent');
+        if (! $attendance->kajianEvent?->isOpen()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Presensi kajian ini sudah ditutup. Buka kembali presensi sebelum memulihkan data.',
+            ], 422);
         }
 
         $duplicateExists = Attendance::query()
@@ -771,7 +801,9 @@ class HermesAgentController extends Controller
     protected function deriveStatus(ParentModel $parent, ?Attendance $attendance, KajianEvent $event): string
     {
         if (! $attendance) {
-            return Attendance::STATUS_ALPHA;
+            return $event->status === 'closed'
+                ? Attendance::STATUS_ALPHA
+                : 'not_started';
         }
 
         if ($attendance->validation_status === Attendance::VALIDATION_REJECTED) {
@@ -791,9 +823,7 @@ class HermesAgentController extends Controller
 
     protected function eventHasEnded(KajianEvent $event): bool
     {
-        $end = Carbon::parse($event->date->format('Y-m-d').' '.Carbon::parse($event->time_end)->format('H:i:s'));
-
-        return now()->gt($end) || $event->status === 'closed';
+        return $event->status === 'closed';
     }
 
     protected function summarizeRows(Collection $rows): array

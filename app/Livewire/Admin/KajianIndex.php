@@ -7,6 +7,7 @@ use App\Models\ClassRoom;
 use App\Models\KajianEvent;
 use App\Models\PublicAttendanceLink;
 use App\Services\WebPushService;
+use App\Services\AttendanceFinalizationService;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
@@ -159,6 +160,9 @@ class KajianIndex extends Component
     public function save()
     {
         $this->validate();
+        $previousStatus = $this->editMode
+            ? KajianEvent::whereKey($this->kajianId)->value('status')
+            : null;
 
         // Build statuses array from toggles
         $statuses = ['hadir_fisik', 'izin', 'alpha'];
@@ -194,23 +198,32 @@ class KajianIndex extends Component
             ->unique()
             ->values()
             ->all();
+        $savedKajian = null;
 
         if ($this->editMode) {
-            DB::transaction(function () use ($data, $targetClassIds) {
+            DB::transaction(function () use ($data, $targetClassIds, &$savedKajian) {
                 $kajian = KajianEvent::findOrFail($this->kajianId);
                 $kajian->update($data);
                 $kajian->targetClasses()->sync($targetClassIds);
+                $savedKajian = $kajian;
             });
 
             $this->dispatch('notify', ['type' => 'success', 'message' => 'Kegiatan berhasil diperbarui!']);
         } else {
-            DB::transaction(function () use ($data, $targetClassIds) {
+            DB::transaction(function () use ($data, $targetClassIds, &$savedKajian) {
                 $data['created_by'] = auth()->id();
                 $kajian = KajianEvent::create($data);
                 $kajian->targetClasses()->sync($targetClassIds);
+                $savedKajian = $kajian;
             });
 
             $this->dispatch('notify', ['type' => 'success', 'message' => 'Kegiatan berhasil ditambahkan!']);
+        }
+
+        if ($this->status === 'closed' && $previousStatus !== 'closed' && $savedKajian) {
+            app(AttendanceFinalizationService::class)->close($savedKajian, auth()->id());
+        } elseif ($previousStatus === 'closed' && $savedKajian) {
+            app(AttendanceFinalizationService::class)->reopen($savedKajian);
         }
 
         $this->showModal = false;
@@ -221,10 +234,18 @@ class KajianIndex extends Component
     {
         $kajian = KajianEvent::findOrFail($id);
 
-        $newStatus = $kajian->status === 'open' ? 'closed' : 'open';
-        $kajian->update(['status' => $newStatus]);
+        if ($kajian->status === 'open') {
+            app(AttendanceFinalizationService::class)->close($kajian, auth()->id());
+            $message = 'Presensi ditutup. Sasaran telah dikunci dan hasil Alfa sudah final.';
+        } elseif ($kajian->status === 'closed') {
+            app(AttendanceFinalizationService::class)->reopen($kajian);
+            $message = 'Presensi dibuka kembali. Data kembali realtime agar wali yang terlambat dapat presensi.';
+        } else {
+            $kajian->update(['status' => 'open']);
+            $message = 'Presensi dibuka. Data kehadiran tampil secara realtime.';
+        }
 
-        $this->dispatch('notify', ['type' => 'success', 'message' => 'Status kegiatan diubah menjadi '.ucfirst($newStatus).'!']);
+        $this->dispatch('notify', ['type' => 'success', 'message' => $message]);
     }
 
     public function createMustawaOnePublicFormLink(): void
@@ -299,7 +320,9 @@ class KajianIndex extends Component
         $kajian = KajianEvent::findOrFail($this->kajianId);
         // Kegiatan memiliki relasi cascade ke presensi, feedback, dan target
         // kelas. Arsipkan dengan status closed agar histori tidak ikut hilang.
-        $kajian->update(['status' => 'closed']);
+        if ($kajian->status !== 'closed') {
+            app(AttendanceFinalizationService::class)->close($kajian, auth()->id());
+        }
         $this->showDeleteModal = false;
         $this->kajianId = null;
         $this->dispatch('notify', ['type' => 'success', 'message' => 'Kegiatan diarsipkan. Histori presensi tetap tersimpan.']);

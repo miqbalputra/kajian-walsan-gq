@@ -130,4 +130,39 @@ class AttendanceScanServiceTest extends TestCase
             'method' => Attendance::METHOD_MANUAL,
         ]);
     }
+
+    public function test_scan_is_rejected_after_the_event_is_closed(): void
+    {
+        $year = AcademicYear::active();
+        $class = ClassRoom::create(['name' => 'Kelas 3A', 'level' => '3', 'is_active' => true]);
+        $operator = User::factory()->create();
+        $parent = ParentModel::create([
+            'user_id' => $operator->id,
+            'type' => 'father',
+            'qr_code_string' => 'P-CLOSED-SCAN',
+        ]);
+        $student = Student::create([
+            'nis' => 'S-3001',
+            'name' => 'Santri Tertutup',
+            'class_id' => $class->id,
+            'is_active' => true,
+            'student_status' => 'active',
+        ]);
+        $parent->students()->attach($student->id);
+
+        $event = KajianEvent::create([
+            'academic_year_id' => $year->id,
+            'title' => 'Kajian Sudah Ditutup',
+            'date' => today(),
+            'time_start' => '08:00',
+            'time_end' => '10:00',
+            'status' => 'closed',
+            'category' => 'kajian',
+        ]);
+
+        $result = app(AttendanceScanService::class)->processManual($event, $parent, $operator->id);
+
+        $this->assertSame('error', $result['status']);
+        $this->assertDatabaseCount('attendances', 0);
+    }
 }

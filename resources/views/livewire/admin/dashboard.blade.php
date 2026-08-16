@@ -1,4 +1,4 @@
-<div>
+<div @if(! $showFollowUpModal) wire:poll.15s.keep-alive="refreshDashboard" @endif>
     <!-- Stats Grid -->
     <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-6 gap-4 mb-6">
         <!-- Total Kajian -->
@@ -95,10 +95,13 @@
             <div class="flex items-center justify-between mb-6">
                 <div>
                     <h3 class="font-semibold text-gray-900 text-lg">Tren Kehadiran</h3>
-                    <p class="text-sm text-gray-500">Persentase per Sesi Kajian</p>
+                    <p class="text-sm text-gray-500 flex items-center gap-1.5">
+                        <span class="inline-flex w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                        Realtime — diperbarui setiap 15 detik
+                    </p>
                 </div>
             </div>
-            <div id="attendanceTrendChart" class="w-full" style="height: 300px;"></div>
+            <div wire:ignore id="attendanceTrendChart" class="w-full" style="height: 300px;"></div>
         </div>
 
         <!-- Attendance Status Distribution -->
@@ -109,7 +112,7 @@
                     <p class="text-sm text-gray-500">Semua Waktu</p>
                 </div>
             </div>
-            <div id="attendanceStatusChart" class="w-full" style="height: 300px;"></div>
+            <div wire:ignore id="attendanceStatusChart" class="w-full" style="height: 300px;"></div>
         </div>
     </div>
 
@@ -123,7 +126,7 @@
                     <p class="text-sm text-gray-500">Persentase kehadiran per bulan vs target 80%</p>
                 </div>
             </div>
-            <div id="monthlyComparisonChart" class="w-full" style="height: 280px;"></div>
+            <div wire:ignore id="monthlyComparisonChart" class="w-full" style="height: 280px;"></div>
         </div>
 
     </div>
@@ -353,6 +356,49 @@
                 purple: '#8B5CF6',
                 pink: '#EC4899'
             };
+            let trendChart;
+            let statusChart;
+            let monthlyChart;
+
+            const updateRealtimeCharts = ({ trendData, statusData, monthlyData }) => {
+                if (trendChart) {
+                    trendChart.updateOptions({ xaxis: { categories: trendData.labels } });
+                    trendChart.updateSeries([
+                        { name: 'Hadir Fisik', data: trendData.hadirFisik },
+                        { name: 'Hadir Online', data: trendData.hadirOnline },
+                        { name: 'Izin', data: trendData.izin },
+                        { name: 'Alpha', data: trendData.alpha }
+                    ]);
+                }
+
+                if (statusChart) {
+                    statusChart.updateSeries([
+                        statusData.hadirFisik,
+                        statusData.hadirOnline,
+                        statusData.izin,
+                        statusData.alpha
+                    ]);
+                }
+
+                if (monthlyChart) {
+                    monthlyChart.updateOptions({ xaxis: { categories: monthlyData.months } });
+                    monthlyChart.updateSeries([
+                        { name: 'Kehadiran', data: monthlyData.attendance, type: 'column' },
+                        { name: 'Target (80%)', data: monthlyData.target, type: 'line' }
+                    ]);
+                }
+            };
+
+            const registerRealtimeChartListener = () => {
+                if (!window.Livewire || window.adminDashboardChartsListenerRegistered) {
+                    return;
+                }
+
+                window.adminDashboardChartsListenerRegistered = true;
+                Livewire.on('dashboard-charts-updated', updateRealtimeCharts);
+            };
+
+            registerRealtimeChartListener();
 
             // 1. Attendance Trend Chart (Stacked Area)
             const trendData = @json($attendanceTrendData);
@@ -413,7 +459,8 @@
             };
 
             if (document.getElementById('attendanceTrendChart')) {
-                new ApexCharts(document.getElementById('attendanceTrendChart'), trendOptions).render();
+                trendChart = new ApexCharts(document.getElementById('attendanceTrendChart'), trendOptions);
+                trendChart.render();
             }
 
             // 2. Attendance Status Distribution (Donut)
@@ -459,7 +506,8 @@
             };
 
             if (document.getElementById('attendanceStatusChart')) {
-                new ApexCharts(document.getElementById('attendanceStatusChart'), statusOptions).render();
+                statusChart = new ApexCharts(document.getElementById('attendanceStatusChart'), statusOptions);
+                statusChart.render();
             }
 
             // 3. Monthly Comparison Chart (Line + Target)
@@ -520,7 +568,8 @@
             };
 
             if (document.getElementById('monthlyComparisonChart')) {
-                new ApexCharts(document.getElementById('monthlyComparisonChart'), monthlyOptions).render();
+                monthlyChart = new ApexCharts(document.getElementById('monthlyComparisonChart'), monthlyOptions);
+                monthlyChart.render();
             }
         });
     </script>

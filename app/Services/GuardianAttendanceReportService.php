@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\Attendance;
+use App\Models\AttendanceRosterSnapshot;
 use App\Models\KajianEvent;
 use App\Models\ParentModel;
 use Carbon\Carbon;
@@ -27,18 +28,26 @@ class GuardianAttendanceReportService
 
         $eventState = $this->eventState($event);
 
-        $attendances = Attendance::with(['validator'])
+        $attendances = Attendance::with(['validator', 'student.classRoom', 'studentEnrollment.classRoom'])
             ->where('kajian_event_id', $event->id)
             ->get()
             ->keyBy('parent_id');
 
         $event->loadMissing('targetClasses');
 
-        return $this->guardians($event)
-            ->map(function (ParentModel $guardian) use ($attendances, $event, $eventState) {
+        return $this->participantsForEvent($event)
+            ->map(function (array $participant) use ($attendances, $event, $eventState) {
+                /** @var ParentModel $guardian */
+                $guardian = $participant['guardian'];
                 $attendance = $attendances->get($guardian->id);
 
-                return $this->rowFromAttendance($guardian, $event, $attendance, $eventState);
+                return $this->rowFromAttendance(
+                    $guardian,
+                    $event,
+                    $attendance,
+                    $eventState,
+                    $participant['snapshot']
+                );
             });
     }
 
@@ -203,9 +212,29 @@ class GuardianAttendanceReportService
             ->values();
     }
 
-    public function rowFromAttendance(ParentModel $guardian, KajianEvent $event, ?Attendance $attendance, string $eventState): array
+    public function rowFromAttendance(
+        ParentModel $guardian,
+        KajianEvent $event,
+        ?Attendance $attendance,
+        string $eventState,
+        ?AttendanceRosterSnapshot $snapshot = null
+    ): array
     {
         $derived = $this->deriveStatus($attendance, $eventState);
+        $attendanceStudent = $attendance?->student;
+        $attendanceEnrollment = $attendance?->studentEnrollment;
+        $targetedStudent = $snapshot ? null : $event->targetedStudentsForParent($guardian)->first();
+        $children = $snapshot
+            ? trim(($snapshot->student_name ?? '-').($snapshot->class_name ? ' ('.$snapshot->class_name.')' : ''))
+            : $this->childDisplay($guardian);
+        $className = $attendanceEnrollment?->class_name
+            ?? $attendanceStudent?->classRoom?->name
+            ?? $snapshot?->class_name
+            ?? $targetedStudent?->classRoom?->name;
+        $classId = $attendanceEnrollment?->class_id
+            ?? $attendanceStudent?->class_id
+            ?? $snapshot?->class_id
+            ?? $targetedStudent?->class_id;
 
         return [
             'guardian_id' => $guardian->id,
@@ -213,7 +242,9 @@ class GuardianAttendanceReportService
             'username' => $guardian->user?->username ?? '-',
             'email' => $guardian->user?->email ?? '-',
             'guardian_type' => $guardian->type_display,
-            'children' => $this->childDisplay($guardian),
+            'children' => $children,
+            'class_id' => $classId,
+            'class_name' => $className,
             'kajian_id' => $event->id,
             'kajian_title' => $event->title,
             'kajian_date' => $event->date?->format('d/m/Y'),
@@ -237,15 +268,13 @@ class GuardianAttendanceReportService
     public function eventState(KajianEvent $event): string
     {
         $start = Carbon::parse($event->date->format('Y-m-d').' '.Carbon::parse($event->time_start)->format('H:i:s'));
-        $end = Carbon::parse($event->date->format('Y-m-d').' '.Carbon::parse($event->time_end)->format('H:i:s'));
-
         if (now()->lt($start)) {
             return 'not_started';
         }
 
-        return now()->lte($end) && $event->status !== 'closed'
-            ? 'in_progress'
-            : 'ended';
+        // The scheduled end is only a reminder. The attendance outcome is
+        // final exclusively after an administrator closes the event.
+        return $event->status === 'closed' ? 'ended' : 'in_progress';
     }
 
     public function deriveStatus(?Attendance $attendance, string $eventState): array
@@ -257,8 +286,8 @@ class GuardianAttendanceReportService
                     'label' => $eventState === 'not_started' ? 'Belum Mulai' : 'Berjalan',
                     'badge' => 'bg-slate-100 text-slate-700',
                     'reason' => $eventState === 'not_started'
-                        ? 'Kajian belum dimulai. Status alfa dihitung setelah kajian selesai.'
-                        : 'Kajian sedang berlangsung. Status alfa dihitung setelah kajian selesai.',
+                        ? 'Kajian belum dimulai. Status alfa dihitung setelah admin menutup presensi.'
+                        : 'Presensi masih dibuka. Status alfa dihitung setelah admin menutup presensi.',
                 ];
             }
 
@@ -322,5 +351,37 @@ class GuardianAttendanceReportService
             ->map(fn ($student) => $student->name.($student->classRoom ? ' ('.$student->classRoom->name.')' : ''))
             ->filter()
             ->join(', ') ?: '-';
+    }
+
+    /**
+     * A closed event uses the exact guardian roster captured at closing time.
+     * Old events without a snapshot intentionally fall back to the legacy
+     * dynamic roster until they are reopened and closed again.
+     */
+    protected function participantsForEvent(KajianEvent $event): Collection
+    {
+        if ($event->status === 'closed') {
+            $snapshots = AttendanceRosterSnapshot::query()
+                ->where('kajian_event_id', $event->id)
+                ->with(['parent.user', 'parent.students.classRoom'])
+                ->orderBy('parent_id')
+                ->get();
+
+            if ($snapshots->isNotEmpty()) {
+                return $snapshots
+                    ->filter(fn (AttendanceRosterSnapshot $snapshot) => $snapshot->parent !== null)
+                    ->map(fn (AttendanceRosterSnapshot $snapshot) => [
+                        'guardian' => $snapshot->parent,
+                        'snapshot' => $snapshot,
+                    ])
+                    ->values();
+            }
+        }
+
+        return $this->guardians($event)
+            ->map(fn (ParentModel $guardian) => [
+                'guardian' => $guardian,
+                'snapshot' => null,
+            ]);
     }
 }

@@ -150,6 +150,11 @@
                             class="material-symbols-rounded text-lg">{{ $kajian->status === 'open' ? 'lock' : 'lock_open' }}</span>
                         {{ $kajian->status === 'open' ? 'Tutup Presensi' : 'Buka Presensi' }}
                     </button>
+                    <p class="mt-2 text-center text-xs text-slate-500">
+                        {{ $kajian->status === 'open'
+                            ? 'Data realtime; Alfa baru dihitung saat ditutup.'
+                            : 'Hasil Alfa final. Buka kembali jika ada presensi yang tertinggal.' }}
+                    </p>
                 </div>
             </div>
         @empty

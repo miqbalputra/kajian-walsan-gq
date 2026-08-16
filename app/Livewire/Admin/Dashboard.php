@@ -8,7 +8,6 @@ use App\Models\KajianEvent;
 use App\Models\ParentModel;
 use App\Models\Student;
 use Carbon\Carbon;
-use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Livewire\Component;
 
@@ -16,7 +15,7 @@ class Dashboard extends Component
 {
     public function render()
     {
-        $dashboard = Cache::remember('admin-dashboard:summary', now()->addSeconds(15), function () {
+        $dashboard = (function () {
             $totalKajian = KajianEvent::count();
             $totalSiswa = Student::active()->count();
             $totalWaliSantri = ParentModel::guardians()->withActiveChild()->count();
@@ -34,9 +33,9 @@ class Dashboard extends Component
 
             if ($lastEvent) {
                 $totalParents = ParentModel::guardians()->targetedByEvent($lastEvent)->count();
-                $attendedCount = Attendance::where('kajian_event_id', $lastEvent->id)
+                $attendedCount = $this->guardianAttendances()
+                    ->where('kajian_event_id', $lastEvent->id)
                     ->whereIn('status', ['hadir_fisik', 'hadir_online'])
-                    ->where('validation_status', 'approved')
                     ->count();
 
                 $lastEventAttendance = $totalParents > 0
@@ -53,7 +52,11 @@ class Dashboard extends Component
                 'lastEventAttendance' => $lastEventAttendance,
                 'lastEvent' => $lastEvent,
                 'recentEvents' => KajianEvent::with('academicYear')->latest('date')->take(5)->get(),
-                'recentAttendance' => Attendance::with(['parent.user', 'kajianEvent'])->latest()->take(10)->get(),
+                'recentAttendance' => $this->guardianAttendances()
+                    ->with(['parent.user', 'kajianEvent'])
+                    ->latest()
+                    ->take(10)
+                    ->get(),
                 'attendanceTrendData' => $this->getAttendanceTrendData(),
                 'attendanceByStatus' => $this->getAttendanceByStatus(),
                 'attendanceByClass' => $this->getAttendanceByClass(),
@@ -61,10 +64,23 @@ class Dashboard extends Component
                 'topClasses' => $this->getTopClasses(),
                 'parentsNeedingAttention' => $this->getParentsNeedingAttention(),
             ];
-        });
+        })();
 
         return view('livewire.admin.dashboard', $dashboard)
             ->layout('components.layouts.admin', ['title' => 'Dashboard']);
+    }
+
+    /**
+     * Triggered by Livewire polling. The render that follows refreshes the
+     * cards and lists, while this browser event updates the ApexCharts data.
+     */
+    public function refreshDashboard(): void
+    {
+        $this->dispatch('dashboard-charts-updated',
+            trendData: $this->getAttendanceTrendData(),
+            statusData: $this->getAttendanceByStatus(),
+            monthlyData: $this->getMonthlyComparison(),
+        );
     }
 
     public $showFollowUpModal = false;
@@ -84,7 +100,10 @@ class Dashboard extends Component
             'followUpReason' => 'required|string|max:255',
         ]);
 
-        $lastEvent = KajianEvent::where('date', '<=', today())->orderByDesc('date')->first();
+        $lastEvent = KajianEvent::where('status', 'closed')
+            ->where('date', '<=', today())
+            ->orderByDesc('date')
+            ->first();
 
         if ($lastEvent && $this->selectedParent) {
             // Create or update alpha record with reason
@@ -103,7 +122,6 @@ class Dashboard extends Component
                 ]
             );
 
-            Cache::forget('admin-dashboard:summary');
             $this->showFollowUpModal = false;
             $this->dispatch('notify', ['type' => 'success', 'message' => 'Hasil follow-up berhasil dicatat.']);
         }
@@ -125,8 +143,8 @@ class Dashboard extends Component
             ->reverse()
             ->values();
 
-        $attendanceByEvent = Attendance::whereIn('kajian_event_id', $events->pluck('id'))
-            ->where('validation_status', 'approved')
+        $attendanceByEvent = $this->guardianAttendances()
+            ->whereIn('kajian_event_id', $events->pluck('id'))
             ->select('kajian_event_id', 'status', DB::raw('count(*) as total'))
             ->groupBy('kajian_event_id', 'status')
             ->get()
@@ -146,16 +164,11 @@ class Dashboard extends Component
             $hadirOnlineCount = (int) ($eventStats->get('hadir_online')->total ?? 0);
             $izinCount = (int) ($eventStats->get('izin')->total ?? 0);
 
-            // Alpha: only count if event is closed or time is passed
-            $isTimePassed = $event->status === 'closed' ||
-                $event->date->lt(now()->toDateString()) ||
-                ($event->date->equalTo(now()->toDateString()) && Carbon::parse($event->time_end)->lt(now()));
-
-            $alphaCount = 0;
-            if ($isTimePassed) {
-                $totalAttended = $hadirFisikCount + $hadirOnlineCount + $izinCount;
-                $alphaCount = max(0, $this->targetedParentCount($event) - $totalAttended);
-            }
+            $storedAlphaCount = (int) ($eventStats->get(Attendance::STATUS_ALPHA)->total ?? 0);
+            $recordedCount = (int) $eventStats->sum('total');
+            $alphaCount = $event->status === 'closed'
+                ? $storedAlphaCount + max(0, $this->targetedParentCount($event) - $recordedCount)
+                : 0;
 
             $hadirFisik[] = $hadirFisikCount;
             $hadirOnline[] = $hadirOnlineCount;
@@ -181,8 +194,8 @@ class Dashboard extends Component
         $pastEvents = $this->completedEvents();
         $pastEventIds = $pastEvents->pluck('id');
 
-        $stats = Attendance::whereIn('kajian_event_id', $pastEventIds)
-            ->where('validation_status', 'approved')
+        $stats = $this->guardianAttendances()
+            ->whereIn('kajian_event_id', $pastEventIds)
             ->select('status', DB::raw('count(*) as total'))
             ->groupBy('status')
             ->pluck('total', 'status')
@@ -192,12 +205,14 @@ class Dashboard extends Component
         // as an all-class event.
         $totalPossible = $pastEvents->sum(fn (KajianEvent $event) => $this->targetedParentCount($event));
 
-        // Sum of all approved attendances in those past events
-        $totalAttendedInPast = Attendance::whereIn('kajian_event_id', $pastEventIds)
-            ->where('validation_status', 'approved')
+        // A pending/rejected submission is still an attendance record. It is
+        // shown separately in validation, but must not turn into Alpha.
+        $totalRecordedInPast = $this->guardianAttendances()
+            ->whereIn('kajian_event_id', $pastEventIds)
             ->count();
 
-        $alphaCount = max(0, $totalPossible - $totalAttendedInPast);
+        $alphaCount = ($stats[Attendance::STATUS_ALPHA] ?? 0)
+            + max(0, $totalPossible - $totalRecordedInPast);
 
         return [
             'hadirFisik' => $stats['hadir_fisik'] ?? 0,
@@ -395,13 +410,16 @@ class Dashboard extends Component
     private function getParentsNeedingAttention(): array
     {
         $lastTwoEvents = KajianEvent::with('targetClasses')
-            ->where('date', '<=', today())
+            ->where('status', 'closed')
             ->orderByDesc('date')
             ->take(2)
             ->get();
 
         if ($lastTwoEvents->count() < 1) {
-            return [];
+            return [
+                'data' => [],
+                'count' => 0,
+            ];
         }
 
         $eventIds = $lastTwoEvents->pluck('id');
@@ -429,21 +447,28 @@ class Dashboard extends Component
 
     private function targetedParentCount(KajianEvent $event): int
     {
+        if ($event->status === 'closed') {
+            $snapshotCount = $event->attendanceRosterSnapshots()->count();
+            if ($snapshotCount > 0) {
+                return $snapshotCount;
+            }
+        }
+
         return ParentModel::guardians()->targetedByEvent($event)->count();
     }
 
     private function completedEvents()
     {
-        return KajianEvent::with('targetClasses')->where(function ($q) {
-            $q->where('status', 'closed')
-                ->orWhere(function ($sq) {
-                    $sq->where('date', '<', now()->toDateString())
-                        ->orWhere(function ($ssq) {
-                            $ssq->where('date', '=', now()->toDateString())
-                                ->where('time_end', '<', now()->toTimeString());
-                        });
-                });
-        })->get();
+        return KajianEvent::with('targetClasses')
+            ->where('status', 'closed')
+            ->get();
+    }
+
+    private function guardianAttendances()
+    {
+        return Attendance::query()->whereHas('parent', function ($query) {
+            $query->whereIn('type', ['father', 'mother']);
+        });
     }
 
 }

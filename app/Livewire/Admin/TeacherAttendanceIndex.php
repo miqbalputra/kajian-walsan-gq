@@ -151,15 +151,11 @@ class TeacherAttendanceIndex extends Component
     protected function teacherAttendanceEventState(KajianEvent $event): string
     {
         $start = Carbon::parse($event->date->format('Y-m-d') . ' ' . Carbon::parse($event->time_start)->format('H:i:s'));
-        $end = Carbon::parse($event->date->format('Y-m-d') . ' ' . Carbon::parse($event->time_end)->format('H:i:s'));
-
         if (now()->lt($start)) {
             return 'not_started';
         }
 
-        return now()->lte($end) && $event->status !== 'closed'
-            ? 'in_progress'
-            : 'ended';
+        return $event->status === 'closed' ? 'ended' : 'in_progress';
     }
 
     protected function deriveTeacherStatus(?Attendance $attendance, ParentModel $teacher, string $eventState): array
@@ -171,8 +167,8 @@ class TeacherAttendanceIndex extends Component
                     'label' => $eventState === 'not_started' ? 'Belum Mulai' : 'Berjalan',
                     'badge' => 'bg-slate-100 text-slate-700',
                     'reason' => $eventState === 'not_started'
-                        ? 'Kajian belum dimulai. Status alfa dihitung setelah kajian selesai.'
-                        : 'Kajian sedang berlangsung. Status alfa dihitung setelah kajian selesai.',
+                        ? 'Kajian belum dimulai. Status alfa dihitung setelah admin menutup presensi.'
+                        : 'Presensi masih dibuka. Status alfa dihitung setelah admin menutup presensi.',
                 ];
             }
 

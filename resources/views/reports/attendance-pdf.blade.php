@@ -229,10 +229,12 @@
 
     <!-- Dashboard Cards -->
     @php
+        $rowsAreRoster = $rowsAreRoster ?? false;
         $totalData = $attendances->count();
-        $totalHadir = $attendances->whereIn('status', ['hadir_fisik', 'hadir_online'])->count();
-        $totalIzin = $attendances->where('status', 'izin')->count();
-        $totalAlpha = $attendances->where('status', 'alpha')->count();
+        $statusKey = $rowsAreRoster ? 'derived_status' : 'status';
+        $totalHadir = $attendances->whereIn($statusKey, ['hadir_fisik', 'hadir_online'])->count();
+        $totalIzin = $attendances->where($statusKey, 'izin')->count();
+        $totalAlpha = $attendances->where($statusKey, 'alpha')->count();
     @endphp
 
     <table class="stats-table">
@@ -293,46 +295,73 @@
         </thead>
         <tbody>
             @forelse($attendances as $index => $attendance)
+                @php
+                    if ($rowsAreRoster) {
+                        $date = $attendance['kajian_date'] ?? '-';
+                        $title = $attendance['kajian_title'] ?? '-';
+                        $year = null;
+                        $guardian = $attendance['guardian_name'] ?? '-';
+                        $guardianType = $attendance['guardian_type'] ?? '-';
+                        $children = $attendance['children'] ?? '-';
+                        $class = $attendance['class_name'] ?? '-';
+                        $status = $attendance['derived_status'] ?? 'not_started';
+                        $method = $attendance['method'] ?? null;
+                    } else {
+                        $date = $attendance->kajianEvent?->date?->format('d/m/Y') ?? '-';
+                        $title = $attendance->kajianEvent?->title ?? '-';
+                        $year = $attendance->kajianEvent?->academicYear?->name;
+                        $guardian = $attendance->parent?->user?->name ?? '-';
+                        $guardianType = $attendance->parent?->type === 'father' ? 'Ayah' : 'Ibu';
+                        $children = $attendance->parent?->students->first()?->name ?? '-';
+                        $class = $attendance->parent?->students->first()?->classRoom?->name ?? '-';
+                        $status = $attendance->status;
+                        $method = $attendance->method;
+                    }
+
+                    $statusClass = match ($status) {
+                        'hadir_fisik' => 'bg-hadir',
+                        'hadir_online' => 'bg-online',
+                        'izin' => 'bg-izin',
+                        'pending', 'not_started' => 'bg-online',
+                        default => 'bg-alpha',
+                    };
+                    $statusLabel = match ($status) {
+                        'hadir_fisik' => 'HADIR',
+                        'hadir_online' => 'ONLINE',
+                        'izin' => 'IZIN',
+                        'pending' => 'PENDING',
+                        'rejected' => 'DITOLAK',
+                        'not_started' => 'DIBUKA',
+                        default => 'ALPHA',
+                    };
+                    $methodLabel = match ($method) {
+                        'scan_qr' => 'Scan QR',
+                        'manual' => 'Manual',
+                        'google_form' => 'Google Form M1',
+                        'public_form' => 'Form Publik M1',
+                        'upload' => 'Upload',
+                        default => '-',
+                    };
+                @endphp
                 <tr>
                     <td class="text-center font-bold text-slate">{{ $index + 1 }}</td>
-                    <td>{{ $attendance->kajianEvent?->date?->format('d/m/Y') }}</td>
+                    <td>{{ $date }}</td>
                     <td>
-                        <div class="font-bold">{{ Str::limit($attendance->kajianEvent?->title, 40) }}</div>
-                        <div style="font-size: 7pt; color: #94a3b8;">{{ $attendance->kajianEvent?->academicYear?->name }}
+                        <div class="font-bold">{{ Str::limit($title, 40) }}</div>
+                        <div style="font-size: 7pt; color: #94a3b8;">{{ $year }}
                         </div>
                     </td>
                     <td>
-                        <div class="font-bold">{{ Str::limit($attendance->parent?->user?->name, 25) }}</div>
+                        <div class="font-bold">{{ Str::limit($guardian, 25) }}</div>
                     </td>
-                    <td class="text-center">{{ $attendance->parent?->type === 'father' ? 'Ayah' : 'Ibu' }}</td>
-                    <td>{{ Str::limit($attendance->parent?->students->first()?->name ?? '-', 25) }}</td>
-                    <td class="text-center">{{ $attendance->parent?->students->first()?->classRoom?->name ?? '-' }}</td>
+                    <td class="text-center">{{ $guardianType }}</td>
+                    <td>{{ Str::limit($children, 25) }}</td>
+                    <td class="text-center">{{ $class }}</td>
                     <td class="text-center">
-                        @php
-                            $statusClass = '';
-                            $statusLabel = '';
-                            if ($attendance->status === 'hadir_fisik') {
-                                $statusClass = 'bg-hadir';
-                                $statusLabel = 'HADIR';
-                            } elseif ($attendance->status === 'hadir_online') {
-                                $statusClass = 'bg-online';
-                                $statusLabel = 'ONLINE';
-                            } elseif ($attendance->status === 'izin') {
-                                $statusClass = 'bg-izin';
-                                $statusLabel = 'IZIN';
-                            } else {
-                                $statusClass = 'bg-alpha';
-                                $statusLabel = 'ALPHA';
-                            }
-                        @endphp
                         <span class="status-box {{ $statusClass }}">{{ $statusLabel }}</span>
                     </td>
                     <td class="text-center text-slate" style="font-size: 8pt;">
-                        @if($attendance->method === 'scan_qr') Scan QR
-                        @elseif($attendance->method === 'manual') Manual
-                        @elseif($attendance->method === 'google_form') Google Form M1
-                        @elseif($attendance->method === 'public_form') Form Publik M1
-                        @else Upload @endif
+                        {{ $methodLabel }}
                     </td>
                 </tr>
             @empty

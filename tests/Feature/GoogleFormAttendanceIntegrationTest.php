@@ -97,6 +97,22 @@ class GoogleFormAttendanceIntegrationTest extends TestCase
         $this->assertDatabaseCount('attendances', 0);
     }
 
+    public function test_closed_event_response_is_kept_without_creating_attendance(): void
+    {
+        [$event, $student, $parent] = $this->makeMustawaOneFixture();
+        $event->update(['status' => 'closed']);
+
+        $response = $this->postSigned($this->payload($event, $student, $parent, 'google-response-closed', 'hadir_online'));
+
+        $response->assertStatus(202)->assertJsonPath('code', 'event_closed');
+        $this->assertDatabaseHas('google_form_submissions', [
+            'response_id' => 'google-response-closed',
+            'processing_status' => GoogleFormSubmission::STATUS_UNRESOLVED,
+            'error_code' => 'event_closed',
+        ]);
+        $this->assertDatabaseCount('attendances', 0);
+    }
+
     public function test_options_returns_only_active_mustawa_one_students(): void
     {
         [, $student] = $this->makeMustawaOneFixture();

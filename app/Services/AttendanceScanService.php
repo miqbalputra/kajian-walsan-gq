@@ -48,6 +48,15 @@ class AttendanceScanService
         ?string $deviceInfo = null
     ): array {
         $deviceInfo = $deviceInfo ? mb_substr($deviceInfo, 0, 255) : null;
+        $event->refresh();
+
+        if (! $event->isOpen()) {
+            return [
+                'status' => 'error',
+                'message' => 'Presensi kajian ini sudah ditutup.',
+            ];
+        }
+
         $parent->loadMissing([
             'user:id,name',
             'students:id,name,class_id,student_status,is_active',

@@ -105,6 +105,15 @@ class GoogleFormAttendanceService
         }
 
         $event = $events->first();
+
+        if (! $event->isOpen()) {
+            return $this->markUnresolved(
+                $submission,
+                'event_closed',
+                'Presensi untuk kajian ini sudah ditutup.'
+            );
+        }
+
         $student = $this->resolveMustawaOneStudent($payload);
 
         if (! $student) {

@@ -23,7 +23,7 @@
     <div class="grid grid-cols-2 md:grid-cols-5 gap-4 mb-6">
         <div class="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
             <p class="text-2xl font-bold text-gray-900">{{ $this->summary['total'] }}</p>
-            <p class="text-sm text-gray-500">Total Data</p>
+            <p class="text-sm text-gray-500">Total Sasaran</p>
         </div>
         <div class="bg-green-50 rounded-xl p-4 border border-green-100">
             <p class="text-2xl font-bold text-green-700">{{ $this->summary['hadir_fisik'] }}</p>
@@ -91,6 +91,9 @@
                     <option value="hadir_fisik">Hadir Fisik</option>
                     <option value="hadir_online">Hadir Online</option>
                     <option value="izin">Izin</option>
+                    <option value="pending">Menunggu Validasi</option>
+                    <option value="rejected">Ditolak</option>
+                    <option value="not_started">Presensi Dibuka</option>
                     <option value="alpha">Alpha</option>
                 </select>
             </div>
@@ -124,54 +127,54 @@
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-gray-100">
-                    @forelse($attendances as $index => $attendance)
+                    @forelse($rows as $index => $row)
                         <tr class="hover:bg-gray-50 transition-colors">
-                            <td class="px-4 py-3 text-sm text-gray-600">{{ $attendances->firstItem() + $index }}</td>
+                            <td class="px-4 py-3 text-sm text-gray-600">{{ $rows->firstItem() + $index }}</td>
                             <td class="px-4 py-3 text-sm text-gray-600">
-                                {{ $attendance->kajianEvent?->date?->format('d/m/Y') }}
+                                {{ $row['kajian_date'] ?? '-' }}
                             </td>
                             <td class="px-4 py-3 text-sm text-gray-900 font-medium max-w-xs truncate">
-                                {{ $attendance->kajianEvent?->title }}
+                                {{ $row['kajian_title'] ?? '-' }}
                             </td>
                             <td class="px-4 py-3">
                                 <div>
-                                    <p class="text-sm font-medium text-gray-900">{{ $attendance->parent?->user?->name }}</p>
-                                    <p class="text-xs text-gray-500">{{ $attendance->parent?->type_display }}</p>
+                                    <p class="text-sm font-medium text-gray-900">{{ $row['guardian_name'] }}</p>
+                                    <p class="text-xs text-gray-500">{{ $row['guardian_type'] }}</p>
                                 </div>
                             </td>
                             <td class="px-4 py-3 text-sm text-gray-600">
-                                {{ $attendance->parent?->students->first()?->name ?? '-' }}
+                                {{ $row['children'] ?? '-' }}
                             </td>
                             <td class="px-4 py-3 text-sm text-gray-600">
-                                {{ $attendance->parent?->students->first()?->classRoom?->name ?? '-' }}
+                                {{ $row['class_name'] ?? '-' }}
                             </td>
                             <td class="px-4 py-3">
-                                <span class="px-2 py-1 rounded-lg text-xs font-medium
-                                            @if($attendance->status === 'hadir_fisik') bg-green-100 text-green-700
-                                            @elseif($attendance->status === 'hadir_online') bg-blue-100 text-blue-700
-                                            @elseif($attendance->status === 'izin') bg-yellow-100 text-yellow-700
-                                            @else bg-red-100 text-red-700 @endif">
-                                    @if($attendance->status === 'hadir_fisik') Hadir
-                                    @elseif($attendance->status === 'hadir_online') Online
-                                    @elseif($attendance->status === 'izin') Izin
-                                    @else Alpha @endif
+                                <span class="px-2 py-1 rounded-lg text-xs font-medium {{ $row['derived_badge'] }}">
+                                    {{ $row['derived_label'] }}
                                 </span>
                             </td>
                             <td class="px-4 py-3 text-xs text-gray-500">
-                                @if($attendance->method === 'scan_qr') Scan QR
-                                @elseif($attendance->method === 'manual') Manual
-                                @elseif($attendance->method === 'google_form') Google Form M1
-                                @elseif($attendance->method === 'public_form') Form Publik M1
-                                @else Upload @endif
+                                @php
+                                    $methodLabel = match ($row['method'] ?? null) {
+                                        'scan_qr' => 'Scan QR',
+                                        'manual' => 'Manual',
+                                        'google_form' => 'Google Form M1',
+                                        'public_form' => 'Form Publik M1',
+                                        'upload' => 'Upload',
+                                        default => '-',
+                                    };
+                                @endphp
+                                {{ $methodLabel }}
                             </td>
                             <td class="px-4 py-3">
                                 <span class="px-2 py-1 rounded-lg text-xs font-medium
-                                            @if($attendance->validation_status === 'approved') bg-green-100 text-green-700
-                                            @elseif($attendance->validation_status === 'pending') bg-yellow-100 text-yellow-700
+                                            @if(($row['validation_status'] ?? null) === 'approved') bg-green-100 text-green-700
+                                            @elseif(($row['validation_status'] ?? null) === 'pending') bg-yellow-100 text-yellow-700
                                             @else bg-red-100 text-red-700 @endif">
-                                    @if($attendance->validation_status === 'approved') ✓
-                                    @elseif($attendance->validation_status === 'pending') ⏳
-                                    @else ✗ @endif
+                                    @if(($row['validation_status'] ?? null) === 'approved') ✓
+                                    @elseif(($row['validation_status'] ?? null) === 'pending') ⏳
+                                    @elseif(($row['validation_status'] ?? null) === 'rejected') ✗
+                                    @else - @endif
                                 </span>
                             </td>
                         </tr>
@@ -187,9 +190,9 @@
             </table>
         </div>
 
-        @if($attendances->hasPages())
+        @if($rows->hasPages())
             <div class="px-4 py-3 border-t border-gray-100">
-                {{ $attendances->links() }}
+                {{ $rows->links() }}
             </div>
         @endif
     </div>

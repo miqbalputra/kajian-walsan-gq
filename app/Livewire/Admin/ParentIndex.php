@@ -560,6 +560,12 @@ class ParentIndex extends Component
         $event = KajianEvent::with('targetClasses')->findOrFail($this->manualKajianEventId);
         $parent = ParentModel::with('user', 'students.classRoom')->findOrFail($this->parentId);
 
+        if (! $event->isOpen()) {
+            $this->dispatch('notify', ['type' => 'error', 'message' => 'Presensi kajian ini sudah ditutup. Buka kembali presensi sebelum menambah data.']);
+
+            return;
+        }
+
         if (! $event->targetsParent($parent)) {
             $this->dispatch('notify', ['type' => 'error', 'message' => 'Wali santri ini tidak termasuk kelas sasaran kegiatan tersebut.']);
 

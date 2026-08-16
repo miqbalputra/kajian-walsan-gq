@@ -24,6 +24,8 @@ class KajianEvent extends Model
         'time_start',
         'time_end',
         'status',
+        'closed_at',
+        'closed_by',
         'category',
         'policy_overrides',
         'qr_code_image',
@@ -36,6 +38,7 @@ class KajianEvent extends Model
         'time_start' => 'datetime:H:i',
         'time_end' => 'datetime:H:i',
         'attendance_count' => 'integer',
+        'closed_at' => 'datetime',
         'policy_overrides' => 'array',
     ];
 
@@ -71,6 +74,11 @@ class KajianEvent extends Model
     public function attendances(): HasMany
     {
         return $this->hasMany(Attendance::class, 'kajian_event_id');
+    }
+
+    public function attendanceRosterSnapshots(): HasMany
+    {
+        return $this->hasMany(AttendanceRosterSnapshot::class);
     }
 
     /**
@@ -158,7 +166,9 @@ class KajianEvent extends Model
      */
     public function close(): bool
     {
-        return $this->update(['status' => 'closed']);
+        app(\App\Services\AttendanceFinalizationService::class)->close($this, auth()->id());
+
+        return true;
     }
 
     /**
