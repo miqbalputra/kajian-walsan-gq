@@ -11,6 +11,13 @@ use Illuminate\Support\Collection;
 
 class GuardianAttendanceReportService
 {
+    private const SHAREABLE_STATUSES = [
+        Attendance::STATUS_HADIR_FISIK,
+        Attendance::STATUS_HADIR_ONLINE,
+        Attendance::STATUS_IZIN,
+        Attendance::STATUS_ALPHA,
+    ];
+
     public function guardians(?KajianEvent $event = null): Collection
     {
         return ParentModel::with(['user', 'students.classRoom'])
@@ -227,13 +234,17 @@ class GuardianAttendanceReportService
         $children = $snapshot
             ? trim(($snapshot->student_name ?? '-').($snapshot->class_name ? ' ('.$snapshot->class_name.')' : ''))
             : $this->childDisplay($guardian);
-        $className = $attendanceEnrollment?->class_name
+        // A closed event is reported against the class captured when its
+        // roster was frozen. Attendance/student data can legitimately change
+        // after a promotion and must not move an historical result to a new
+        // class in the reports or shareable statistics.
+        $className = $snapshot?->class_name
+            ?? $attendanceEnrollment?->class_name
             ?? $attendanceStudent?->classRoom?->name
-            ?? $snapshot?->class_name
             ?? $targetedStudent?->classRoom?->name;
-        $classId = $attendanceEnrollment?->class_id
+        $classId = $snapshot?->class_id
+            ?? $attendanceEnrollment?->class_id
             ?? $attendanceStudent?->class_id
-            ?? $snapshot?->class_id
             ?? $targetedStudent?->class_id;
 
         return [
@@ -343,6 +354,114 @@ class GuardianAttendanceReportService
                 'reason' => 'Status presensi tidak aktif.',
             ],
         };
+    }
+
+    /**
+     * Build final, group-shareable attendance statistics for one closed event.
+     * Each roster row appears in exactly one class: the frozen roster class.
+     */
+    public function shareableClassStatistics(?KajianEvent $event): ?array
+    {
+        if (! $event || $event->status !== 'closed') {
+            return null;
+        }
+
+        // Older closed events do not have a frozen roster unless they were
+        // backfilled. Do not publish a changing, reconstructed denominator as
+        // a final group statistic.
+        if (! $event->closed_at && ! $event->attendanceRosterSnapshots()->exists()) {
+            return null;
+        }
+
+        $rows = $this->rowsForEvent($event);
+        $classes = $rows
+            ->groupBy(function (array $row): string {
+                return (string) ($row['class_id'] ?? 'unassigned');
+            })
+            ->map(function (Collection $classRows, string $classKey): array {
+                $className = $classRows->first()['class_name'] ?? 'Tanpa Kelas';
+
+                return [
+                    'key' => 'class-'.$classKey,
+                    'id' => $classKey === 'unassigned' ? null : (int) $classKey,
+                    'name' => $className,
+                    'summary' => $this->shareBreakdown($classRows),
+                    'guardians' => [
+                        'father' => $this->shareBreakdown(
+                            $classRows->where('guardian_type', 'Ayah')->values()
+                        ),
+                        'mother' => $this->shareBreakdown(
+                            $classRows->where('guardian_type', 'Ibu')->values()
+                        ),
+                    ],
+                ];
+            })
+            ->sortBy(fn (array $class) => mb_strtolower($class['name']))
+            ->values();
+
+        return [
+            'event' => [
+                'id' => $event->id,
+                'title' => $event->title,
+                'date' => $event->date?->translatedFormat('l, d F Y'),
+                'time' => $event->time_start && $event->time_end
+                    ? $event->getTimeRangeAttribute()
+                    : null,
+            ],
+            'summary' => $this->shareBreakdown($rows),
+            'classes' => $classes,
+            'generated_at' => now()->translatedFormat('d F Y, H:i').' WIB',
+        ];
+    }
+
+    /**
+     * @param Collection<int, array<string, mixed>> $rows
+     * @return array{total: int, counts: array<string, int>, percentages: array<string, float>}
+     */
+    private function shareBreakdown(Collection $rows): array
+    {
+        $counts = [
+            Attendance::STATUS_HADIR_FISIK => 0,
+            Attendance::STATUS_HADIR_ONLINE => 0,
+            Attendance::STATUS_IZIN => 0,
+            Attendance::STATUS_ALPHA => 0,
+            'pending' => 0,
+            'rejected' => 0,
+            'perlu_validasi' => 0,
+        ];
+
+        foreach ($rows as $row) {
+            $status = $row['derived_status'] ?? null;
+
+            if (in_array($status, self::SHAREABLE_STATUSES, true)) {
+                $counts[$status]++;
+                continue;
+            }
+
+            if ($status === Attendance::VALIDATION_PENDING) {
+                $counts['pending']++;
+                $counts['perlu_validasi']++;
+                continue;
+            }
+
+            if ($status === Attendance::VALIDATION_REJECTED) {
+                $counts['rejected']++;
+                $counts['perlu_validasi']++;
+                continue;
+            }
+
+            // A closed event should not yield an in-progress status. If old
+            // data does, keep it out of Alpha and flag it for admin review.
+            $counts['perlu_validasi']++;
+        }
+
+        $total = $rows->count();
+        $percentages = collect($counts)
+            ->except(['pending', 'rejected'])
+            ->map(fn (int $count) => $total > 0 ? round(($count / $total) * 100, 1) : 0.0)
+            ->all();
+
+        return compact('total', 'counts', 'percentages');
     }
 
     protected function childDisplay(ParentModel $guardian): string

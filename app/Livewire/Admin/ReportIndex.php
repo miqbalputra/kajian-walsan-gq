@@ -22,6 +22,7 @@ class ReportIndex extends Component
     public $academicYearId = '';
     public $kajianId = '';
     public $classId = '';
+    public $shareClassKey = '';
     public $status = '';
     public $perPage = 20;
 
@@ -40,6 +41,7 @@ class ReportIndex extends Component
 
     public function updatingKajianId()
     {
+        $this->shareClassKey = '';
         $this->resetPage();
     }
 
@@ -228,6 +230,32 @@ class ReportIndex extends Component
             ->get();
     }
 
+    public function getSelectedKajianProperty(): ?KajianEvent
+    {
+        return $this->kajianId
+            ? KajianEvent::with('targetClasses')->find($this->kajianId)
+            : null;
+    }
+
+    public function getShareStatisticsProperty(): ?array
+    {
+        return app(GuardianAttendanceReportService::class)
+            ->shareableClassStatistics($this->selectedKajian);
+    }
+
+    public function getShareStatisticsStateProperty(): string
+    {
+        if (! $this->selectedKajian) {
+            return 'select_event';
+        }
+
+        if ($this->selectedKajian->status !== 'closed') {
+            return 'attendance_open';
+        }
+
+        return $this->shareStatistics ? 'ready' : 'snapshot_missing';
+    }
+
     public function getSummaryProperty()
     {
         $rows = $this->getReportRows();
@@ -245,11 +273,17 @@ class ReportIndex extends Component
     {
         $academicYears = AcademicYear::orderByDesc('name')->get();
         $classes = ClassRoom::where('is_active', true)->orderBy('name')->get();
+        $selectedKajian = $this->selectedKajian;
+        $shareStatistics = $this->shareStatistics;
+        $shareStatisticsState = $this->shareStatisticsState;
 
         return view('livewire.admin.report-index', [
             'rows' => $this->rows,
             'academicYears' => $academicYears,
             'classes' => $classes,
+            'selectedKajian' => $selectedKajian,
+            'shareStatistics' => $shareStatistics,
+            'shareStatisticsState' => $shareStatisticsState,
         ])->layout('components.layouts.admin', ['title' => 'Laporan Kehadiran']);
     }
 }

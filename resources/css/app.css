@@ -177,6 +177,40 @@
     color: #e2e8f0 !important;
 }
 
+/* Shared attendance images are intentionally light so the downloaded PNG is
+   identical regardless of the administrator's current colour theme. */
+.attendance-share-export {
+    color-scheme: light;
+}
+
+.dark .attendance-share-export .bg-white {
+    background-color: #ffffff !important;
+}
+
+.dark .attendance-share-export .bg-slate-50 {
+    background-color: #f8fafc !important;
+}
+
+.dark .attendance-share-export .text-slate-900 {
+    color: #0f172a !important;
+}
+
+.dark .attendance-share-export .text-slate-600 {
+    color: #475569 !important;
+}
+
+.dark .attendance-share-export .text-slate-500 {
+    color: #64748b !important;
+}
+
+.dark .attendance-share-export .border-slate-100 {
+    border-color: #f1f5f9 !important;
+}
+
+.dark .attendance-share-export .border-slate-200 {
+    border-color: #e2e8f0 !important;
+}
+
 /* Fix jarring white hover on tables in dark mode */
 .dark tr:hover,
 .dark .hover\:bg-gray-50:hover {
