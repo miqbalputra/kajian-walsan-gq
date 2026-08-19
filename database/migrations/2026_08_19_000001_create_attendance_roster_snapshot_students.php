@@ -7,6 +7,14 @@ use Illuminate\Support\Facades\Schema;
 return new class extends Migration {
     public function up(): void
     {
+        // MariaDB DDL is not rolled back when a deployment is interrupted
+        // after CREATE TABLE succeeds but before Laravel records the batch.
+        // Treat an already-created table as applied so a container restart can
+        // finish the migration without dropping any existing snapshot rows.
+        if (Schema::hasTable('attendance_roster_snapshot_students')) {
+            return;
+        }
+
         Schema::create('attendance_roster_snapshot_students', function (Blueprint $table) {
             $table->id();
             $table->foreignId('attendance_roster_snapshot_id')
