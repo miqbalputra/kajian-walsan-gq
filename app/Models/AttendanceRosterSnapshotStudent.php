@@ -5,25 +5,27 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Illuminate\Database\Eloquent\Relations\HasMany;
 
-class AttendanceRosterSnapshot extends Model
+class AttendanceRosterSnapshotStudent extends Model
 {
     use HasFactory;
 
     protected $fillable = [
-        'kajian_event_id',
+        'attendance_roster_snapshot_id',
         'parent_id',
         'student_id',
         'student_enrollment_id',
         'class_id',
         'student_name',
+        'student_nis',
         'class_name',
+        'parent_name',
+        'parent_type',
     ];
 
-    public function kajianEvent(): BelongsTo
+    public function rosterSnapshot(): BelongsTo
     {
-        return $this->belongsTo(KajianEvent::class);
+        return $this->belongsTo(AttendanceRosterSnapshot::class, 'attendance_roster_snapshot_id');
     }
 
     public function parent(): BelongsTo
@@ -41,8 +43,8 @@ class AttendanceRosterSnapshot extends Model
         return $this->belongsTo(StudentEnrollment::class);
     }
 
-    public function students(): HasMany
+    public function classRoom(): BelongsTo
     {
-        return $this->hasMany(AttendanceRosterSnapshotStudent::class);
+        return $this->belongsTo(ClassRoom::class, 'class_id');
     }
 }

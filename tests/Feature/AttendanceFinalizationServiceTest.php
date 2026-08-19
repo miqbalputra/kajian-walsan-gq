@@ -55,6 +55,7 @@ class AttendanceFinalizationServiceTest extends TestCase
         $this->assertSame('closed', $event->status);
         $this->assertNotNull($event->closed_at);
         $this->assertDatabaseCount('attendance_roster_snapshots', 2);
+        $this->assertDatabaseCount('attendance_roster_snapshot_students', 2);
 
         $closedRows = $reports->rowsForEvent($event);
         $this->assertSame(2, $closedRows->count());
@@ -76,6 +77,7 @@ class AttendanceFinalizationServiceTest extends TestCase
 
         $this->assertSame('open', $event->status);
         $this->assertDatabaseCount('attendance_roster_snapshots', 0);
+        $this->assertDatabaseCount('attendance_roster_snapshot_students', 0);
         $this->assertSame(3, $reports->rowsForEvent($event)->count());
         $this->assertSame(0, $reports->rowsForEvent($event)->where('derived_status', Attendance::STATUS_ALPHA)->count());
     }
@@ -131,6 +133,7 @@ class AttendanceFinalizationServiceTest extends TestCase
         $this->assertSame('closed', $event->fresh()->status);
         $this->assertNull($event->fresh()->closed_at);
         $this->assertDatabaseCount('attendance_roster_snapshots', 2);
+        $this->assertDatabaseCount('attendance_roster_snapshot_students', 2);
         $this->assertSame(
             1,
             app(GuardianAttendanceReportService::class)

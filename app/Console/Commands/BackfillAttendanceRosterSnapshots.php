@@ -30,19 +30,20 @@ class BackfillAttendanceRosterSnapshots extends Command
         $events = KajianEvent::query()
             ->with('targetClasses')
             ->where('status', 'closed')
-            ->when(
-                $eventIds->isNotEmpty(),
-                fn ($query) => $query->whereIn('id', $eventIds),
-                fn ($query) => $query->whereDoesntHave('attendanceRosterSnapshots'),
-            )
+            ->when($eventIds->isNotEmpty(), fn ($query) => $query->whereIn('id', $eventIds))
             ->orderBy('date')
             ->orderBy('id')
             ->get()
-            ->filter(fn (KajianEvent $event) => ! $event->attendanceRosterSnapshots()->exists())
+            ->filter(function (KajianEvent $event): bool {
+                $snapshots = $event->attendanceRosterSnapshots();
+
+                return ! $snapshots->exists()
+                    || $snapshots->whereDoesntHave('students')->exists();
+            })
             ->values();
 
         if ($eventIds->isNotEmpty() && $events->count() !== $eventIds->count()) {
-            $this->warn('Sebagian ID dilewati karena tidak ditemukan, belum ditutup, atau sudah memiliki snapshot.');
+            $this->warn('Sebagian ID dilewati karena tidak ditemukan, belum ditutup, atau snapshot anaknya sudah lengkap.');
         }
 
         if ($events->isEmpty()) {

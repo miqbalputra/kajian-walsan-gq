@@ -38,6 +38,11 @@ class GuardianAttendanceShareStatisticsTest extends TestCase
         [$fatherPhysical, $fatherPhysicalStudent] = $this->makeGuardian($classA, 'father', 'Fisik A', 'SHARE-FA-1');
         [$fatherMissing] = $this->makeGuardian($classA, 'father', 'Alfa A', 'SHARE-FA-2');
         [$fatherMulti, $multiStudentA] = $this->makeGuardian($classA, 'father', 'Izin Multi', 'SHARE-FA-3');
+        $multiStudentASibling = $this->makeStudent($classA, 'Anak Ketiga Multi', 'SHARE-MULTI-A2');
+        $fatherMulti->students()->attach($multiStudentASibling->id, [
+            'relationship' => 'biological',
+            'is_primary_contact' => false,
+        ]);
         $multiStudentB = $this->makeStudent($classB, 'Anak Kedua Multi', 'SHARE-MULTI-B');
         $fatherMulti->students()->attach($multiStudentB->id, [
             'relationship' => 'biological',
@@ -59,6 +64,7 @@ class GuardianAttendanceShareStatisticsTest extends TestCase
             'parent_id' => $fatherMulti->id,
             'class_id' => $classA->id,
         ]);
+        $this->assertDatabaseCount('attendance_roster_snapshot_students', 8);
 
         // A later class change must not move an already final attendance
         // result away from the roster class captured at closure.
@@ -83,14 +89,49 @@ class GuardianAttendanceShareStatisticsTest extends TestCase
         $this->assertSame(0, $classAStats['guardians']['mother']['counts'][Attendance::STATUS_ALPHA]);
 
         $classBStats = collect($statistics['classes'])->firstWhere('id', $classB->id);
-        $this->assertSame(1, $classBStats['summary']['total']);
+        $this->assertSame(2, $classBStats['summary']['total']);
         $this->assertSame(1, $classBStats['guardians']['father']['counts'][Attendance::STATUS_HADIR_FISIK]);
-        $this->assertSame(100.0, $classBStats['guardians']['father']['percentages'][Attendance::STATUS_HADIR_FISIK]);
+        $this->assertSame(1, $classBStats['guardians']['father']['counts'][Attendance::STATUS_IZIN]);
+        $this->assertSame(50.0, $classBStats['guardians']['father']['percentages'][Attendance::STATUS_HADIR_FISIK]);
+        $this->assertSame(50.0, $classBStats['guardians']['father']['percentages'][Attendance::STATUS_IZIN]);
+
+        $classAStudent = collect($classAStats['students'])->firstWhere('student_id', $multiStudentA->id);
+        $this->assertSame($multiStudentA->name, $classAStudent['name']);
+        $this->assertSame($multiStudentA->nis, $classAStudent['nis']);
+        $this->assertSame('Izin', $classAStudent['parents']['father']['label']);
+        $this->assertSame('Bapak Izin Multi', $classAStudent['parents']['father']['name']);
+        $this->assertCount(6, $classAStats['students']);
+        $this->assertNotNull(collect($classAStats['students'])->firstWhere('student_id', $multiStudentASibling->id));
+        $this->assertSame('Belum terdaftar', collect($classAStats['students'])->firstWhere('student_id', $fatherPhysicalStudent->id)['parents']['mother']['label']);
+        $this->assertSame('Menunggu Validasi', collect($classAStats['students'])->firstWhere('student_id', $motherPendingStudent->id)['parents']['mother']['label']);
+        $this->assertSame('Alfa', collect($classAStats['students'])->firstWhere('student_id', $fatherMissing->students()->first()->id)['parents']['father']['label']);
+
+        $classBStudent = collect($classBStats['students'])->firstWhere('student_id', $multiStudentB->id);
+        $this->assertSame($multiStudentB->name, $classBStudent['name']);
+        $this->assertSame($multiStudentB->nis, $classBStudent['nis']);
+        $this->assertSame('Izin', $classBStudent['parents']['father']['label']);
+        $this->assertSame($classB->name, $classBStudent['class_name']);
 
         $snapshot = AttendanceRosterSnapshot::where('kajian_event_id', $event->id)
             ->where('parent_id', $fatherMulti->id)
             ->firstOrFail();
         $this->assertSame($classA->id, $snapshot->class_id);
+        $this->assertDatabaseHas('attendance_roster_snapshot_students', [
+            'attendance_roster_snapshot_id' => $snapshot->id,
+            'student_id' => $multiStudentA->id,
+            'class_id' => $classA->id,
+            'student_nis' => $multiStudentA->nis,
+        ]);
+
+        Livewire::test(\App\Livewire\Admin\ReportIndex::class)
+            ->set('academicYearId', (string) $year->id)
+            ->set('kajianId', (string) $event->id)
+            ->set('shareClassKey', 'class-'.$classA->id)
+            ->assertSee('Detail peserta didik')
+            ->assertSee('Nama Anak')
+            ->assertSee($multiStudentA->nis)
+            ->assertSee('Bapak Izin Multi')
+            ->assertSee('Ibu');
     }
 
     public function test_share_statistics_are_unavailable_for_an_open_event(): void

@@ -149,7 +149,7 @@
                                 class="w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-slate-900 shadow-sm focus:border-primary-500 focus:ring-2 focus:ring-primary-500">
                                 <option value="">Pilih satu kelas</option>
                                 @foreach($shareStatistics['classes'] as $classStat)
-                                    <option value="{{ $classStat['key'] }}">{{ $classStat['name'] }} ({{ $classStat['summary']['total'] }} sasaran)</option>
+                                    <option value="{{ $classStat['key'] }}">{{ $classStat['name'] }} ({{ $classStat['summary']['total'] }} wali unik)</option>
                                 @endforeach
                             </select>
                         </div>
@@ -180,6 +180,18 @@
                             </div>
                         @endforelse
                     </div>
+
+                    @if($selectedShareClass)
+                        <div class="mt-5 border-t border-slate-100 pt-5">
+                            <div class="mb-3 flex flex-wrap items-center justify-between gap-2">
+                                <div>
+                                    <p class="text-xs font-bold uppercase tracking-[0.16em] text-primary-700">Pratinjau grup kelas</p>
+                                    <p class="mt-1 text-sm text-slate-500">Tabel berikut adalah isi gambar yang akan dikirim ke wali kelas.</p>
+                                </div>
+                            </div>
+                            <x-reports.attendance-share-class-card :class-stat="$selectedShareClass" :detailed="true" />
+                        </div>
+                    @endif
                 </div>
             </div>
 
@@ -230,10 +242,10 @@
                             <p class="text-sm font-bold uppercase tracking-[0.2em] text-primary-100">Presensi Wali Santri</p>
                             <h2 class="mt-2 text-4xl font-extrabold tracking-tight">Statistik Kehadiran</h2>
                             <p class="mt-3 text-2xl font-bold text-white">{{ $classStat['name'] }}</p>
-                            <p class="mt-1 text-base text-primary-200">{{ $shareStatistics['event']['title'] }} · {{ $shareStatistics['event']['date'] }}</p>
+                            <p class="mt-1 text-base text-primary-200">{{ $shareStatistics['event']['title'] }} · {{ $shareStatistics['event']['date'] }}{{ $shareStatistics['event']['time'] ? ' · '.$shareStatistics['event']['time'] : '' }}</p>
                         </div>
                         <div class="p-10">
-                            <x-reports.attendance-share-class-card :class-stat="$classStat" />
+                            <x-reports.attendance-share-class-card :class-stat="$classStat" :detailed="true" />
                             <p class="mt-6 text-sm text-slate-500">Dibuat {{ $shareStatistics['generated_at'] }} · Persentase dari total sasaran Bapak atau Ibu.</p>
                         </div>
                     </div>

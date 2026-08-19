@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\Attendance;
 use App\Models\AttendanceRosterSnapshot;
+use App\Models\AttendanceRosterSnapshotStudent;
 use App\Models\KajianEvent;
 use App\Models\ParentModel;
 use Carbon\Carbon;
@@ -374,26 +375,68 @@ class GuardianAttendanceReportService
         }
 
         $rows = $this->rowsForEvent($event);
+        $rowByParent = $rows->keyBy('guardian_id');
+        $rosterSnapshots = $event->attendanceRosterSnapshots()->get(['id']);
+        $childSnapshots = AttendanceRosterSnapshotStudent::query()
+            ->when(
+                $rosterSnapshots->isNotEmpty(),
+                fn ($query) => $query->whereIn('attendance_roster_snapshot_id', $rosterSnapshots->pluck('id')),
+                fn ($query) => $query->whereRaw('1 = 0'),
+            )
+            ->orderBy('class_name')
+            ->orderBy('student_name')
+            ->orderBy('parent_type')
+            ->get();
+
+        // A closed event with missing child rows predates (or has an incomplete)
+        // detailed snapshot migration and must be backfilled before it can be
+        // presented as a complete class report.
+        $hasIncompleteChildSnapshots = $rosterSnapshots->contains(
+            fn (AttendanceRosterSnapshot $snapshot): bool => ! $childSnapshots->contains(
+                'attendance_roster_snapshot_id',
+                $snapshot->id
+            )
+        );
+        if ($hasIncompleteChildSnapshots) {
+            return null;
+        }
+
         $classes = $rows
-            ->groupBy(function (array $row): string {
-                return (string) ($row['class_id'] ?? 'unassigned');
-            })
-            ->map(function (Collection $classRows, string $classKey): array {
-                $className = $classRows->first()['class_name'] ?? 'Tanpa Kelas';
+            ->when($childSnapshots->isNotEmpty(), fn (Collection $rows) => $childSnapshots->groupBy(
+                fn (AttendanceRosterSnapshotStudent $snapshot): string => (string) ($snapshot->class_id ?? 'unassigned')
+            ))
+            ->when($childSnapshots->isEmpty(), fn (Collection $rows) => $rows->groupBy(
+                fn (array $row): string => (string) ($row['class_id'] ?? 'unassigned')
+            ))
+            ->map(function (Collection $classRows, string $classKey) use ($childSnapshots, $rowByParent): array {
+                $className = $childSnapshots->isNotEmpty()
+                    ? ($classRows->first()?->class_name ?? 'Tanpa Kelas')
+                    : ($classRows->first()['class_name'] ?? 'Tanpa Kelas');
+
+                $parentRows = $childSnapshots->isNotEmpty()
+                    ? $classRows
+                        ->groupBy('parent_id')
+                        ->map(fn (Collection $parentSnapshots) => $rowByParent->get($parentSnapshots->first()->parent_id))
+                        ->filter()
+                        ->values()
+                    : $classRows;
 
                 return [
                     'key' => 'class-'.$classKey,
                     'id' => $classKey === 'unassigned' ? null : (int) $classKey,
                     'name' => $className,
-                    'summary' => $this->shareBreakdown($classRows),
+                    'summary' => $this->shareBreakdown($parentRows),
                     'guardians' => [
                         'father' => $this->shareBreakdown(
-                            $classRows->where('guardian_type', 'Ayah')->values()
+                            $parentRows->where('guardian_type', 'Ayah')->values()
                         ),
                         'mother' => $this->shareBreakdown(
-                            $classRows->where('guardian_type', 'Ibu')->values()
+                            $parentRows->where('guardian_type', 'Ibu')->values()
                         ),
                     ],
+                    'students' => $childSnapshots->isNotEmpty()
+                        ? $this->shareStudentRows($classRows, $rowByParent)
+                        : [],
                 ];
             })
             ->sortBy(fn (array $class) => mb_strtolower($class['name']))
@@ -462,6 +505,74 @@ class GuardianAttendanceReportService
             ->all();
 
         return compact('total', 'counts', 'percentages');
+    }
+
+    /**
+     * @param Collection<int, AttendanceRosterSnapshotStudent> $snapshots
+     * @param Collection<int, array<string, mixed>> $rowByParent
+     * @return Collection<int, array<string, mixed>>
+     */
+    private function shareStudentRows(Collection $snapshots, Collection $rowByParent): Collection
+    {
+        return $snapshots
+            ->groupBy(function (AttendanceRosterSnapshotStudent $snapshot): string {
+                return ($snapshot->student_id ?? 'unknown').':'.($snapshot->student_nis ?? $snapshot->student_name ?? '');
+            })
+            ->map(function (Collection $studentSnapshots) use ($rowByParent): array {
+                /** @var AttendanceRosterSnapshotStudent $first */
+                $first = $studentSnapshots->first();
+                $parents = [
+                    'father' => null,
+                    'mother' => null,
+                ];
+
+                foreach ($studentSnapshots->groupBy('parent_type') as $parentType => $parentSnapshots) {
+                    $parentSnapshots = $parentSnapshots->unique('parent_id')->values();
+                    $parentDetails = $parentSnapshots->map(function (AttendanceRosterSnapshotStudent $snapshot) use ($rowByParent): array {
+                        $row = $rowByParent->get($snapshot->parent_id);
+
+                        return [
+                            'parent_id' => $snapshot->parent_id,
+                            'name' => $snapshot->parent_name ?: ($row['guardian_name'] ?? null),
+                            'status' => $row['derived_status'] ?? null,
+                            'label' => $row['derived_label'] ?? 'Belum terdaftar',
+                            'badge' => $row['derived_badge'] ?? 'bg-slate-100 text-slate-600',
+                        ];
+                    })->values();
+
+                    if (in_array($parentType, ['father', 'mother'], true)) {
+                        $parents[$parentType] = $parentDetails->count() === 1
+                            ? $parentDetails->first()
+                            : [
+                                'parent_id' => null,
+                                'name' => $parentDetails->pluck('name')->filter()->join(' / '),
+                                'status' => null,
+                                'label' => $parentDetails->pluck('label')->filter()->unique()->join(' / '),
+                                'badge' => 'bg-slate-100 text-slate-600',
+                            ];
+                    }
+                }
+
+                foreach (['father', 'mother'] as $parentType) {
+                    $parents[$parentType] ??= [
+                        'parent_id' => null,
+                        'name' => null,
+                        'status' => null,
+                        'label' => 'Belum terdaftar',
+                        'badge' => 'bg-slate-100 text-slate-600',
+                    ];
+                }
+
+                return [
+                    'student_id' => $first->student_id,
+                    'name' => $first->student_name ?: '-',
+                    'nis' => $first->student_nis ?: '-',
+                    'class_name' => $first->class_name ?: '-',
+                    'parents' => $parents,
+                ];
+            })
+            ->sortBy(fn (array $student) => mb_strtolower($student['name']))
+            ->values();
     }
 
     protected function childDisplay(ParentModel $guardian): string

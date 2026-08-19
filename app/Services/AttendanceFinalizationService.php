@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\AttendanceRosterSnapshot;
+use App\Models\AttendanceRosterSnapshotStudent;
 use App\Models\KajianEvent;
 use App\Models\ParentModel;
 use App\Models\StudentEnrollment;
@@ -74,8 +75,24 @@ class AttendanceFinalizationService
                 throw new \LogicException('Hanya presensi yang sudah ditutup yang dapat dibackfill.');
             }
 
-            if ($event->attendanceRosterSnapshots()->exists()) {
-                return 0;
+            $snapshots = $event->attendanceRosterSnapshots()->get();
+            if ($snapshots->isNotEmpty()) {
+                $hasCompleteChildSnapshots = $snapshots->every(
+                    fn (AttendanceRosterSnapshot $snapshot): bool => $snapshot->students()->exists()
+                );
+
+                if ($hasCompleteChildSnapshots) {
+                    return 0;
+                }
+
+                $this->appendRosterSnapshotStudents(
+                    $event,
+                    $this->legacyParticipants($event),
+                    $snapshots->keyBy('parent_id'),
+                    now()
+                );
+
+                return $snapshots->count();
             }
 
             return $this->replaceRosterSnapshot($event, $this->legacyParticipants($event), now(), false);
@@ -95,30 +112,39 @@ class AttendanceFinalizationService
     }
 
     /**
-     * @return Collection<int, array{guardian: ParentModel, student: \App\Models\Student|null, enrollment: StudentEnrollment|null}>
+     * @return Collection<int, array{guardian: ParentModel, student: \App\Models\Student|null, enrollment: StudentEnrollment|null, students: Collection}>
      */
     protected function currentParticipants(KajianEvent $event, bool $ensureEnrollment = true): Collection
     {
         return ParentModel::guardians()
             ->targetedByEvent($event)
-            ->with(['students.classRoom'])
+            ->with(['user', 'students.classRoom'])
             ->orderBy('id')
             ->get()
             ->map(function (ParentModel $guardian) use ($event, $ensureEnrollment): array {
-                $student = $event->targetedStudentsForParent($guardian)->first();
+                $students = $event->targetedStudentsForParent($guardian)
+                    ->values()
+                    ->map(function ($student) use ($event, $ensureEnrollment): array {
+                        return [
+                            'student' => $student,
+                            'enrollment' => $ensureEnrollment
+                                ? StudentEnrollment::ensureForEvent($student, $event)
+                                : StudentEnrollment::forStudentAndYear($student->id, $event->academic_year_id),
+                        ];
+                    });
+                $primary = $students->first();
 
                 return [
                     'guardian' => $guardian,
-                    'student' => $student,
-                    'enrollment' => $ensureEnrollment
-                        ? StudentEnrollment::ensureForEvent($student, $event)
-                        : StudentEnrollment::forStudentAndYear($student?->id, $event->academic_year_id),
+                    'student' => $primary['student'] ?? null,
+                    'enrollment' => $primary['enrollment'] ?? null,
+                    'students' => $students,
                 ];
             });
     }
 
     /**
-     * @return Collection<int, array{guardian: ParentModel, student: \App\Models\Student|null, enrollment: StudentEnrollment|null}>
+     * @return Collection<int, array{guardian: ParentModel, student: \App\Models\Student|null, enrollment: StudentEnrollment|null, students: Collection}>
      */
     protected function legacyParticipants(KajianEvent $event): Collection
     {
@@ -135,6 +161,7 @@ class AttendanceFinalizationService
         $historicalParticipants = ParentModel::guardians()
             ->whereHas('students.enrollments', $forEventYear)
             ->with([
+                'user',
                 'students' => function ($query) use ($forEventYear): void {
                     $query->with([
                         'classRoom',
@@ -145,12 +172,28 @@ class AttendanceFinalizationService
             ->orderBy('id')
             ->get()
             ->map(function (ParentModel $guardian): array {
-                $student = $guardian->students->first();
+                $students = $guardian->students
+                    ->map(fn ($student): array => [
+                        'student' => $student,
+                        'enrollment' => $student->enrollments->first(),
+                    ])
+                    ->filter(fn (array $context) => $context['enrollment'] !== null)
+                    ->values();
+                if ($students->isEmpty()) {
+                    $students = $guardian->students
+                        ->map(fn ($student): array => [
+                            'student' => $student,
+                            'enrollment' => null,
+                        ])
+                        ->values();
+                }
+                $primary = $students->first();
 
                 return [
                     'guardian' => $guardian,
-                    'student' => $student,
-                    'enrollment' => $student?->enrollments->first(),
+                    'student' => $primary['student'] ?? null,
+                    'enrollment' => $primary['enrollment'] ?? null,
+                    'students' => $students,
                 ];
             })
             ->keyBy(fn (array $participant) => $participant['guardian']->id);
@@ -160,16 +203,32 @@ class AttendanceFinalizationService
         // was later removed from the operational data.
         $recordedParticipants = ParentModel::guardians()
             ->whereIn('id', $event->attendances()->pluck('parent_id')->filter()->unique())
-            ->with(['students.classRoom', 'students.enrollments' => $forEventYear])
+            ->with(['user', 'students.classRoom', 'students.enrollments' => $forEventYear])
             ->orderBy('id')
             ->get()
             ->map(function (ParentModel $guardian): array {
-                $student = $guardian->students->first();
+                $students = $guardian->students
+                    ->map(fn ($student): array => [
+                        'student' => $student,
+                        'enrollment' => $student->enrollments->first(),
+                    ])
+                    ->filter(fn (array $context) => $context['enrollment'] !== null)
+                    ->values();
+                if ($students->isEmpty()) {
+                    $students = $guardian->students
+                        ->map(fn ($student): array => [
+                            'student' => $student,
+                            'enrollment' => null,
+                        ])
+                        ->values();
+                }
+                $primary = $students->first();
 
                 return [
                     'guardian' => $guardian,
-                    'student' => $student,
-                    'enrollment' => $student?->enrollments->first(),
+                    'student' => $primary['student'] ?? null,
+                    'enrollment' => $primary['enrollment'] ?? null,
+                    'students' => $students,
                 ];
             })
             ->keyBy(fn (array $participant) => $participant['guardian']->id);
@@ -189,7 +248,7 @@ class AttendanceFinalizationService
     }
 
     /**
-     * @param Collection<int, array{guardian: ParentModel, student: \App\Models\Student|null, enrollment: StudentEnrollment|null}> $participants
+     * @param Collection<int, array{guardian: ParentModel, student: \App\Models\Student|null, enrollment: StudentEnrollment|null, students: Collection}> $participants
      */
     protected function replaceRosterSnapshot(
         KajianEvent $event,
@@ -197,6 +256,7 @@ class AttendanceFinalizationService
         \DateTimeInterface $now,
         bool $replaceExisting
     ): int {
+        $participants = $participants->values();
         $rows = $participants->map(function (array $participant) use ($event, $now): array {
             /** @var ParentModel $guardian */
             $guardian = $participant['guardian'];
@@ -224,6 +284,58 @@ class AttendanceFinalizationService
             AttendanceRosterSnapshot::insert($rows);
         }
 
+        $snapshots = AttendanceRosterSnapshot::where('kajian_event_id', $event->id)
+            ->get()
+            ->keyBy('parent_id');
+        $this->appendRosterSnapshotStudents($event, $participants, $snapshots, $now);
+
         return count($rows);
+    }
+
+    /**
+     * @param Collection<int, array{guardian: ParentModel, student: \App\Models\Student|null, enrollment: StudentEnrollment|null, students: Collection}> $participants
+     * @param Collection<int, AttendanceRosterSnapshot> $snapshots
+     */
+    protected function appendRosterSnapshotStudents(
+        KajianEvent $event,
+        Collection $participants,
+        Collection $snapshots,
+        \DateTimeInterface $now
+    ): void {
+        $rows = [];
+
+        foreach ($participants as $participant) {
+            /** @var ParentModel $guardian */
+            $guardian = $participant['guardian'];
+            $snapshot = $snapshots->get($guardian->id);
+
+            if (! $snapshot) {
+                continue;
+            }
+
+            foreach ($participant['students'] ?? collect() as $context) {
+                $student = $context['student'];
+                $enrollment = $context['enrollment'];
+
+                $rows[] = [
+                    'attendance_roster_snapshot_id' => $snapshot->id,
+                    'parent_id' => $guardian->id,
+                    'student_id' => $student?->id,
+                    'student_enrollment_id' => $enrollment?->id,
+                    'class_id' => $enrollment?->class_id ?? $student?->class_id,
+                    'student_name' => $student?->name,
+                    'student_nis' => $student?->nis,
+                    'class_name' => $enrollment?->class_name ?? $student?->classRoom?->name,
+                    'parent_name' => $guardian->user?->name,
+                    'parent_type' => $guardian->type,
+                    'created_at' => $now,
+                    'updated_at' => $now,
+                ];
+            }
+        }
+
+        if ($rows !== []) {
+            AttendanceRosterSnapshotStudent::insertOrIgnore($rows);
+        }
     }
 }
