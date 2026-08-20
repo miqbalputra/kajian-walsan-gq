@@ -172,20 +172,49 @@ class ParentIndex extends Component
             default => 'father,mother',
         };
 
+        $phoneRules = ['nullable', 'string', 'max:20'];
+        if (! $this->hasUnchangedStoredPhone()) {
+            // New or edited phone numbers must use the Indonesian format.
+            // Legacy imports may contain a descriptive value such as
+            // "Hp bersama istri"; retaining that untouched value must not
+            // prevent an admin from updating unrelated account credentials.
+            $phoneRules[] = 'regex:/^(\+62|62|0)?[0-9]{8,13}$/';
+        }
+
         return [
             'name' => 'required|string|max:100',
             'username' => 'required|string|max:50',
             'email' => 'required|email|max:255',
             'password' => 'nullable|string|min:6',
             'nik' => 'nullable|string|max:20',
-            // Phone validation: Indonesian format (optional +62/62/0 prefix, 8-13 digits)
-            'phone' => ['nullable', 'string', 'max:20', 'regex:/^(\+62|62|0)?[0-9]{8,13}$/'],
+            'phone' => $phoneRules,
             'type' => 'required|in:'.$allowedTypes,
             'is_teacher' => 'boolean',
             'occupation' => 'nullable|string|max:100',
             'address' => 'nullable|string|max:500',
             'is_single_parent' => 'boolean',
             'selectedChildren' => 'array',
+        ];
+    }
+
+    protected function hasUnchangedStoredPhone(): bool
+    {
+        if (! $this->editMode || ! $this->parentId) {
+            return false;
+        }
+
+        $storedPhone = ParentModel::query()
+            ->whereKey($this->parentId)
+            ->join('users', 'parents.user_id', '=', 'users.id')
+            ->value('users.phone');
+
+        return (string) $this->phone === (string) $storedPhone;
+    }
+
+    protected function messages(): array
+    {
+        return [
+            'phone.regex' => 'Nomor telepon harus format Indonesia, contoh 081234567890 atau 6281234567890.',
         ];
     }
 

@@ -405,6 +405,7 @@
                                     <input type="text" wire:model="phone"
                                         class="w-full px-4 py-2.5 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-transparent"
                                         placeholder="08xxxxxxxxxx">
+                                    @error('phone') <span class="text-red-500 text-sm">{{ $message }}</span> @enderror
                                 </div>
                                 <div>
                                     <label class="block text-sm font-medium text-gray-700 mb-1">NIK Wali</label>

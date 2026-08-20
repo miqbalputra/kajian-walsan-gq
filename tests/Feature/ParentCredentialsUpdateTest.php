@@ -17,10 +17,10 @@ class ParentCredentialsUpdateTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_admin_edit_persists_parent_username_and_password_for_all_login_names(): void
+    public function test_admin_can_update_credentials_without_replacing_a_legacy_invalid_phone_value(): void
     {
         $admin = $this->makeUser('admin', 'admin-test@example.test', 'admin');
-        $parentUser = $this->makeUser('ayah-lama', 'ayah-lama@example.test', 'wali_santri');
+        $parentUser = $this->makeUser('ayah-lama', 'ayah-lama@example.test', 'wali_santri', 'Hpbersamaistri');
         $parent = ParentModel::create([
             'user_id' => $parentUser->id,
             'type' => 'father',
@@ -60,9 +60,15 @@ class ParentCredentialsUpdateTest extends TestCase
         $this->assertSame('ayah-baru', $parentUser->username);
         $this->assertTrue(Hash::check('password-baru', $parentUser->password));
         $this->assertTrue(Hash::check('password-baru', $alias->password));
+
+        Livewire::test(ParentIndex::class)
+            ->call('openEditModal', $parent->id)
+            ->set('phone', 'nomor-tidak-valid')
+            ->call('save')
+            ->assertHasErrors(['phone']);
     }
 
-    private function makeUser(string $username, string $email, string $roleName): User
+    private function makeUser(string $username, string $email, string $roleName, string $phone = '081234567890'): User
     {
         return User::create([
             'name' => $username,
@@ -70,6 +76,7 @@ class ParentCredentialsUpdateTest extends TestCase
             'email' => $email,
             'password' => 'password-lama',
             'role_id' => Role::where('name', $roleName)->value('id'),
+            'phone' => $phone,
             'is_active' => true,
         ]);
     }
