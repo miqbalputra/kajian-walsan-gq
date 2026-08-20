@@ -300,6 +300,10 @@ class ParentIndex extends Component
 
                 if ($this->password) {
                     $user->update(['password' => Hash::make($this->password)]);
+                    // Wali can sign in with a child login alias as well as
+                    // the canonical username. Keep every login path on the
+                    // same password after an admin edit.
+                    app(ParentLoginAliasService::class)->syncPassword($user, $this->password);
                 }
 
                 $parent->update([

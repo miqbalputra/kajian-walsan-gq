@@ -4,6 +4,7 @@ namespace App\Livewire\WaliSantri;
 
 use App\Models\ParentModel;
 use App\Models\User;
+use App\Services\ParentLoginAliasService;
 use BaconQrCode\Renderer\Image\SvgImageBackEnd;
 use BaconQrCode\Renderer\ImageRenderer;
 use BaconQrCode\Renderer\RendererStyle\RendererStyle;
@@ -120,6 +121,7 @@ class Profile extends Component
         $user->update([
             'password' => Hash::make($this->new_password),
         ]);
+        app(ParentLoginAliasService::class)->syncPassword($user, $this->new_password);
 
         // Kirim Notifikasi ke n8n (WhatsApp) - Production Mode
         try {
