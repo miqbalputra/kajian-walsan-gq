@@ -26,6 +26,7 @@ Aplikasi ini mendigitalisasi proses verifikasi kehadiran dengan integrasi geolok
 - 🔑 **AI Password Recovery Assistant** - Solusi lupa *password* otomatis 24 Jam dibantu oleh AI (*ditenagai oleh n8n*).
 - 🏷️ **Role-Based Access (Multi-Peran)** - Hierarki otorisasi ketat (Super Admin, Admin, Guru Kelas, dan Wali Santri).
 - ⚡ **SPA-like Experience** - Navigasi halus secepat kilat dengan *Livewire Navigation* / *Blaze*.
+- 🔗 **Data Induk Yayasan** - Roster santri aktif dapat ditarik read-only dari sumber data induk tanpa memindahkan transaksi presensi.
 
 ---
 
@@ -93,6 +94,10 @@ Untuk melangsungkan pengembangan di komputer (*Localhost*):
 
 ## 💡 Keamanan dan Penjagaan Kualitas
 Semua akses jalur belakang, API pemulihan akun dari N8N, token Google OAuth, dan sandi telah dirancang terenkripsi. Silakan tinjau `routes/web.php` untuk validasi Endpoint Rahasia, dan letakkan kode rahasia N8N hanya di berkas `.env` perangkat produksi!
+
+## 🔗 Integrasi Data Induk
+
+Konfigurasi dan prosedur sinkronisasi roster Kajian tersedia di [docs/DATA_INDUK.md](docs/DATA_INDUK.md). Aplikasi ini hanya membaca API Data Induk dan mempertahankan seluruh transaksi presensi di database Kajian.
 
 <br>
 <p align="center">

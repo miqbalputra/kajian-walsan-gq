@@ -4,11 +4,18 @@ namespace App\Livewire\Admin;
 
 use App\Imports\StudentsImport;
 use App\Models\ClassRoom;
+use App\Models\ParentModel;
 use App\Models\Student;
+use App\Models\User;
+use App\Services\DataIndukRosterSyncService;
 use App\Services\StudentArchiveService;
+use Illuminate\Support\Facades\Hash;
 use Livewire\Component;
+use Livewire\WithFileUploads;
 use Livewire\WithPagination;
 use Maatwebsite\Excel\Facades\Excel;
+use Maatwebsite\Excel\Validators\ValidationException;
+use PhpOffice\PhpSpreadsheet\Cell\Coordinate;
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
 use PhpOffice\PhpSpreadsheet\Style\Alignment;
 use PhpOffice\PhpSpreadsheet\Style\Border;
@@ -17,29 +24,43 @@ use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
 
 class StudentIndex extends Component
 {
+    use WithFileUploads;
     use WithPagination;
-    use \Livewire\WithFileUploads;
 
     public $search = '';
+
     public $classFilter = '';
+
     public $perPage = 10;
 
     // Modal state
     public $showModal = false;
+
     public $showImportModal = false;
+
     public $showDeleteModal = false;
+
     public $editMode = false;
+
     public $studentId = null;
 
     // Form fields
     public $nis = '';
+
     public $name = '';
+
     public $class_id = '';
+
     public $gender = '';
+
     public $birth_date = '';
+
     public $guardian_name = '';
+
     public $guardian_phone = '';
+
     public $guardian_relationship = '';
+
     public $is_active = true;
 
     // Import
@@ -78,6 +99,27 @@ class StudentIndex extends Component
         $this->reset(['nis', 'name', 'class_id', 'gender', 'birth_date', 'guardian_name', 'guardian_phone', 'guardian_relationship', 'is_active', 'editMode', 'studentId']);
         $this->is_active = true;
         $this->showModal = true;
+    }
+
+    public function syncDataInduk(DataIndukRosterSyncService $sync): void
+    {
+        try {
+            $result = $sync->sync();
+            $message = "Sinkronisasi Data Induk selesai: {$result['created']} baru, {$result['updated']} diperbarui, {$result['unchanged']} tetap.";
+
+            if ($result['conflicts'] !== []) {
+                $message .= ' '.count($result['conflicts']).' konflik perlu diperiksa.';
+            }
+            if ($result['unmapped_class_ids'] !== []) {
+                $message .= ' '.count($result['unmapped_class_ids']).' kelas master belum dipetakan.';
+            }
+
+            $this->dispatch('notify', ['type' => 'success', 'message' => $message]);
+            $this->resetPage();
+        } catch (\Throwable $exception) {
+            report($exception);
+            $this->dispatch('notify', ['type' => 'error', 'message' => $exception->getMessage()]);
+        }
     }
 
     public function openEditModal($id)
@@ -126,6 +168,7 @@ class StudentIndex extends Component
         }
         if ($nisQuery->exists()) {
             $this->addError('nis', 'NIS sudah digunakan.');
+
             return;
         }
 
@@ -179,7 +222,7 @@ class StudentIndex extends Component
             ->orderBy('name')
             ->get();
 
-        $spreadsheet = new Spreadsheet();
+        $spreadsheet = new Spreadsheet;
         $sheet = $spreadsheet->getActiveSheet();
         $sheet->setTitle('Data Santri & Wali');
 
@@ -197,7 +240,7 @@ class StudentIndex extends Component
             'Nama Wali (fallback)', 'Telepon Wali (fallback)', 'Hubungan Wali (fallback)',
         ];
         $sheet->fromArray($headers, null, 'A1');
-        $lastCol = \PhpOffice\PhpSpreadsheet\Cell\Coordinate::stringFromColumnIndex(count($headers)); // 23 -> 'W'
+        $lastCol = Coordinate::stringFromColumnIndex(count($headers)); // 23 -> 'W'
         $sheet->getStyle('A1:'.$lastCol.'1')->applyFromArray($headerStyle);
 
         $rows = [];
@@ -248,7 +291,7 @@ class StudentIndex extends Component
 
         // Simpan ke temp file lalu download
         $fileName = 'data-santri-wali-'.date('Y-m-d').'.xlsx';
-        if (!file_exists(storage_path('app/public'))) {
+        if (! file_exists(storage_path('app/public'))) {
             mkdir(storage_path('app/public'), 0755, true);
         }
         $tempPath = storage_path('app/public/'.$fileName);
@@ -263,16 +306,16 @@ class StudentIndex extends Component
     public function downloadTemplate()
     {
         // Create Excel template using PhpSpreadsheet
-        $spreadsheet = new \PhpOffice\PhpSpreadsheet\Spreadsheet();
+        $spreadsheet = new Spreadsheet;
         $sheet = $spreadsheet->getActiveSheet();
         $sheet->setTitle('Template Siswa');
 
         // Header style
         $headerStyle = [
             'font' => ['bold' => true, 'color' => ['rgb' => 'FFFFFF']],
-            'fill' => ['fillType' => \PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID, 'startColor' => ['rgb' => '10B981']],
-            'alignment' => ['horizontal' => \PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER],
-            'borders' => ['allBorders' => ['borderStyle' => \PhpOffice\PhpSpreadsheet\Style\Border::BORDER_THIN]],
+            'fill' => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => '10B981']],
+            'alignment' => ['horizontal' => Alignment::HORIZONTAL_CENTER],
+            'borders' => ['allBorders' => ['borderStyle' => Border::BORDER_THIN]],
         ];
 
         // Headers
@@ -316,7 +359,7 @@ class StudentIndex extends Component
             ['- Email dan password untuk wali akan digenerate otomatis'],
         ];
         foreach ($instructions as $row => $data) {
-            $instructionSheet->setCellValue('A' . ($row + 1), $data[0]);
+            $instructionSheet->setCellValue('A'.($row + 1), $data[0]);
         }
         $instructionSheet->getStyle('A1')->getFont()->setBold(true)->setSize(14);
         $instructionSheet->getColumnDimension('A')->setWidth(60);
@@ -326,14 +369,14 @@ class StudentIndex extends Component
 
         // Save to temp file
         $fileName = 'template_import_siswa.xlsx';
-        $tempPath = storage_path('app/public/' . $fileName);
+        $tempPath = storage_path('app/public/'.$fileName);
 
         // Ensure directory exists
-        if (!file_exists(storage_path('app/public'))) {
+        if (! file_exists(storage_path('app/public'))) {
             mkdir(storage_path('app/public'), 0755, true);
         }
 
-        $writer = new \PhpOffice\PhpSpreadsheet\Writer\Xlsx($spreadsheet);
+        $writer = new Xlsx($spreadsheet);
         $writer->save($tempPath);
 
         return response()->download($tempPath, $fileName, [
@@ -348,7 +391,7 @@ class StudentIndex extends Component
         ]);
 
         try {
-            $import = new StudentsImport();
+            $import = new StudentsImport;
             Excel::import($import, $this->importFile->getRealPath());
 
             $this->showImportModal = false;
@@ -358,20 +401,20 @@ class StudentIndex extends Component
             $this->dispatch('notify', ['type' => 'success', 'message' => $summary]);
 
             // Show errors if any
-            if (!empty($import->errors)) {
+            if (! empty($import->errors)) {
                 foreach (array_slice($import->errors, 0, 5) as $error) {
                     $this->dispatch('notify', ['type' => 'warning', 'message' => $error]);
                 }
             }
 
             $this->resetPage();
-        } catch (\Maatwebsite\Excel\Validators\ValidationException $e) {
+        } catch (ValidationException $e) {
             $failures = $e->failures();
             foreach (array_slice($failures, 0, 3) as $failure) {
-                $this->addError('importFile', "Baris {$failure->row()}: " . implode(', ', $failure->errors()));
+                $this->addError('importFile', "Baris {$failure->row()}: ".implode(', ', $failure->errors()));
             }
         } catch (\Exception $e) {
-            $this->addError('importFile', 'Gagal import: ' . $e->getMessage());
+            $this->addError('importFile', 'Gagal import: '.$e->getMessage());
         }
     }
 
@@ -381,17 +424,17 @@ class StudentIndex extends Component
         // Simple logic: Create User first
         $username = preg_replace('/[^0-9]/', '', $phone);
         if (empty($username)) {
-            $username = strtolower(str_replace(' ', '', $name)) . rand(100, 999);
+            $username = strtolower(str_replace(' ', '', $name)).rand(100, 999);
         }
 
         // Check if user exists
-        $user = \App\Models\User::where('username', $username)->first();
-        if (!$user) {
-            $user = \App\Models\User::create([
+        $user = User::where('username', $username)->first();
+        if (! $user) {
+            $user = User::create([
                 'name' => $name,
                 'username' => $username,
-                'email' => $username . '@example.com', // Dummy email
-                'password' => \Illuminate\Support\Facades\Hash::make('bismillah'), // Default password
+                'email' => $username.'@example.com', // Dummy email
+                'password' => Hash::make('bismillah'), // Default password
                 'phone' => $phone,
                 'role_id' => $waliRole?->id,
                 'is_active' => true,
@@ -399,13 +442,13 @@ class StudentIndex extends Component
         }
 
         // Create/Find Parent Profile
-        $parent = \App\Models\ParentModel::firstOrCreate(
+        $parent = ParentModel::firstOrCreate(
             ['user_id' => $user->id],
             ['type' => $type]
         );
 
         // Attach to student
-        if (!$student->parents()->where('parent_id', $parent->id)->exists()) {
+        if (! $student->parents()->where('parent_id', $parent->id)->exists()) {
             $student->parents()->attach($parent->id, ['relationship' => $type === 'father' ? 'Ayah' : 'Ibu']);
         }
     }
@@ -415,8 +458,8 @@ class StudentIndex extends Component
         $query = Student::with('classRoom', 'parents.students')
             ->when($this->search, function ($query) {
                 $query->where(function ($q) {
-                    $q->where('name', 'like', '%' . $this->search . '%')
-                        ->orWhere('nis', 'like', '%' . $this->search . '%');
+                    $q->where('name', 'like', '%'.$this->search.'%')
+                        ->orWhere('nis', 'like', '%'.$this->search.'%');
                 });
             })
             ->when($this->classFilter, function ($query) {

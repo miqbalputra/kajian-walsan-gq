@@ -13,6 +13,7 @@ class Student extends Model
     use HasFactory;
 
     protected $fillable = [
+        'data_induk_id',
         'nis',
         'name',
         'class_id',
@@ -149,6 +150,7 @@ class Student extends Model
     public function getFullDisplayAttribute(): string
     {
         $class = $this->classRoom?->name ?? '-';
+
         return "{$this->name} ({$class})";
     }
 }

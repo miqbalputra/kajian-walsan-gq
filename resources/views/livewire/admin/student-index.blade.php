@@ -6,6 +6,13 @@
             <p class="text-gray-500">Kelola data siswa/santri</p>
         </div>
         <div class="flex gap-3">
+            <button wire:click="syncDataInduk" wire:loading.attr="disabled"
+                class="inline-flex items-center justify-center gap-2 px-4 py-3 bg-indigo-500 text-white rounded-xl font-semibold hover:bg-indigo-600 disabled:opacity-60 transition-colors">
+                <span class="material-symbols-rounded" wire:loading.remove wire:target="syncDataInduk">sync</span>
+                <span class="material-symbols-rounded animate-spin" wire:loading wire:target="syncDataInduk">progress_activity</span>
+                <span wire:loading.remove wire:target="syncDataInduk">Sinkronkan Data Induk</span>
+                <span wire:loading wire:target="syncDataInduk">Menyinkronkan…</span>
+            </button>
             <button wire:click="exportWaliSantri"
                 class="inline-flex items-center justify-center gap-2 px-4 py-3 bg-green-500 text-white rounded-xl font-semibold hover:bg-green-600 transition-colors">
                 <span class="material-symbols-rounded">table_chart</span>
