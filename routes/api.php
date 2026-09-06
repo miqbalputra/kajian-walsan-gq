@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Api\HermesAgentController;
 use App\Http\Controllers\Api\GoogleFormIntegrationController;
+use App\Http\Controllers\TelegramReviewWebhookController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -30,3 +31,6 @@ Route::prefix('api/integrations/google-forms/mustawa-1')
         Route::get('/options', [GoogleFormIntegrationController::class, 'options'])->name('options');
         Route::post('/', [GoogleFormIntegrationController::class, 'store'])->name('store');
     });
+
+Route::post('/telegram/review/webhook', TelegramReviewWebhookController::class)
+    ->name('telegram.review.webhook');

@@ -58,4 +58,20 @@ return [
     'google_forms' => [
         'webhook_secret' => env('GOOGLE_FORM_WEBHOOK_SECRET', ''),
     ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Telegram proof review
+    |--------------------------------------------------------------------------
+    |
+    | Secrets deliberately stay in the deployment environment. The review
+    | group receives only new online-attendance and permission proofs.
+    |
+    */
+    'telegram_review' => [
+        'enabled' => env('TELEGRAM_REVIEW_ENABLED', false),
+        'bot_token' => env('TELEGRAM_REVIEW_BOT_TOKEN', ''),
+        'chat_id' => env('TELEGRAM_REVIEW_CHAT_ID', ''),
+        'webhook_secret' => env('TELEGRAM_REVIEW_WEBHOOK_SECRET', ''),
+    ],
 ];

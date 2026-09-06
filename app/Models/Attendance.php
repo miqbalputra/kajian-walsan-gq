@@ -106,6 +106,11 @@ class Attendance extends Model
         return $this->hasMany(AttendanceProofHistory::class)->latest('created_at');
     }
 
+    public function telegramReviewRequests(): HasMany
+    {
+        return $this->hasMany(TelegramReviewRequest::class)->latest('created_at');
+    }
+
     public function googleFormSubmissions(): HasMany
     {
         return $this->hasMany(GoogleFormSubmission::class, 'attendance_id');
@@ -141,6 +146,21 @@ class Attendance extends Model
     public function isRejected(): bool
     {
         return $this->validation_status === self::VALIDATION_REJECTED;
+    }
+
+    /**
+     * Telegram is the final decision maker for photo proofs in the selected
+     * attendance flows. Kept on the model so every input channel shares the
+     * same rule.
+     */
+    public function requiresTelegramReview(): bool
+    {
+        return (bool) config('services.telegram_review.enabled', false)
+            && filled($this->proof_file)
+            && in_array($this->status, [
+                self::STATUS_HADIR_ONLINE,
+                self::STATUS_IZIN,
+            ], true);
     }
 
     /**

@@ -298,6 +298,10 @@ class AttendanceProofReviewService
 
     protected function applyDecision(array &$updates, Attendance $attendance, array $decision): void
     {
+        if ($attendance->requiresTelegramReview()) {
+            return;
+        }
+
         if ($decision['decision'] === 'approve') {
             $updates['validation_status'] = Attendance::VALIDATION_APPROVED;
             $updates['validated_by'] = null;

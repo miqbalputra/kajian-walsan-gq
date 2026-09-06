@@ -5,6 +5,7 @@ namespace App\Livewire\Admin;
 use App\Models\Role;
 use App\Models\User;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Validation\Rule;
 use Livewire\Component;
 use Livewire\WithPagination;
 
@@ -28,6 +29,7 @@ class UserIndex extends Component
     public $email = '';
     public $password = '';
     public $phone = '';
+    public $telegram_user_id = '';
     public $role_id = '';
     public $is_active = true;
 
@@ -38,6 +40,7 @@ class UserIndex extends Component
             'username' => 'required|string|max:50',
             'email' => 'required|email|max:255',
             'phone' => 'nullable|string|max:20',
+            'telegram_user_id' => ['nullable', 'string', 'max:32', 'regex:/^\\d+$/', Rule::unique('users', 'telegram_user_id')->ignore($this->userId)],
             'role_id' => 'required|exists:roles,id',
             'is_active' => 'boolean',
         ];
@@ -55,7 +58,7 @@ class UserIndex extends Component
 
     public function openCreateModal()
     {
-        $this->reset(['name', 'username', 'email', 'password', 'phone', 'role_id', 'is_active', 'editMode', 'userId']);
+        $this->reset(['name', 'username', 'email', 'password', 'phone', 'telegram_user_id', 'role_id', 'is_active', 'editMode', 'userId']);
         $this->is_active = true;
         $this->showModal = true;
     }
@@ -68,6 +71,7 @@ class UserIndex extends Component
         $this->username = $user->username;
         $this->email = $user->email;
         $this->phone = $user->phone;
+        $this->telegram_user_id = $user->telegram_user_id ?? '';
         $this->role_id = $user->role_id;
         $this->is_active = $user->is_active;
         $this->password = '';
@@ -105,6 +109,7 @@ class UserIndex extends Component
                 'username' => $this->username,
                 'email' => $this->email,
                 'phone' => $this->phone,
+                'telegram_user_id' => $this->telegram_user_id ?: null,
                 'role_id' => $this->role_id,
                 'is_active' => $this->is_active,
             ]);
@@ -121,6 +126,7 @@ class UserIndex extends Component
                 'email' => $this->email,
                 'password' => Hash::make($this->password ?: 'password'),
                 'phone' => $this->phone,
+                'telegram_user_id' => $this->telegram_user_id ?: null,
                 'role_id' => $this->role_id,
                 'is_active' => $this->is_active,
             ]);
@@ -129,7 +135,7 @@ class UserIndex extends Component
         }
 
         $this->showModal = false;
-        $this->reset(['name', 'username', 'email', 'password', 'phone', 'role_id', 'is_active', 'editMode', 'userId']);
+        $this->reset(['name', 'username', 'email', 'password', 'phone', 'telegram_user_id', 'role_id', 'is_active', 'editMode', 'userId']);
     }
 
     public function confirmDelete($id)

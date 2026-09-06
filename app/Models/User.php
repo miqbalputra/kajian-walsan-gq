@@ -27,6 +27,7 @@ class User extends Authenticatable
         'password',
         'role_id',
         'phone',
+        'telegram_user_id',
         'avatar',
         'is_active',
         'google_id',

@@ -95,6 +95,16 @@ Untuk melangsungkan pengembangan di komputer (*Localhost*):
 ## 💡 Keamanan dan Penjagaan Kualitas
 Semua akses jalur belakang, API pemulihan akun dari N8N, token Google OAuth, dan sandi telah dirancang terenkripsi. Silakan tinjau `routes/web.php` untuk validasi Endpoint Rahasia, dan letakkan kode rahasia N8N hanya di berkas `.env` perangkat produksi!
 
+## 🤖 Persetujuan Bukti melalui Telegram
+
+Untuk mengaktifkan persetujuan foto catatan kajian online dan surat izin dari grup Telegram:
+
+1. Buat bot di **@BotFather**, masukkan ke grup reviewer, lalu isi `TELEGRAM_REVIEW_ENABLED`, `TELEGRAM_REVIEW_BOT_TOKEN`, `TELEGRAM_REVIEW_CHAT_ID`, dan `TELEGRAM_REVIEW_WEBHOOK_SECRET` di environment produksi.
+2. Jalankan migrasi dan daftarkan webhook: `php artisan migrate --force` lalu `php artisan telegram:review-webhook`.
+3. Setiap reviewer mengirim `/start` ke chat pribadi bot untuk memperoleh Telegram ID. Masukkan ID tersebut pada akun admin terkait di **Admin → Manajemen User**.
+
+Bot hanya menerima keputusan dari akun admin aktif yang telah dipetakan. Tombol **Tolak** menampilkan alasan cepat, sedangkan klik bukti yang sudah diganti atau diproses akan ditolak dengan aman.
+
 ## 🔗 Integrasi Data Induk
 
 Konfigurasi dan prosedur sinkronisasi roster Kajian tersedia di [docs/DATA_INDUK.md](docs/DATA_INDUK.md). Aplikasi ini hanya membaca API Data Induk dan mempertahankan seluruh transaksi presensi di database Kajian.

@@ -202,7 +202,12 @@ class AiProviderService
             'ai_validated_at' => now(),
         ];
 
-        if (($result['decision'] ?? '') === 'approve' && ($result['confidence'] ?? 0) >= $threshold) {
+        // Online/izin proof decisions belong to the Telegram reviewer flow.
+        // AI remains a recommendation there, even when automatic AI approval
+        // is enabled for other attendance workflows.
+        if ($attendance->requiresTelegramReview()) {
+            // Keep the existing pending state and validator fields intact.
+        } elseif (($result['decision'] ?? '') === 'approve' && ($result['confidence'] ?? 0) >= $threshold) {
             $updates['validation_status'] = Attendance::VALIDATION_APPROVED;
             $updates['validated_by'] = null;
             $updates['validated_at'] = now();

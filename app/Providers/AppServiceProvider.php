@@ -6,6 +6,8 @@ use Illuminate\Support\ServiceProvider;
 use Illuminate\Support\Facades\Gate;
 use App\Models\User;
 use App\Models\ParentModel;
+use App\Models\Attendance;
+use App\Observers\AttendanceObserver;
 use Laravel\Pulse\Facades\Pulse;
 use Livewire\Blaze\Blaze;
 
@@ -24,6 +26,8 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        Attendance::observe(AttendanceObserver::class);
+
         // Pulse Authorization
         Gate::define('viewPulse', function (User $user) {
             return config('pulse.enabled') && $user->isAdmin();

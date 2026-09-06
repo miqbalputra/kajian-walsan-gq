@@ -5,6 +5,8 @@ namespace App\Livewire\Admin;
 use App\Models\Attendance;
 use App\Models\GoogleFormSubmission;
 use App\Services\AttendanceProofReviewService;
+use App\Services\AttendanceDecisionService;
+use App\Services\TelegramReviewService;
 use App\Services\GoogleFormAttendanceService;
 use App\Services\WhatsAppNotificationService;
 use Illuminate\Support\Facades\Log;
@@ -82,19 +84,11 @@ class AttendanceValidation extends Component
     public function approve($id)
     {
         $attendance = Attendance::with(['parent.user', 'kajianEvent'])->findOrFail($id);
-        $attendance->update([
-            'validation_status' => 'approved',
-            'validated_by' => auth()->id(),
-            'validated_at' => now(),
-        ]);
-        $attendance->kajianEvent?->updateAttendanceCount();
-
-        // Kirim notifikasi WhatsApp via n8n
-        try {
-            app(WhatsAppNotificationService::class)->sendApprovalNotification($attendance);
-        } catch (\Exception $e) {
-            // Jangan ganggu proses approve jika WA gagal
-        }
+        app(AttendanceDecisionService::class)->decide(
+            $attendance,
+            auth()->user(),
+            Attendance::VALIDATION_APPROVED,
+        );
 
         $this->dispatch('notify', ['type' => 'success', 'message' => 'Presensi berhasil disetujui!']);
         $this->showProofModal = false;
@@ -114,20 +108,12 @@ class AttendanceValidation extends Component
         ]);
 
         $this->selectedAttendance->load(['parent.user', 'kajianEvent']);
-        $this->selectedAttendance->update([
-            'validation_status' => 'rejected',
-            'rejection_reason' => $this->rejectionReason,
-            'validated_by' => auth()->id(),
-            'validated_at' => now(),
-        ]);
-        $this->selectedAttendance->kajianEvent?->updateAttendanceCount();
-
-        // Kirim notifikasi WhatsApp via n8n
-        try {
-            app(WhatsAppNotificationService::class)->sendRejectionNotification($this->selectedAttendance);
-        } catch (\Exception $e) {
-            // Jangan ganggu proses reject jika WA gagal
-        }
+        app(AttendanceDecisionService::class)->decide(
+            $this->selectedAttendance,
+            auth()->user(),
+            Attendance::VALIDATION_REJECTED,
+            $this->rejectionReason,
+        );
 
         $this->showRejectModal = false;
         $this->showProofModal = false;
@@ -144,6 +130,7 @@ class AttendanceValidation extends Component
             'validated_at' => null,
         ]);
         $attendance->kajianEvent?->updateAttendanceCount();
+        app(TelegramReviewService::class)->queueForAttendance($attendance->fresh());
 
         $this->dispatch('notify', ['type' => 'info', 'message' => 'Status presensi dikembalikan ke pending.']);
     }

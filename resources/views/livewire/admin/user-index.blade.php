@@ -230,6 +230,15 @@
                             </div>
 
                             <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Telegram ID Reviewer</label>
+                                <input type="text" wire:model="telegram_user_id"
+                                    class="w-full px-4 py-2.5 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                                    placeholder="Contoh: 123456789">
+                                <p class="mt-1 text-xs text-gray-500">Kirim <code>/start</code> ke bot untuk melihat ID. Hanya akun admin aktif yang dapat memakai tombol review.</p>
+                                @error('telegram_user_id') <span class="text-red-500 text-sm">{{ $message }}</span> @enderror
+                            </div>
+
+                            <div>
                                 <label class="block text-sm font-medium text-gray-700 mb-1">Password
                                     {{ $editMode ? '(kosongkan jika tidak diubah)' : '' }}</label>
                                 <input type="password" wire:model="password"
