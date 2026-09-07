@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Auth\ForgotPasswordController;
+use App\Http\Controllers\BackupController;
 use App\Http\Controllers\Auth\GoogleController;
 use App\Http\Controllers\Auth\QrLoginController;
 use App\Http\Controllers\HomeController;
@@ -12,6 +13,7 @@ use App\Livewire\Admin\AnnouncementIndex;
 use App\Livewire\Admin\ArchiveIndex;
 use App\Livewire\Admin\AttendanceTrash;
 use App\Livewire\Admin\AttendanceValidation;
+use App\Livewire\Admin\BackupIndex;
 use App\Livewire\Admin\ChatAi;
 use App\Livewire\Admin\ClassIndex;
 use App\Livewire\Admin\Dashboard;
@@ -136,6 +138,9 @@ Route::middleware('auth')->group(function () {
         Route::get('/teacher-attendance', TeacherAttendanceIndex::class)->name('teacher-attendance.index');
         Route::get('/classes', ClassIndex::class)->name('classes.index');
         Route::get('/reports', ReportIndex::class)->name('reports.index');
+        Route::get('/backups', BackupIndex::class)->name('backups.index');
+        Route::get('/backups/sql', [BackupController::class, 'downloadSql'])->name('backups.sql');
+        Route::get('/backups/xlsx', [BackupController::class, 'downloadXlsx'])->name('backups.xlsx');
         Route::get('/validation', AttendanceValidation::class)->name('validation.index');
         Route::get('/validation/trash', AttendanceTrash::class)->name('validation.trash');
         Route::get('/users', UserIndex::class)->name('users.index');

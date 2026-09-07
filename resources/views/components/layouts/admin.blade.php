@@ -119,6 +119,11 @@
                     <span class="material-symbols-rounded">assessment</span>
                     Laporan
                 </a>
+                <a href="{{ route('admin.backups.index') }}"
+                    class="flex items-center gap-3 px-4 py-3 rounded-xl font-medium transition-colors {{ request()->routeIs('admin.backups.*') ? 'bg-primary-50 dark:bg-primary-900/20 text-primary-600 dark:text-primary-400' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-slate-800' }}">
+                    <span class="material-symbols-rounded">backup</span>
+                    Backup Data
+                </a>
                 <a href="{{ route('admin.surveys.index') }}"
                     class="flex items-center gap-3 px-4 py-3 rounded-xl font-medium transition-colors {{ request()->routeIs('admin.surveys.*') ? 'bg-primary-50 dark:bg-primary-900/20 text-primary-600 dark:text-primary-400' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-slate-800' }}">
                     <span class="material-symbols-rounded">thumbs_up_down</span>
