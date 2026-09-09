@@ -19,6 +19,7 @@ class ParentModel extends Model
     protected $table = 'parents';
 
     protected $fillable = [
+		'data_induk_id',
         'user_id',
         'type',
         'is_teacher',

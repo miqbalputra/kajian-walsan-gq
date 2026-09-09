@@ -54,9 +54,11 @@ class SurveyAnalysis extends Component
             $query->whereDate('created_at', '<=', $this->filterDateEnd);
         }
 
-        $allFeedbacks = $query->get();
-        $totalResponses = $allFeedbacks->count();
-        $averageRating = $totalResponses > 0 ? round($allFeedbacks->avg('rating'), 2) : 0;
+        $summary = (clone $query)
+            ->selectRaw('COUNT(*) as total_responses, AVG(rating) as average_rating')
+            ->first();
+        $totalResponses = (int) ($summary?->total_responses ?? 0);
+        $averageRating = $totalResponses > 0 ? round((float) $summary->average_rating, 2) : 0;
 
         // Multi-criteria averages
         $materiAvg = 0;
@@ -67,12 +69,17 @@ class SurveyAnalysis extends Component
             $operasionalSum = 0;
             $feedbacksWithExtra = 0;
 
-            foreach ($allFeedbacks as $f) {
-                if ($f->extra_feedback) {
-                    $materiSum += $f->extra_feedback['materi'] ?? 0;
-                    $operasionalSum += $f->extra_feedback['operasional'] ?? 0;
-                    $feedbacksWithExtra++;
+            // Select only the JSON column needed for the two auxiliary
+            // averages instead of hydrating every feedback model.
+            foreach ((clone $query)->whereNotNull('extra_feedback')->pluck('extra_feedback') as $extraFeedback) {
+                $extraFeedback = is_string($extraFeedback) ? json_decode($extraFeedback, true) : $extraFeedback;
+                if (! is_array($extraFeedback)) {
+                    continue;
                 }
+
+                $materiSum += (float) ($extraFeedback['materi'] ?? 0);
+                $operasionalSum += (float) ($extraFeedback['operasional'] ?? 0);
+                $feedbacksWithExtra++;
             }
 
             if ($feedbacksWithExtra > 0) {
@@ -81,13 +88,17 @@ class SurveyAnalysis extends Component
             }
         }
 
-        $ratingCounts = [
-            5 => $allFeedbacks->where('rating', '>=', 4.5)->count(),
-            4 => $allFeedbacks->whereBetween('rating', [3.5, 4.4])->count(),
-            3 => $allFeedbacks->whereBetween('rating', [2.5, 3.4])->count(),
-            2 => $allFeedbacks->whereBetween('rating', [1.5, 2.4])->count(),
-            1 => $allFeedbacks->where('rating', '<', 1.5)->count(),
-        ];
+        $ratingCounts = [5 => 0, 4 => 0, 3 => 0, 2 => 0, 1 => 0];
+        foreach ((clone $query)->select('rating')->selectRaw('COUNT(*) as total')->groupBy('rating')->get() as $row) {
+            $bucket = match (true) {
+                (float) $row->rating >= 4.5 => 5,
+                (float) $row->rating >= 3.5 => 4,
+                (float) $row->rating >= 2.5 => 3,
+                (float) $row->rating >= 1.5 => 2,
+                default => 1,
+            };
+            $ratingCounts[$bucket] += (int) $row->total;
+        }
 
         // Monthly Trend (6 months) - compatible with both MySQL and SQLite
         $driver = DB::getDriverName();
@@ -95,7 +106,7 @@ class SurveyAnalysis extends Component
             ? 'strftime("%Y-%m", created_at)'
             : 'DATE_FORMAT(created_at, "%Y-%m")';
 
-        $trendData = KajianFeedback::select(
+        $trendData = (clone $query)->select(
             DB::raw($monthExpr . ' as month'),
             DB::raw('AVG(rating) as avg_rating'),
             DB::raw('COUNT(*) as count')

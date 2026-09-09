@@ -230,6 +230,28 @@ body {
     font-feature-settings: "cv02", "cv03", "cv04", "cv11";
 }
 
+/* Shared polish: visible keyboard focus, comfortable touch targets, and a
+   reduced-motion fallback without changing the existing visual language. */
+:where(a, button, input, select, textarea):focus-visible {
+    outline: 3px solid color-mix(in srgb, var(--color-primary-500) 65%, white);
+    outline-offset: 2px;
+}
+
+:where(button, [role='button'], a) {
+    touch-action: manipulation;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        scroll-behavior: auto !important;
+        transition-duration: 0.01ms !important;
+    }
+}
+
 /* Alpine.js cloak to prevent flash of unstyled content */
 [x-cloak] {
     display: none !important;

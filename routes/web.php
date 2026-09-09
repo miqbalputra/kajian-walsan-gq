@@ -8,7 +8,6 @@ use App\Http\Controllers\HomeController;
 use App\Http\Controllers\PanitiaAttendanceScanController;
 use App\Http\Controllers\PushSubscriptionController;
 use App\Http\Controllers\PublicMustawaOneAttendanceController;
-use App\Http\Middleware\InjectPwaInstallPrompt;
 use App\Livewire\Admin\AnnouncementIndex;
 use App\Livewire\Admin\ArchiveIndex;
 use App\Livewire\Admin\AttendanceTrash;
@@ -52,9 +51,6 @@ use Illuminate\Support\Facades\Route;
 Route::get('/__deploy-version', function () {
     return response()->json([
         'version' => '2026-05-19-push-notification-loader-v4',
-        'commit_hint' => 'push-notification-loader',
-        'pwa_middleware_install' => class_exists(InjectPwaInstallPrompt::class),
-        'pwa_push_script' => file_exists(public_path('js/pwa-push.js')),
         'timestamp' => now()->toISOString(),
     ])->header('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0');
 })->name('deploy.version');

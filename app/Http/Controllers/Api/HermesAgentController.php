@@ -20,6 +20,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\Rules\File;
 
 class HermesAgentController extends Controller
 {
@@ -606,7 +607,7 @@ class HermesAgentController extends Controller
                 Attendance::VALIDATION_PENDING,
                 Attendance::VALIDATION_REJECTED,
             ])],
-            'proof_photo' => ['nullable', 'image', 'mimes:jpg,jpeg,png', 'max:4096'],
+            'proof_photo' => ['nullable', File::image()->types(['jpg', 'jpeg', 'png'])->max(4096)],
             // FIX #3: proof_url hanya menerima URL Cloudinary (res.cloudinary.com)
             // untuk mencegah phishing/SSRF via URL arbitrer yang dikirim ke AI vision model.
             'proof_url' => ['nullable', 'url', 'max:2048', function ($attribute, $value, $fail) {

@@ -24,9 +24,8 @@ class GoogleController extends Controller
     /**
      * Redirect ke Google OAuth (Login page)
      *
-     * Menggunakan stateless() agar flow OAuth tidak bergantung session state.
-     * redirectUrl() dipanggil eksplisit agar redirect_uri di authorize request
-     * dan token exchange request identik, menghindari Google 400 Bad Request.
+     * Socialite session state remains enabled so the callback is bound to the
+     * browser session and protected from login CSRF.
      */
     public function redirect()
     {
@@ -43,7 +42,6 @@ class GoogleController extends Controller
         $redirectUrl = Socialite::driver('google')
             ->redirectUrl($callbackUrl)
             ->scopes(['openid', 'profile', 'email'])
-            ->stateless()
             ->redirect()
             ->getTargetUrl();
 
@@ -67,14 +65,12 @@ class GoogleController extends Controller
         try {
             $googleUser = Socialite::driver('google')
                 ->redirectUrl($callbackUrl)
-                ->stateless()
                 ->user();
         } catch (\Throwable $e) {
             Log::error('[Google Login] Callback failed', [
                 'error' => $e->getMessage(),
                 'class' => get_class($e),
                 'code' => $e->getCode(),
-                'trace' => $e->getTraceAsString(),
                 'request_state' => request()->get('state'),
                 'request_code' => request()->has('code') ? 'present' : 'missing',
                 'redirect_uri_config' => config('services.google.redirect'),
@@ -178,8 +174,8 @@ class GoogleController extends Controller
 
     /**
      * Link akun Google ke akun yang sudah login (dari halaman Profil)
-     * Menggunakan stateless() karena user sudah authenticated —
-     * tidak perlu CSRF state check dari Socialite.
+     * The authenticated browser session is used as the link target. The
+     * Socialite state value binds the provider callback to that session.
      */
     public function linkRedirect()
     {
@@ -191,38 +187,19 @@ class GoogleController extends Controller
 
         $callbackUrl = $this->getLinkCallbackUrl();
 
-        // Enkripsi ID user ke parameter state.
-        // Tujuannya agar jika request direbut oleh Antivirus/Pre-fetcher di background,
-        // backend tetap tahu akun siapa yang harus dilink tanpa butuh auth session.
-        $statePayload = encrypt(Auth::id().'|'.time());
-
         return Socialite::driver('google')
             ->redirectUrl($callbackUrl)
-            ->with(['state' => $statePayload])
-            ->stateless()
             ->redirect();
     }
 
     /**
-     * Handle callback untuk link akun Google (stateless)
+     * Handle callback untuk link akun Google.
      */
     public function linkCallback(Request $request)
     {
         $callbackUrl = $this->getLinkCallbackUrl();
 
-        // 1. Ekstrak User ID dari state jika ada
-        $intendedUserId = null;
-        if ($request->has('state')) {
-            try {
-                $decrypted = decrypt($request->state);
-                $intendedUserId = explode('|', $decrypted)[0] ?? null;
-            } catch (\Throwable $e) {
-                // Abaikan jika tidak valid
-            }
-        }
-
-        // Tentukan target fallback user (dari Auth session atau dari state rahasia)
-        $targetUser = Auth::user() ?? ($intendedUserId ? User::find($intendedUserId) : null);
+        $targetUser = Auth::user();
 
         if (! $targetUser) {
             return redirect()->route('login')->withErrors([
@@ -234,29 +211,15 @@ class GoogleController extends Controller
         try {
             $googleUser = Socialite::driver('google')
                 ->redirectUrl($callbackUrl)
-                ->stateless()
                 ->user();
         } catch (\Throwable $e) {
-            // DETEKSI DOUBLE REQUEST:
-            // Jika token exchange gagal (biasanya karena invalid_grant)
-            // KITA CEK apakah akun user ternyata BARUSAJA berhasil di-link dalam 2 menit terakhir!
-            // Jika iya, artinya proses pertama (Antivirus) berhasil, dan ini adalah proses kedua (Browser).
-            if (
-                str_contains($e->getMessage(), 'invalid_grant') &&
-                $targetUser->google_id !== null &&
-                $targetUser->updated_at->diffInSeconds(now()) < 120
-            ) {
-                return redirect()->route('wali-santri.profile')->with('google-success', 'Akun Google berhasil dihubungkan! (Diselamatkan dari interupsi keamanan browser)');
-            }
-
-            // Jika error lain atau belum terlink sama sekali, tampilkan error aslinya
             Log::error('[Google Link] Callback failed', [
                 'error' => $e->getMessage(),
                 'callback_url' => $callbackUrl,
                 'target_user' => $targetUser->id,
             ]);
 
-            return redirect()->route('wali-santri.profile')->with('google-error', 'Gagal menghubungkan akun Google. Pastikan Client Secret di .env server sudah sesuai dengan Google Cloud. (Error: '.$e->getMessage().')');
+            return redirect()->route('wali-santri.profile')->with('google-error', 'Gagal menghubungkan akun Google. Silakan mulai kembali dari halaman profil.');
         }
 
         // 3. Proses linking normal (Token berhasil ditukar)
@@ -273,8 +236,6 @@ class GoogleController extends Controller
 
         Log::info('[Google Link] Success', ['user_id' => $targetUser->id, 'google_id' => $googleUser->getId()]);
 
-        // Jika ini adalah request background dari antivirus (Auth::user() null), kita ga perlu pusing soal redirect
-        // Karena browser aslinya nanti akan menyusul dan memicu catch blok di atas.
         return redirect()->route('wali-santri.profile')->with('google-success', 'Akun Google berhasil dihubungkan! Sekarang Anda bisa login dengan Google.');
     }
 

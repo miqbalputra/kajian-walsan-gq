@@ -10,6 +10,7 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\Rules\File;
 use Illuminate\View\View;
 
 class PublicMustawaOneAttendanceController extends Controller
@@ -40,13 +41,12 @@ class PublicMustawaOneAttendanceController extends Controller
             'student_id' => ['required', 'integer'],
             'parent_type' => ['required', Rule::in(['father', 'mother'])],
             'status' => ['required', Rule::in([Attendance::STATUS_HADIR_ONLINE, Attendance::STATUS_IZIN])],
-            'proof_file' => ['required', 'image', 'mimes:jpg,jpeg,png', 'max:2048'],
+            'proof_file' => ['required', File::image()->types(['jpg', 'jpeg', 'png'])->max(2048)],
             'notes' => ['nullable', 'string', 'max:500', 'required_if:status,'.Attendance::STATUS_IZIN],
             'website' => ['nullable', 'max:0'],
         ], [
             'proof_file.required' => 'Foto bukti wajib diupload.',
             'proof_file.image' => 'Bukti harus berupa foto JPG atau PNG.',
-            'proof_file.mimes' => 'Format foto harus JPG atau PNG.',
             'proof_file.max' => 'Ukuran foto maksimal 2 MB.',
             'notes.required_if' => 'Alasan izin wajib diisi.',
         ]);

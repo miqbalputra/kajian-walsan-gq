@@ -6,6 +6,8 @@ use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
+use RuntimeException;
 
 class CloudinaryService
 {
@@ -33,6 +35,8 @@ class CloudinaryService
      */
     public function upload(UploadedFile $file, string $subfolder = 'uploads'): array
     {
+        $this->assertSafeImage($file);
+
         if (!$this->enabled || empty($this->cloudName)) {
             // Fallback ke local storage
             $path = $file->store($subfolder, 'public');
@@ -54,8 +58,8 @@ class CloudinaryService
         $folder = $this->folder . '/' . $subfolder;
 
         // Determine resource type — saat ini hanya image (PDF dinonaktifkan)
-        $extension = strtolower($file->getClientOriginalExtension());
-        $resourceType = in_array($extension, ['pdf', 'doc', 'docx']) ? 'raw' : 'image';
+        $extension = strtolower($file->extension() ?: 'jpg');
+        $resourceType = 'image';
 
         // Transformation only applies to images, NOT raw files
         $quality = config('cloudinary.quality', 'auto:eco');
@@ -94,7 +98,7 @@ class CloudinaryService
 
         try {
             $response = Http::timeout(30)
-                ->attach('file', file_get_contents($file->getRealPath()), $file->getClientOriginalName())
+                ->attach('file', file_get_contents($file->getRealPath()), Str::uuid()->toString().'.'.$extension)
                 ->post("https://api.cloudinary.com/v1_1/{$this->cloudName}/{$resourceType}/upload", $payload);
 
             if ($response->successful()) {
@@ -117,18 +121,16 @@ class CloudinaryService
                 }
             }
 
-            // Log full Cloudinary error response
             Log::error('[Cloudinary] Upload failed', [
                 'resource_type' => $resourceType,
                 'extension'     => $extension,
                 'status'        => $response->status(),
-                'body'          => $response->body(),
             ]);
 
         } catch (\Exception $e) {
             Log::error('[Cloudinary] Exception during upload', [
-                'message' => $e->getMessage(),
-                'trace'   => $e->getTraceAsString(),
+                'exception' => $e::class,
+                'message' => Str::limit($e->getMessage(), 300),
             ]);
         }
 
@@ -141,6 +143,18 @@ class CloudinaryService
             'url'      => $path,
             'is_cloud' => false,
         ];
+    }
+
+    private function assertSafeImage(UploadedFile $file): void
+    {
+        if (! $file->isValid()) {
+            throw new RuntimeException('File upload tidak valid.');
+        }
+
+        $allowedMimes = ['image/jpeg', 'image/png'];
+        if (! in_array($file->getMimeType(), $allowedMimes, true) || @getimagesize($file->getRealPath()) === false) {
+            throw new RuntimeException('File upload harus berupa gambar JPG atau PNG yang valid.');
+        }
     }
 
     /**

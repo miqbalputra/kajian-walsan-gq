@@ -19,15 +19,15 @@ class VerifyHermesAgent
             ], 503);
         }
 
-        $providedSecret = $request->header('X-Hermes-Secret')
-            ?: $request->bearerToken()
-            ?: $request->input('secret');
+        // Secrets must stay in headers. Accepting a body/query field makes
+        // accidental proxy/server access logging a credential disclosure risk.
+        $providedSecret = $request->header('X-Hermes-Secret') ?: $request->bearerToken();
 
         if (! is_string($providedSecret) || ! hash_equals($configuredSecret, $providedSecret)) {
             return response()->json([
                 'success' => false,
                 'message' => 'Unauthorized Hermes Agent.',
-            ], 403);
+            ], 401);
         }
 
         return $next($request);

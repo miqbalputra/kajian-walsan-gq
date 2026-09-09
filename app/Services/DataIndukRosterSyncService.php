@@ -37,6 +37,7 @@ final class DataIndukRosterSyncService
 
                 if ($masterId === '' || $nis === '' || $name === '') {
                     $result['conflicts'][] = 'Data roster tanpa ID master, NIS, atau nama dilewati.';
+                    $this->recordConflict('student', $masterId ?: null, null, 'Roster tanpa ID master, NIS, atau nama.', $remote);
 
                     continue;
                 }
@@ -46,6 +47,7 @@ final class DataIndukRosterSyncService
 
                 if ($byMasterId && $byNis && $byMasterId->id !== $byNis->id) {
                     $result['conflicts'][] = "NIS {$nis} sudah terkait ke siswa Kajian lain.";
+                    $this->recordConflict('student', $masterId, $byNis->id, "NIS {$nis} sudah terkait ke siswa Kajian lain.", $remote);
 
                     continue;
                 }
@@ -90,6 +92,17 @@ final class DataIndukRosterSyncService
         });
     }
 
+    /**
+     * A master archive never deletes Kajian-owned attendance or transactions.
+     * It only disables the mirrored identity from future Kajian rosters.
+     */
+    public function archiveMasterStudent(string $masterId): int
+    {
+        return Student::query()
+            ->where('data_induk_id', $masterId)
+            ->update(['is_active' => false, 'student_status' => 'archived']);
+    }
+
     /** @param array<int, string> $unmappedClassIds */
     private function localClassId(mixed $masterClassId, array &$unmappedClassIds): ?int
     {
@@ -98,13 +111,41 @@ final class DataIndukRosterSyncService
             return null;
         }
 
-        $localClassId = config('data-induk.class_map.'.$masterClassId);
-        if (! $localClassId || ! ClassRoom::query()->whereKey($localClassId)->exists()) {
+        $localClassId = ClassRoom::query()->where('data_induk_id', $masterClassId)->value('id');
+        $localClassId ??= config('data-induk.class_map.'.$masterClassId);
+        if (! $localClassId) {
             $unmappedClassIds[] = $masterClassId;
 
             return null;
         }
 
         return (int) $localClassId;
+    }
+
+    /** @param array<string, mixed> $payload */
+    private function recordConflict(string $entityType, ?string $masterId, ?int $localId, string $reason, array $payload): void
+    {
+        $query = DB::table('data_induk_sync_conflicts')
+            ->where('entity_type', $entityType)
+            ->where('reason', $reason)
+            ->where('status', 'open');
+        if ($masterId === null) {
+            $query->whereNull('master_id');
+        } else {
+            $query->where('master_id', $masterId);
+        }
+        $existing = $query->first();
+        $values = ['local_id' => $localId, 'payload' => json_encode($payload), 'updated_at' => now()];
+        if ($existing) {
+            DB::table('data_induk_sync_conflicts')->where('id', $existing->id)->update($values);
+            return;
+        }
+        DB::table('data_induk_sync_conflicts')->insert($values + [
+            'entity_type' => $entityType,
+            'master_id' => $masterId,
+            'reason' => $reason,
+            'status' => 'open',
+            'created_at' => now(),
+        ]);
     }
 }

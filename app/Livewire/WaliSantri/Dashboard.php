@@ -15,6 +15,7 @@ use BaconQrCode\Renderer\ImageRenderer;
 use BaconQrCode\Renderer\RendererStyle\RendererStyle;
 use BaconQrCode\Writer;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Validation\Rules\File;
 use Livewire\Component;
 use Livewire\WithFileUploads;
 
@@ -56,10 +57,13 @@ class Dashboard extends Component
 
     public $notes = '';
 
-    protected $rules = [
-        'proofPhoto' => 'required|image|mimes:jpg,jpeg,png|max:2048',
-        'notes' => 'nullable|string|max:500',
-    ];
+    protected function rules(): array
+    {
+        return [
+            'proofPhoto' => ['required', File::image()->types(['jpg', 'jpeg', 'png'])->max(2048)],
+            'notes' => 'nullable|string|max:500',
+        ];
+    }
 
     public function getParentProperty()
     {
@@ -274,7 +278,7 @@ class Dashboard extends Component
     public function submitPhysicalAttendance()
     {
         $this->validate([
-            'proofPhoto' => 'required|image|mimes:jpg,jpeg,png|max:2048',
+            'proofPhoto' => ['required', File::image()->types(['jpg', 'jpeg', 'png'])->max(2048)],
             'notes' => 'nullable|string|max:500',
         ]);
 
@@ -343,7 +347,7 @@ class Dashboard extends Component
     public function submitOnlineAttendance()
     {
         $this->validate([
-            'proofPhoto' => 'required|image|mimes:jpg,jpeg,png|max:2048',
+            'proofPhoto' => ['required', File::image()->types(['jpg', 'jpeg', 'png'])->max(2048)],
         ]);
 
         if (! $this->activeEvent || ! $this->parent || ! $this->ensureEligibleForActiveEvent()) {
@@ -403,7 +407,7 @@ class Dashboard extends Component
     public function submitIzin()
     {
         $this->validate([
-            'izinDocument' => 'required|image|mimes:jpg,jpeg,png|max:2048',
+            'izinDocument' => ['required', File::image()->types(['jpg', 'jpeg', 'png'])->max(2048)],
             'notes' => 'required|string|max:500',
         ]);
 
@@ -479,7 +483,7 @@ class Dashboard extends Component
     public function reuploadProof()
     {
         $this->validate([
-            'reuploadFile' => 'required|image|mimes:jpg,jpeg,png|max:2048',
+            'reuploadFile' => ['required', File::image()->types(['jpg', 'jpeg', 'png'])->max(2048)],
         ], [
             'reuploadFile.required' => 'File bukti wajib diupload.',
             'reuploadFile.mimes' => 'Format file harus JPG atau PNG.',
@@ -736,10 +740,32 @@ class Dashboard extends Component
             'ratingOperasional.min' => 'Beri penilaian untuk Kualitas Teknis/Fasilitas.',
         ]);
 
+        $event = KajianEvent::query()
+            ->whereKey((int) $this->feedbackEventId)
+            ->whereHas('attendances', function ($query) {
+                $query->where('parent_id', $this->parent?->id)
+                    ->whereIn('status', [
+                        Attendance::STATUS_HADIR_FISIK,
+                        Attendance::STATUS_HADIR_ONLINE,
+                        Attendance::STATUS_IZIN,
+                    ]);
+            })
+            ->where(function ($query) {
+                $query->whereDate('date', '<', today())
+                    ->orWhere('status', 'closed');
+            })
+            ->first();
+
+        if (! $event) {
+            $this->addError('feedbackEventId', 'Feedback hanya dapat dikirim untuk kajian yang Anda ikuti.');
+
+            return;
+        }
+
         $overallRating = round(($this->ratingMateri + $this->ratingOperasional) / 2, 1);
 
         KajianFeedback::updateOrCreate(
-            ['kajian_event_id' => $this->feedbackEventId, 'user_id' => auth()->id()],
+            ['kajian_event_id' => $event->id, 'user_id' => auth()->id()],
             [
                 'rating' => $overallRating,
                 'comment' => $this->feedbackComment,

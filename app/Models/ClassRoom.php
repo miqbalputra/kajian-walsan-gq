@@ -16,6 +16,7 @@ class ClassRoom extends Model
     protected $table = 'classes';
 
     protected $fillable = [
+		'data_induk_id',
         'name',
         'level',
         'capacity',

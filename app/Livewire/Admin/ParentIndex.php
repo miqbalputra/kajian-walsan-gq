@@ -23,6 +23,7 @@ use BaconQrCode\Writer;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Validation\Rules\File;
 use Livewire\Component;
 use Livewire\WithFileUploads;
 use Livewire\WithPagination;
@@ -185,7 +186,7 @@ class ParentIndex extends Component
             'name' => 'required|string|max:100',
             'username' => 'required|string|max:50',
             'email' => 'required|email|max:255',
-            'password' => 'nullable|string|min:6',
+            'password' => $this->editMode ? 'nullable|string|min:12' : 'required|string|min:12',
             'nik' => 'nullable|string|max:20',
             'phone' => $phoneRules,
             'type' => 'required|in:'.$allowedTypes,
@@ -365,7 +366,7 @@ class ParentIndex extends Component
                     'name' => $this->name,
                     'username' => $this->username,
                     'email' => $this->email,
-                    'password' => Hash::make($this->password ?: 'password'),
+                    'password' => Hash::make($this->password),
                     'phone' => $this->phone,
                     'role_id' => $targetRole?->id,
                     'is_active' => true,
@@ -584,7 +585,9 @@ class ParentIndex extends Component
         $this->validate([
             'manualKajianEventId' => 'required|exists:kajian_events,id',
             'manualStatus' => 'required|in:hadir_fisik,hadir_online,izin',
-            'manualProofFile' => $this->manualStatus !== 'hadir_fisik' ? 'required|file|image|max:2048' : 'nullable',
+            'manualProofFile' => $this->manualStatus !== 'hadir_fisik'
+                ? ['required', File::image()->types(['jpg', 'jpeg', 'png'])->max(2048)]
+                : 'nullable',
             'manualNotes' => 'nullable|string|max:500',
         ], [
             'manualProofFile.required' => $this->manualStatus === 'hadir_online' ? 'Catatan kajian wajib diupload.' : 'Surat pernyataan izin wajib diupload.',

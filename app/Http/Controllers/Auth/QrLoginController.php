@@ -84,6 +84,7 @@ class QrLoginController extends Controller
 
         // Login the user
         Auth::login($user, true);
+        $request->session()->regenerate();
 
         return response()->json([
             'success' => true,

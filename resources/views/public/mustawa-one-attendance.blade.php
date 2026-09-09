@@ -10,6 +10,7 @@
 
     <div class="min-h-screen bg-slate-100 px-4 py-7 sm:py-10">
         <main class="mx-auto max-w-xl" x-data="{
+            submitting: false,
             students: @js($studentOptions),
             studentId: @js((string) old('student_id', '')),
             parentType: @js(old('parent_type', '')),
@@ -60,7 +61,8 @@
                         <div class="mb-5 rounded-2xl border border-red-200 bg-red-50 p-4 text-sm font-medium text-red-700">{{ $message }}</div>
                     @enderror
 
-                    <form method="POST" action="{{ route('public.mustawa-one-form.store', ['token' => $link->token]) }}" enctype="multipart/form-data" class="space-y-5">
+                    <form method="POST" action="{{ route('public.mustawa-one-form.store', ['token' => $link->token]) }}" enctype="multipart/form-data" class="space-y-5"
+                        x-on:submit="if (submitting) { $event.preventDefault(); return; } submitting = true">
                         @csrf
 
                         <div class="absolute -left-[10000px] top-auto h-px w-px overflow-hidden" aria-hidden="true">
@@ -145,9 +147,11 @@
                             @error('notes') <p class="mt-1 text-xs font-medium text-red-600">{{ $message }}</p> @enderror
                         </div>
 
-                        <button type="submit" class="flex w-full items-center justify-center gap-2 rounded-xl bg-emerald-600 px-5 py-3.5 text-sm font-extrabold text-white shadow-lg shadow-emerald-600/20 transition-colors hover:bg-emerald-700">
-                            <span class="material-symbols-rounded">upload_file</span>
-                            Kirim Bukti Presensi
+                        <button type="submit" x-bind:disabled="submitting"
+                            class="flex w-full items-center justify-center gap-2 rounded-xl bg-emerald-600 px-5 py-3.5 text-sm font-extrabold text-white shadow-lg shadow-emerald-600/20 transition-colors hover:bg-emerald-700 disabled:cursor-wait disabled:opacity-70">
+                            <span x-show="!submitting" class="material-symbols-rounded">upload_file</span>
+                            <span x-show="submitting" class="material-symbols-rounded animate-spin">progress_activity</span>
+                            <span x-text="submitting ? 'Mengirim...' : 'Kirim Bukti Presensi'"></span>
                         </button>
                     </form>
                 </section>

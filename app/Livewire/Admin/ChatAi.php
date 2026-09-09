@@ -62,7 +62,8 @@ class ChatAi extends Component
         try {
             $answer = app(AiProviderService::class)->chatWithDatabase($question, $this->messages);
         } catch (\Throwable $exception) {
-            $answer = 'AI belum bisa menjawab: ' . $exception->getMessage();
+            report($exception);
+            $answer = 'AI belum bisa menjawab saat ini. Silakan coba lagi beberapa saat lagi.';
         }
 
         AiChatMessage::create([

@@ -14,7 +14,7 @@ use Illuminate\Support\Facades\Route;
 // Jalur khusus Hermes Agent - akses data dan aksi presensi Wali Santri/Guru.
 Route::prefix('hermes-agent')
     ->name('hermes-agent.')
-    ->middleware('hermes.agent')
+    ->middleware(['hermes.agent', 'throttle:120,1'])
     ->group(function () {
         Route::post('/', [HermesAgentController::class, 'handle'])->name('handle');
         Route::get('/overview', [HermesAgentController::class, 'overview'])->name('overview');

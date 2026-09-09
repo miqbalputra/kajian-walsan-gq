@@ -64,12 +64,26 @@ class Profile extends Component
 
     public function selectAvatar($icon, $color)
     {
+        $isAllowed = collect($this->avatarPresets)->contains(
+            fn (array $preset): bool => $preset['icon'] === $icon && $preset['color'] === $color
+        );
+
+        if (! $isAllowed) {
+            return;
+        }
+
         $this->avatar = "icon:{$icon}|{$color}";
     }
 
     public function updateProfile()
     {
         $user = auth()->user();
+
+        if (! collect($this->avatarPresets)->contains(
+            fn (array $preset): bool => "icon:{$preset['icon']}|{$preset['color']}" === $this->avatar
+        )) {
+            $this->avatar = 'icon:mosque|bg-indigo-500';
+        }
 
         $this->validate([
             'name' => 'required|string|max:255',

@@ -39,6 +39,84 @@ final class DataIndukClient
         return $data;
     }
 
+    /**
+     * @return array{items:array<int, array<string, mixed>>,nextCursor:int}
+     */
+    public function changes(?string $cursor = null, ?string $unitId = null): array
+    {
+        $data = $this->responseData('integrations/changes', array_filter([
+            'cursor' => $cursor,
+            'unitId' => $unitId ?? config('data-induk.unit_id'),
+            'limit' => 200,
+        ], static fn (mixed $value): bool => filled($value)));
+
+        $items = $data['items'] ?? null;
+        if (! is_array($items) || ! isset($data['nextCursor'])) {
+            throw new RuntimeException('Respons perubahan Data Induk tidak valid.');
+        }
+
+        return ['items' => $items, 'nextCursor' => (int) $data['nextCursor']];
+    }
+
+    /** @return array<int, array<string, mixed>> */
+    public function referenceClasses(?string $unitId = null): array
+    {
+        return $this->collection('integrations/references/classes', array_filter([
+            'unitId' => $unitId ?? config('data-induk.unit_id'),
+        ], static fn (mixed $value): bool => filled($value)));
+    }
+
+    /** @return array<int, array<string, mixed>> */
+    public function guardians(?string $unitId = null): array
+    {
+        return $this->collection('integrations/guardians', array_filter([
+            'unitId' => $unitId ?? config('data-induk.unit_id'),
+        ], static fn (mixed $value): bool => filled($value)));
+    }
+
+    /** @return array<int, array<string, mixed>> */
+    public function familyLinks(?string $unitId = null): array
+    {
+        return $this->collection('integrations/family-links', array_filter([
+            'unitId' => $unitId ?? config('data-induk.unit_id'),
+        ], static fn (mixed $value): bool => filled($value)));
+    }
+
+    /** @return array<int, array<string, mixed>> */
+    public function enrollments(?string $unitId = null): array
+    {
+        return $this->collection('integrations/enrollments', array_filter([
+            'unitId' => $unitId ?? config('data-induk.unit_id'),
+        ], static fn (mixed $value): bool => filled($value)));
+    }
+
+    /** @return array<int, array<string, mixed>> */
+    private function collection(string $path, array $query): array
+    {
+        $data = $this->responseData($path, $query);
+        $data = $data['items'] ?? $data;
+        if (! is_array($data)) {
+            throw new RuntimeException('Respons koleksi Data Induk tidak valid.');
+        }
+        return $data;
+    }
+
+    /** @return array<string, mixed> */
+    private function responseData(string $path, array $query): array
+    {
+        $this->ensureConfigured();
+        try {
+            $response = $this->request()->retry(2, 200, static fn (Throwable $exception): bool => $exception instanceof ConnectionException)->get($path, $query)->throw();
+        } catch (ConnectionException $exception) {
+            throw new RuntimeException('Data Induk tidak dapat dijangkau. Periksa jaringan server.', previous: $exception);
+        }
+        $data = $response->json('data');
+        if (! is_array($data)) {
+            throw new RuntimeException('Respons Data Induk tidak valid.');
+        }
+        return $data;
+    }
+
     public function isConfigured(): bool
     {
         return (bool) config('data-induk.enabled')

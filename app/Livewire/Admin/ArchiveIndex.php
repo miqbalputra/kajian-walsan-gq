@@ -9,6 +9,7 @@ use App\Models\Student;
 use App\Services\ParentArchiveService;
 use App\Services\StudentArchiveService;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Validation\Rules\File;
 use Livewire\Component;
 use Livewire\WithFileUploads;
 use Livewire\WithPagination;
@@ -95,7 +96,7 @@ class ArchiveIndex extends Component
             'reason' => ['nullable', 'string', 'max:500'],
             'destination' => ['nullable', 'string', 'max:255'],
             'notes' => ['nullable', 'string', 'max:2000'],
-            'evidenceFile' => ['nullable', 'file', 'mimes:jpg,jpeg,png,pdf', 'max:5120'],
+            'evidenceFile' => ['nullable', File::types(['jpg', 'jpeg', 'png', 'pdf'])->max(5120)],
         ]);
 
         $storedPath = null;

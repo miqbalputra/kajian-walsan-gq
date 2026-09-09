@@ -396,7 +396,7 @@
                                     {{ $editMode ? '(kosongkan jika tidak diubah)' : '' }}</label>
                                 <input type="password" wire:model="password"
                                     class="w-full px-4 py-2.5 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                                    placeholder="{{ $editMode ? '••••••••' : '' }}">
+                                    placeholder="{{ $editMode ? '••••••••••••' : 'Minimal 12 karakter' }}">
                                 @error('password') <span class="text-red-500 text-sm">{{ $message }}</span> @enderror
                             </div>
                             <div class="grid grid-cols-2 lg:grid-cols-3 gap-4">
