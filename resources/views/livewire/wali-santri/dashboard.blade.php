@@ -566,7 +566,7 @@
                         <span class="block mt-2 text-amber-600 text-xs font-semibold">Pastikan yang dikirim benar-benar foto catatan, bukan kipas, ruangan, meja, atau objek lain. Foto akan diperiksa otomatis.</span>
                     </p>
 
-                    <form wire:submit="submitPhysicalAttendance">
+                    <form wire:submit="submitPhysicalAttendance" x-data="imageUploadForm()" x-on:submit="markSaving($event)">
                         <div class="space-y-6">
                             <div>
                                 <label class="block text-xs font-black text-slate-400 uppercase tracking-widest mb-3">
@@ -574,21 +574,11 @@
                                     <span class="text-emerald-500">*</span>
                                 </label>
                                 <div class="border-2 border-dashed border-slate-200 rounded-3xl p-8 text-center hover:border-emerald-500 hover:bg-emerald-50/30 transition-all cursor-pointer relative group"
-                                    x-data="{ compressing: false }" data-compress-container>
+                                    data-compress-container>
                                     <input type="file" accept="image/jpeg,image/png"
-                                        wire:model="proofPhoto"
+                                        data-image-upload-input x-on:change="uploadLivewire($wire, 'proofPhoto', $event)" x-bind:disabled="isInputBusy()"
                                         class="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-                                        x-on:change="
-                                            const input = $event.target;
-                                            if (input.files[0] && input.files[0].type.startsWith('image/')) {
-                                                compressing = true;
-                                                const compressed = await window.ImageCompressor.compress(input.files[0]);
-                                                const dt = new DataTransfer();
-                                                dt.items.add(compressed);
-                                                input.files = dt.files;
-                                                compressing = false;
-                                            }
-                                        ">
+                                        >
 
                                     @if($proofPhoto)
                                         <div class="relative pointer-events-none">
@@ -604,15 +594,25 @@
                                             </div>
                                             <div>
                                                 <p class="text-sm font-bold text-slate-700">Klik untuk upload foto</p>
-                                                <p class="text-[10px] text-slate-400 font-medium uppercase tracking-wider mt-1">JPG/PNG, Maks 2MB</p>
+                                                <p class="text-[10px] text-slate-400 font-medium uppercase tracking-wider mt-1">JPG/PNG, otomatis dikompres ≤1MB</p>
                                             </div>
                                         </div>
                                     @endif
 
-                                    <div x-show="compressing" class="flex flex-col items-center gap-2 py-2">
-                                        <span class="material-symbols-rounded text-emerald-500 animate-spin text-3xl">progress_activity</span>
-                                        <p class="text-xs font-bold text-emerald-600">Mengompresi foto...</p>
+                                </div>
+                                <div x-cloak x-show="hasUploadStatus()" class="mt-4 space-y-2 rounded-2xl border border-slate-100 bg-slate-50 p-3">
+                                    <div class="flex items-center justify-between gap-3 text-xs font-bold text-slate-600">
+                                        <span x-text="statusText"></span>
+                                        <span x-show="uploadState === 'uploading'" x-text="`${progress}%`"></span>
                                     </div>
+                                    <div class="h-3 w-full overflow-hidden rounded-full bg-slate-200" role="progressbar" aria-label="Progress upload foto"
+                                        x-bind:aria-valuenow="progress" aria-valuemin="0" aria-valuemax="100">
+                                        <div class="h-full rounded-full bg-emerald-600 transition-all duration-300" x-bind:style="`width: ${progress}%`"></div>
+                                    </div>
+                                    <p x-show="originalSize && compressedSize" class="text-[11px] text-slate-500">
+                                        Ukuran: <span x-text="originalSize"></span> → <span class="font-bold text-emerald-700" x-text="compressedSize"></span>
+                                    </p>
+                                    <p x-show="errorMessage" class="text-xs font-semibold text-red-600" x-text="errorMessage"></p>
                                 </div>
                                 @error('proofPhoto') <span class="text-red-500 text-xs font-bold mt-2 block">{{ $message }}</span> @enderror
                             </div>
@@ -630,7 +630,7 @@
                                 class="flex-1 px-6 py-4 border border-slate-100 text-slate-500 rounded-2xl font-bold hover:bg-slate-50 transition-all">
                                 Batalkan Pilihan
                             </button>
-                            <button type="submit"
+                            <button type="submit" x-bind:disabled="isSubmitBusy()"
                                 class="flex-1 px-6 py-4 bg-emerald-600 text-white rounded-2xl font-bold hover:bg-emerald-700 flex items-center justify-center gap-3 shadow-xl shadow-emerald-500/20 transition-all active:scale-95"
                                 wire:loading.attr="disabled">
                                 <span wire:loading wire:target="submitPhysicalAttendance"
@@ -665,7 +665,7 @@
                         <span class="block mt-2 text-amber-600 text-xs font-semibold">Kirim foto catatan hasil kajian yang terlihat jelas. Jangan kirim foto kipas, ruangan, meja, atau objek lain.</span>
                     </p>
 
-                    <form wire:submit="submitOnlineAttendance">
+                    <form wire:submit="submitOnlineAttendance" x-data="imageUploadForm()" x-on:submit="markSaving($event)">
                         <div class="space-y-6">
                             <div>
                                 <label class="block text-xs font-black text-slate-400 uppercase tracking-widest mb-3">
@@ -673,21 +673,11 @@
                                     <span class="text-primary-500">*</span>
                                 </label>
                                 <div class="border-2 border-dashed border-slate-200 rounded-3xl p-8 text-center hover:border-primary-500 hover:bg-primary-50/30 transition-all cursor-pointer relative group"
-                                    x-data="{ compressing: false }" data-compress-container>
+                                    data-compress-container>
                                     <input type="file" accept="image/jpeg,image/png"
-                                        wire:model="proofPhoto"
+                                        data-image-upload-input x-on:change="uploadLivewire($wire, 'proofPhoto', $event)" x-bind:disabled="isInputBusy()"
                                         class="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-                                        x-on:change="
-                                            const input = $event.target;
-                                            if (input.files[0] && input.files[0].type.startsWith('image/')) {
-                                                compressing = true;
-                                                const compressed = await window.ImageCompressor.compress(input.files[0]);
-                                                const dt = new DataTransfer();
-                                                dt.items.add(compressed);
-                                                input.files = dt.files;
-                                                compressing = false;
-                                            }
-                                        ">
+                                        >
 
                                     @if($proofPhoto)
                                         <div class="relative pointer-events-none">
@@ -703,16 +693,25 @@
                                             </div>
                                             <div>
                                                 <p class="text-sm font-bold text-slate-700">Klik untuk upload foto</p>
-                                                <p class="text-[10px] text-slate-400 font-medium uppercase tracking-wider mt-1">JPG/PNG, Maks 2MB</p>
+                                                <p class="text-[10px] text-slate-400 font-medium uppercase tracking-wider mt-1">JPG/PNG, otomatis dikompres ≤1MB</p>
                                             </div>
                                         </div>
                                     @endif
 
-                                    <!-- Compression loading indicator -->
-                                    <div x-show="compressing" class="flex flex-col items-center gap-2 py-2">
-                                        <span class="material-symbols-rounded text-primary-500 animate-spin text-3xl">progress_activity</span>
-                                        <p class="text-xs font-bold text-primary-600">Mengompresi foto...</p>
+                                </div>
+                                <div x-cloak x-show="hasUploadStatus()" class="mt-4 space-y-2 rounded-2xl border border-slate-100 bg-slate-50 p-3">
+                                    <div class="flex items-center justify-between gap-3 text-xs font-bold text-slate-600">
+                                        <span x-text="statusText"></span>
+                                        <span x-show="uploadState === 'uploading'" x-text="`${progress}%`"></span>
                                     </div>
+                                    <div class="h-3 w-full overflow-hidden rounded-full bg-slate-200" role="progressbar" aria-label="Progress upload foto"
+                                        x-bind:aria-valuenow="progress" aria-valuemin="0" aria-valuemax="100">
+                                        <div class="h-full rounded-full bg-primary-600 transition-all duration-300" x-bind:style="`width: ${progress}%`"></div>
+                                    </div>
+                                    <p x-show="originalSize && compressedSize" class="text-[11px] text-slate-500">
+                                        Ukuran: <span x-text="originalSize"></span> → <span class="font-bold text-primary-700" x-text="compressedSize"></span>
+                                    </p>
+                                    <p x-show="errorMessage" class="text-xs font-semibold text-red-600" x-text="errorMessage"></p>
                                 </div>
                                 @error('proofPhoto') <span class="text-red-500 text-xs font-bold mt-2 block">{{ $message }}</span> @enderror
                             </div>
@@ -730,7 +729,7 @@
                                 class="flex-1 px-6 py-4 border border-slate-100 text-slate-500 rounded-2xl font-bold hover:bg-slate-50 transition-all">
                                 Batalkan Pilihan
                             </button>
-                            <button type="submit"
+                            <button type="submit" x-bind:disabled="isSubmitBusy()"
                                 class="flex-1 px-6 py-4 bg-primary-600 text-white rounded-2xl font-bold hover:bg-primary-700 flex items-center justify-center gap-3 shadow-xl shadow-primary-500/20 transition-all active:scale-95"
                                 wire:loading.attr="disabled">
                                 <span wire:loading wire:target="submitOnlineAttendance"
@@ -765,7 +764,7 @@
                         <span class="block mt-2 text-amber-600 text-xs font-semibold">Upload foto surat/pernyataan yang lengkap dan terbaca, bukan foto objek atau ruangan.</span>
                     </p>
 
-                    <form wire:submit="submitIzin">
+                    <form wire:submit="submitIzin" x-data="imageUploadForm()" x-on:submit="markSaving($event)">
                         <div class="space-y-6">
                             <div>
                                 <label class="block text-xs font-black text-slate-400 uppercase tracking-widest mb-3">
@@ -773,22 +772,12 @@
                                     <span class="text-amber-500">*</span>
                                 </label>
                                 <div class="border-2 border-dashed border-slate-200 rounded-3xl p-8 text-center hover:border-amber-500 hover:bg-amber-50/30 transition-all cursor-pointer relative group"
-                                    x-data="{ compressing: false }" data-compress-container>
+                                    data-compress-container>
                                     <input type="file"
                                         accept="image/jpeg,image/png"
-                                        wire:model="izinDocument"
+                                        data-image-upload-input x-on:change="uploadLivewire($wire, 'izinDocument', $event)" x-bind:disabled="isInputBusy()"
                                         class="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-                                        x-on:change="
-                                            const input = $event.target;
-                                            if (input.files[0] && input.files[0].type.startsWith('image/')) {
-                                                compressing = true;
-                                                const compressed = await window.ImageCompressor.compress(input.files[0]);
-                                                const dt = new DataTransfer();
-                                                dt.items.add(compressed);
-                                                input.files = dt.files;
-                                                compressing = false;
-                                            }
-                                        ">
+                                        >
 
                                     @if($izinDocument)
                                         <div class="relative pointer-events-none">
@@ -804,16 +793,25 @@
                                             </div>
                                             <div>
                                                 <p class="text-sm font-bold text-slate-700">Klik untuk upload surat</p>
-                                                <p class="text-[10px] text-slate-400 font-medium uppercase tracking-wider mt-1">JPG/PNG, Maks 2MB</p>
+                                                <p class="text-[10px] text-slate-400 font-medium uppercase tracking-wider mt-1">JPG/PNG, otomatis dikompres ≤1MB</p>
                                             </div>
                                         </div>
                                     @endif
 
-                                    <!-- Compression loading indicator -->
-                                    <div x-show="compressing" class="flex flex-col items-center gap-2 py-2">
-                                        <span class="material-symbols-rounded text-amber-500 animate-spin text-3xl">progress_activity</span>
-                                        <p class="text-xs font-bold text-amber-600">Mengompresi foto...</p>
+                                </div>
+                                <div x-cloak x-show="hasUploadStatus()" class="mt-4 space-y-2 rounded-2xl border border-slate-100 bg-slate-50 p-3">
+                                    <div class="flex items-center justify-between gap-3 text-xs font-bold text-slate-600">
+                                        <span x-text="statusText"></span>
+                                        <span x-show="uploadState === 'uploading'" x-text="`${progress}%`"></span>
                                     </div>
+                                    <div class="h-3 w-full overflow-hidden rounded-full bg-slate-200" role="progressbar" aria-label="Progress upload foto"
+                                        x-bind:aria-valuenow="progress" aria-valuemin="0" aria-valuemax="100">
+                                        <div class="h-full rounded-full bg-amber-500 transition-all duration-300" x-bind:style="`width: ${progress}%`"></div>
+                                    </div>
+                                    <p x-show="originalSize && compressedSize" class="text-[11px] text-slate-500">
+                                        Ukuran: <span x-text="originalSize"></span> → <span class="font-bold text-amber-700" x-text="compressedSize"></span>
+                                    </p>
+                                    <p x-show="errorMessage" class="text-xs font-semibold text-red-600" x-text="errorMessage"></p>
                                 </div>
                                 @error('izinDocument') <span class="text-red-500 text-xs font-bold mt-2 block">{{ $message }}</span> @enderror
                             </div>
@@ -832,7 +830,7 @@
                                 class="flex-1 px-6 py-4 border border-slate-100 text-slate-500 rounded-2xl font-bold hover:bg-slate-50 transition-all">
                                 Batalkan Pilihan
                             </button>
-                            <button type="submit"
+                            <button type="submit" x-bind:disabled="isSubmitBusy()"
                                 class="flex-1 px-6 py-4 bg-amber-500 text-white rounded-2xl font-bold hover:bg-amber-600 flex items-center justify-center gap-3 shadow-xl shadow-amber-500/20 transition-all active:scale-95"
                                 wire:loading.attr="disabled">
                                 <span wire:loading wire:target="submitIzin"
@@ -873,7 +871,7 @@
                         @endif
                     </p>
 
-                    <form wire:submit="reuploadProof">
+                    <form wire:submit="reuploadProof" x-data="imageUploadForm()" x-on:submit="markSaving($event)">
                         <div class="space-y-6">
                             <div>
                                 <label class="block text-xs font-black text-slate-400 uppercase tracking-widest mb-3">
@@ -881,21 +879,11 @@
                                     <span class="text-red-500">*</span>
                                 </label>
                                 <div class="border-2 border-dashed border-slate-200 rounded-3xl p-8 text-center hover:border-red-500 hover:bg-red-50/30 transition-all cursor-pointer relative group"
-                                    x-data="{ compressing: false }" data-compress-container>
+                                    data-compress-container>
                                     <input type="file" accept="image/jpeg,image/png"
-                                        wire:model="reuploadFile"
+                                        data-image-upload-input x-on:change="uploadLivewire($wire, 'reuploadFile', $event)" x-bind:disabled="isInputBusy()"
                                         class="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-                                        x-on:change="
-                                            const input = $event.target;
-                                            if (input.files[0] && input.files[0].type.startsWith('image/')) {
-                                                compressing = true;
-                                                const compressed = await window.ImageCompressor.compress(input.files[0]);
-                                                const dt = new DataTransfer();
-                                                dt.items.add(compressed);
-                                                input.files = dt.files;
-                                                compressing = false;
-                                            }
-                                        ">
+                                        >
 
                                     @if($reuploadFile)
                                         <div class="relative pointer-events-none">
@@ -911,16 +899,25 @@
                                             </div>
                                             <div>
                                                 <p class="text-sm font-bold text-slate-700">Klik untuk upload file baru</p>
-                                                <p class="text-[10px] text-slate-400 font-medium uppercase tracking-wider mt-1">JPG/PNG, Maks 2MB</p>
+                                                <p class="text-[10px] text-slate-400 font-medium uppercase tracking-wider mt-1">JPG/PNG, otomatis dikompres ≤1MB</p>
                                             </div>
                                         </div>
                                     @endif
 
-                                    <!-- Compression loading indicator -->
-                                    <div x-show="compressing" class="flex flex-col items-center gap-2 py-2">
-                                        <span class="material-symbols-rounded text-red-500 animate-spin text-3xl">progress_activity</span>
-                                        <p class="text-xs font-bold text-red-600">Mengompresi foto...</p>
+                                </div>
+                                <div x-cloak x-show="hasUploadStatus()" class="mt-4 space-y-2 rounded-2xl border border-slate-100 bg-slate-50 p-3">
+                                    <div class="flex items-center justify-between gap-3 text-xs font-bold text-slate-600">
+                                        <span x-text="statusText"></span>
+                                        <span x-show="uploadState === 'uploading'" x-text="`${progress}%`"></span>
                                     </div>
+                                    <div class="h-3 w-full overflow-hidden rounded-full bg-slate-200" role="progressbar" aria-label="Progress upload foto"
+                                        x-bind:aria-valuenow="progress" aria-valuemin="0" aria-valuemax="100">
+                                        <div class="h-full rounded-full bg-red-600 transition-all duration-300" x-bind:style="`width: ${progress}%`"></div>
+                                    </div>
+                                    <p x-show="originalSize && compressedSize" class="text-[11px] text-slate-500">
+                                        Ukuran: <span x-text="originalSize"></span> → <span class="font-bold text-red-700" x-text="compressedSize"></span>
+                                    </p>
+                                    <p x-show="errorMessage" class="text-xs font-semibold text-red-600" x-text="errorMessage"></p>
                                 </div>
                                 @error('reuploadFile') <span class="text-red-500 text-xs font-bold mt-2 block">{{ $message }}</span> @enderror
                             </div>
@@ -931,7 +928,7 @@
                                 class="flex-1 px-6 py-4 border border-slate-100 text-slate-500 rounded-2xl font-bold hover:bg-slate-50 transition-all">
                                 Batalkan Pilihan
                             </button>
-                            <button type="submit"
+                            <button type="submit" x-bind:disabled="isSubmitBusy()"
                                 class="flex-1 px-6 py-4 {{ ($reuploadIsPendingReplace || $reuploadIsInitialTeacherNote) ? 'bg-yellow-500 hover:bg-yellow-600 shadow-yellow-400/20' : 'bg-red-600 hover:bg-red-700 shadow-red-500/20' }} text-white rounded-2xl font-bold flex items-center justify-center gap-3 shadow-xl transition-all active:scale-95"
                                 wire:loading.attr="disabled">
                                 <span wire:loading wire:target="reuploadProof"

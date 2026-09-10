@@ -11,6 +11,7 @@ use App\Models\Role;
 use App\Models\Student;
 use App\Models\StudentEnrollment;
 use App\Models\User;
+use App\Services\CloudinaryService;
 use App\Services\ParentDataExportService;
 use App\Services\ParentArchiveService;
 use App\Services\ParentLoginAliasService;
@@ -627,8 +628,13 @@ class ParentIndex extends Component
 
         $proofPath = null;
         if ($this->manualProofFile) {
-            $folder = $this->manualStatus === 'hadir_online' ? 'attendance_notes' : 'attendance_permissions';
-            $proofPath = $this->manualProofFile->store($folder, 'public');
+            $folder = match (true) {
+                $this->manualParent?->isTeacher() && $this->manualStatus === 'izin' => 'teacher-permission-letters',
+                $this->manualParent?->isTeacher() => 'teacher-attendance-notes',
+                $this->manualStatus === 'izin' => 'izin-documents',
+                default => 'attendance-proofs',
+            };
+            $proofPath = app(CloudinaryService::class)->upload($this->manualProofFile, $folder)['url'];
         }
 
         Attendance::create([

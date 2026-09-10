@@ -1221,7 +1221,7 @@
                         </button>
                     </div>
 
-                    <form wire:submit="saveManualAttendance">
+                    <form wire:submit="saveManualAttendance" x-data="imageUploadForm()" x-on:submit="markSaving($event)">
                         <div class="space-y-4">
                             <div>
                                 <label class="block text-sm font-medium text-gray-700 mb-1">Pilih Kajian <span class="text-red-500">*</span></label>
@@ -1269,7 +1269,10 @@
                                         <span class="text-red-500">*</span>
                                     </label>
                                     <div class="relative border-2 border-dashed border-gray-200 rounded-xl p-4 transition-colors hover:border-primary-300">
-                                        <input type="file" wire:model="manualProofFile" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer">
+                                        <input type="file" accept="image/jpeg,image/png" data-image-upload-input
+                                            x-on:change="uploadLivewire($wire, 'manualProofFile', $event)"
+                                            x-bind:disabled="isInputBusy()"
+                                            class="absolute inset-0 w-full h-full opacity-0 cursor-pointer">
                                         <div class="text-center">
                                             @if($manualProofFile)
                                                 <div class="flex items-center justify-center gap-2 text-green-600">
@@ -1282,8 +1285,21 @@
                                             @endif
                                         </div>
                                     </div>
+                                    <div x-cloak x-show="hasUploadStatus()" class="mt-3 space-y-2 rounded-xl border border-gray-100 bg-gray-50 p-3">
+                                        <div class="flex items-center justify-between gap-3 text-xs font-bold text-gray-600">
+                                            <span x-text="statusText"></span>
+                                            <span x-show="uploadState === 'uploading'" x-text="progress + '%'"></span>
+                                        </div>
+                                        <div class="h-3 w-full overflow-hidden rounded-full bg-gray-200" role="progressbar" aria-label="Progress upload foto"
+                                            x-bind:aria-valuenow="progress" aria-valuemin="0" aria-valuemax="100">
+                                            <div class="h-full rounded-full bg-emerald-500 transition-all duration-300" x-bind:style="'width: ' + progress + '%'"></div>
+                                        </div>
+                                        <p x-show="originalSize && compressedSize" class="text-[11px] text-gray-500">
+                                            Ukuran: <span x-text="originalSize"></span> → <span class="font-bold text-emerald-700" x-text="compressedSize"></span>
+                                        </p>
+                                        <p x-show="errorMessage" class="text-xs font-semibold text-red-600" x-text="errorMessage"></p>
+                                    </div>
                                     @error('manualProofFile') <span class="text-red-500 text-sm">{{ $message }}</span> @enderror
-                                    <div wire:loading wire:target="manualProofFile" class="text-xs text-primary-600 mt-1">Mengupload...</div>
                                 </div>
                             @endif
 
@@ -1299,7 +1315,7 @@
                                 class="flex-1 px-4 py-3 border border-gray-200 rounded-xl font-medium text-gray-700 hover:bg-gray-50 transition-colors">
                                 Batal
                             </button>
-                            <button type="submit" wire:loading.attr="disabled"
+                            <button type="submit" x-bind:disabled="isSubmitBusy()" wire:loading.attr="disabled"
                                 class="flex-1 px-4 py-3 bg-emerald-500 text-white rounded-xl font-medium hover:bg-emerald-600 transition-colors disabled:opacity-50">
                                 <span wire:loading.remove>Simpan Presensi</span>
                                 <span wire:loading>Memproses...</span>

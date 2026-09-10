@@ -10,7 +10,6 @@
 
     <div class="min-h-screen bg-slate-100 px-4 py-7 sm:py-10">
         <main class="mx-auto max-w-xl" x-data="{
-            submitting: false,
             students: @js($studentOptions),
             studentId: @js((string) old('student_id', '')),
             parentType: @js(old('parent_type', '')),
@@ -62,7 +61,7 @@
                     @enderror
 
                     <form method="POST" action="{{ route('public.mustawa-one-form.store', ['token' => $link->token]) }}" enctype="multipart/form-data" class="space-y-5"
-                        x-on:submit="if (submitting) { $event.preventDefault(); return; } submitting = true">
+                        x-data="imageUploadForm()" x-on:submit="submitPlain($event)">
                         @csrf
 
                         <div class="absolute -left-[10000px] top-auto h-px w-px overflow-hidden" aria-hidden="true">
@@ -134,8 +133,23 @@
                                 <span class="text-red-500">*</span>
                             </label>
                             <input id="proof_file" name="proof_file" type="file" accept="image/jpeg,image/png" capture="environment"
+                                data-image-upload-input x-on:change="compressPlain($event)" x-bind:disabled="isInputBusy()"
                                 class="block w-full rounded-xl border border-dashed border-slate-300 bg-slate-50 px-3 py-3 text-sm text-slate-700 file:mr-3 file:rounded-lg file:border-0 file:bg-emerald-600 file:px-3 file:py-2 file:text-sm file:font-bold file:text-white hover:file:bg-emerald-700" required>
-                            <p class="mt-2 text-xs leading-5 text-slate-500">JPG atau PNG, maksimal 2 MB. Pastikan foto jelas dan berisi dokumen, bukan foto kipas, ruangan, meja, atau objek lain.</p>
+                            <p class="mt-2 text-xs leading-5 text-slate-500">JPG atau PNG. Foto otomatis dikompres maksimal 1 MB sebelum dikirim. Pastikan foto jelas dan berisi dokumen, bukan foto kipas, ruangan, meja, atau objek lain.</p>
+                            <div x-cloak x-show="hasUploadStatus()" class="mt-4 space-y-2 rounded-xl border border-slate-100 bg-slate-50 p-3">
+                                <div class="flex items-center justify-between gap-3 text-xs font-bold text-slate-600">
+                                    <span x-text="statusText"></span>
+                                    <span x-show="uploadState === 'uploading'" x-text="`${progress}%`"></span>
+                                </div>
+                                <div class="h-3 w-full overflow-hidden rounded-full bg-slate-200" role="progressbar" aria-label="Progress upload foto"
+                                    x-bind:aria-valuenow="progress" aria-valuemin="0" aria-valuemax="100">
+                                    <div class="h-full rounded-full bg-emerald-600 transition-all duration-300" x-bind:style="`width: ${progress}%`"></div>
+                                </div>
+                                <p x-show="originalSize && compressedSize" class="text-[11px] text-slate-500">
+                                    Ukuran: <span x-text="originalSize"></span> → <span class="font-bold text-emerald-700" x-text="compressedSize"></span>
+                                </p>
+                                <p x-show="errorMessage" class="text-xs font-semibold text-red-600" x-text="errorMessage"></p>
+                            </div>
                             @error('proof_file') <p class="mt-1 text-xs font-medium text-red-600">{{ $message }}</p> @enderror
                         </div>
 
@@ -147,7 +161,7 @@
                             @error('notes') <p class="mt-1 text-xs font-medium text-red-600">{{ $message }}</p> @enderror
                         </div>
 
-                        <button type="submit" x-bind:disabled="submitting"
+                        <button type="submit" x-bind:disabled="isSubmitBusy()"
                             class="flex w-full items-center justify-center gap-2 rounded-xl bg-emerald-600 px-5 py-3.5 text-sm font-extrabold text-white shadow-lg shadow-emerald-600/20 transition-colors hover:bg-emerald-700 disabled:cursor-wait disabled:opacity-70">
                             <span x-show="!submitting" class="material-symbols-rounded">upload_file</span>
                             <span x-show="submitting" class="material-symbols-rounded animate-spin">progress_activity</span>

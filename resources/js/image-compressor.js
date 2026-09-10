@@ -1,176 +1,500 @@
 /**
- * Image Compressor Utility
- * Compress gambar di browser sebelum upload ke server.
- * Menggunakan Canvas API — tidak perlu library external.
+ * Browser image compression and upload helpers.
  *
- * Usage dalam Alpine.js:
- *   await compressImage(fileInput, { maxWidth: 1200, quality: 0.7 })
+ * Proof images are compressed on the user's device before they are sent to
+ * Livewire or submitted by the public form. This keeps the VPS request small
+ * and avoids sending the original camera photo before compression finishes.
  */
 
+const IMAGE_COMPRESSION_FAILURE_MESSAGE =
+    'Mohon maaf, ukuran file foto terlalu besar. Mohon jadikan foto tersebut "screenshoot" supaya ukuran jadi kecil, kemudian upload ulang screenshoot foto tersebut.';
+
+const IMAGE_UPLOAD_FAILURE_MESSAGE =
+    'Foto belum dapat diupload. Silakan periksa koneksi internet lalu coba lagi.';
+
 window.ImageCompressor = {
-    /**
-     * Default settings
-     */
     defaults: {
-        maxWidth: 1200,     // Max lebar (px)
-        maxHeight: 1200,    // Max tinggi (px)
-        quality: 0.7,       // Kualitas JPEG (0.0 - 1.0)
-        mimeType: 'image/jpeg', // Output format
+        maxBytes: 1_000_000,
+        maxWidth: 1600,
+        maxHeight: 1600,
+        minDimension: 640,
+        initialQuality: 0.82,
+        minQuality: 0.42,
+        qualityStep: 0.08,
+        dimensionScale: 0.85,
+        mimeType: 'image/jpeg',
     },
 
     /**
-     * Compress a File object and return a new compressed File.
-     *
-     * @param {File} file - File dari input[type=file]
-     * @param {Object} options - Override default settings
-     * @returns {Promise<File>} - Compressed File object
+     * Compress a File and return only the resulting File.
      */
     async compress(file, options = {}) {
-        // Skip jika bukan image
-        if (!file.type.startsWith('image/')) {
-            console.log('[ImageCompressor] Bukan gambar, skip compression:', file.type);
-            return file;
+        const result = await this.compressWithStats(file, options);
+
+        return result.file;
+    },
+
+    /**
+     * Compress a File until it is at or below maxBytes.
+     *
+     * @returns {Promise<{file: File, originalSize: number, compressedSize: number, width: number, height: number, wasCompressed: boolean}>}
+     */
+    async compressWithStats(file, options = {}) {
+        if (!file || !file.type || !file.type.startsWith('image/')) {
+            throw this._compressionError();
+        }
+
+        if (!['image/jpeg', 'image/png'].includes(file.type)) {
+            throw this._compressionError();
         }
 
         const settings = { ...this.defaults, ...options };
-        const originalSize = file.size;
+        const source = await this._loadImage(file);
 
         try {
-            // 1. Load image
-            const img = await this._loadImage(file);
+            if (!source.width || !source.height) {
+                throw this._compressionError();
+            }
 
-            // 2. Calculate new dimensions
-            const { width, height } = this._calculateDimensions(
-                img.naturalWidth,
-                img.naturalHeight,
+            const sourceFits = file.type === settings.mimeType
+                && file.size <= settings.maxBytes
+                && source.width <= settings.maxWidth
+                && source.height <= settings.maxHeight;
+
+            if (sourceFits) {
+                return {
+                    file,
+                    originalSize: file.size,
+                    compressedSize: file.size,
+                    width: source.width,
+                    height: source.height,
+                    wasCompressed: false,
+                };
+            }
+
+            let dimensions = this._calculateDimensions(
+                source.width,
+                source.height,
                 settings.maxWidth,
                 settings.maxHeight
             );
-
-            // 3. Draw to canvas
             const canvas = document.createElement('canvas');
-            canvas.width = width;
-            canvas.height = height;
-            const ctx = canvas.getContext('2d');
-            ctx.drawImage(img, 0, 0, width, height);
+            const ctx = canvas.getContext('2d', { alpha: false });
 
-            // 4. Convert to blob
-            const blob = await this._canvasToBlob(canvas, settings.mimeType, settings.quality);
-
-            // 5. Buat File object baru
-            const compressedFile = new File(
-                [blob],
-                file.name.replace(/\.[^.]+$/, '.jpg'), // Ganti extension ke .jpg
-                { type: settings.mimeType, lastModified: Date.now() }
-            );
-
-            const compressedSize = compressedFile.size;
-            const ratio = ((1 - compressedSize / originalSize) * 100).toFixed(0);
-
-            console.log(
-                `[ImageCompressor] ${this._formatSize(originalSize)} → ${this._formatSize(compressedSize)} (hemat ${ratio}%) | ${img.naturalWidth}x${img.naturalHeight} → ${width}x${height}`
-            );
-
-            // Jangan gunakan hasil compressed jika malah lebih besar
-            if (compressedSize >= originalSize) {
-                console.log('[ImageCompressor] Hasil compressed lebih besar, gunakan file asli.');
-                return file;
+            if (!ctx) {
+                throw this._compressionError();
             }
 
-            return compressedFile;
+            while (true) {
+                canvas.width = dimensions.width;
+                canvas.height = dimensions.height;
 
-        } catch (error) {
-            console.error('[ImageCompressor] Error:', error);
-            return file; // Fallback ke file asli jika gagal
+                // JPEG has no alpha channel. A white background keeps a PNG
+                // with transparency readable instead of turning black.
+                ctx.fillStyle = '#ffffff';
+                ctx.fillRect(0, 0, dimensions.width, dimensions.height);
+                ctx.drawImage(source.image, 0, 0, dimensions.width, dimensions.height);
+
+                for (const quality of this._qualitySteps(settings)) {
+                    const blob = await this._canvasToBlob(canvas, settings.mimeType, quality);
+
+                    if (blob.size <= settings.maxBytes) {
+                        const compressedFile = this._makeFile(file, blob, settings.mimeType);
+
+                        return {
+                            file: compressedFile,
+                            originalSize: file.size,
+                            compressedSize: compressedFile.size,
+                            width: dimensions.width,
+                            height: dimensions.height,
+                            wasCompressed: true,
+                        };
+                    }
+                }
+
+                const longestSide = Math.max(dimensions.width, dimensions.height);
+
+                if (longestSide <= settings.minDimension) {
+                    break;
+                }
+
+                dimensions = this._scaleDimensions(
+                    dimensions,
+                    settings.dimensionScale,
+                    settings.minDimension
+                );
+            }
+
+            throw this._compressionError();
+        } finally {
+            source.cleanup();
         }
     },
 
     /**
-     * Compress dan set ke Livewire file input.
-     * Panggil dari event listener pada input[type=file].
-     *
-     * @param {HTMLInputElement} input - The file input element
-     * @param {Object} options - Compression options
+     * Replace the selected file in an input without triggering another change
+     * event. The caller decides whether to upload it or submit the form.
      */
-    async compressAndSet(input, options = {}) {
-        const files = input.files;
-        if (!files || files.length === 0) return;
-
-        const file = files[0];
-
-        // Skip PDF
-        if (file.type === 'application/pdf') {
-            console.log('[ImageCompressor] PDF file, skip compression.');
-            return;
+    replaceInputFile(input, file) {
+        if (typeof DataTransfer === 'undefined') {
+            throw this._compressionError();
         }
 
-        // Show loading indicator
-        const container = input.closest('[data-compress-container]') || input.parentElement;
-        const loadingEl = container?.querySelector('[data-compress-loading]');
-        if (loadingEl) loadingEl.style.display = 'flex';
+        const dataTransfer = new DataTransfer();
+        dataTransfer.items.add(file);
+        input.files = dataTransfer.files;
+    },
 
+    clearInput(input) {
         try {
-            const compressed = await this.compress(file, options);
-
-            // Create a new DataTransfer to set compressed file
-            const dt = new DataTransfer();
-            dt.items.add(compressed);
-            input.files = dt.files;
-
-            // Trigger events so Livewire picks up the change
-            input.dispatchEvent(new Event('change', { bubbles: true }));
-
-        } finally {
-            if (loadingEl) loadingEl.style.display = 'none';
+            input.value = '';
+        } catch (error) {
+            // Some browsers do not allow clearing a file input in every state.
         }
     },
 
-    // --- Private helpers ---
+    formatSize(bytes) {
+        if (bytes < 1024) return `${bytes} B`;
+        if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+
+        return `${(bytes / (1024 * 1024)).toFixed(2)} MB`;
+    },
+
+    showCompressionFailure() {
+        window.alert(IMAGE_COMPRESSION_FAILURE_MESSAGE);
+    },
+
+    showUploadFailure() {
+        window.alert(IMAGE_UPLOAD_FAILURE_MESSAGE);
+    },
+
+    _compressionError() {
+        const error = new Error(IMAGE_COMPRESSION_FAILURE_MESSAGE);
+        error.code = 'IMAGE_COMPRESSION_FAILED';
+
+        return error;
+    },
+
+    _qualitySteps(settings) {
+        const qualities = [];
+
+        for (let quality = settings.initialQuality; quality > settings.minQuality; quality -= settings.qualityStep) {
+            qualities.push(Number(quality.toFixed(2)));
+        }
+
+        qualities.push(settings.minQuality);
+
+        return [...new Set(qualities)];
+    },
+
+    _makeFile(originalFile, blob, mimeType) {
+        const originalName = originalFile.name || 'foto-catatan';
+        const baseName = originalName.replace(/\.[^.]+$/, '');
+
+        return new File(
+            [blob],
+            `${baseName}.jpg`,
+            {
+                type: mimeType,
+                lastModified: Date.now(),
+            }
+        );
+    },
 
     _loadImage(file) {
+        // createImageBitmap can apply the camera's EXIF orientation before the
+        // canvas is drawn. Older browsers use the Image fallback below.
+        if (typeof createImageBitmap === 'function') {
+            return createImageBitmap(file, { imageOrientation: 'from-image' })
+                .then((bitmap) => ({
+                    image: bitmap,
+                    width: bitmap.width,
+                    height: bitmap.height,
+                    cleanup: () => bitmap.close?.(),
+                }))
+                .catch(() => this._loadImageWithElement(file));
+        }
+
+        return this._loadImageWithElement(file);
+    },
+
+    _loadImageWithElement(file) {
         return new Promise((resolve, reject) => {
-            const img = new Image();
-            img.onload = () => {
-                URL.revokeObjectURL(img.src);
-                resolve(img);
+            const image = new Image();
+            const objectUrl = URL.createObjectURL(file);
+
+            image.onload = () => {
+                URL.revokeObjectURL(objectUrl);
+                resolve({
+                    image,
+                    width: image.naturalWidth,
+                    height: image.naturalHeight,
+                    cleanup: () => {},
+                });
             };
-            img.onerror = reject;
-            img.src = URL.createObjectURL(file);
+
+            image.onerror = () => {
+                URL.revokeObjectURL(objectUrl);
+                reject(this._compressionError());
+            };
+
+            image.src = objectUrl;
         });
     },
 
-    _calculateDimensions(origWidth, origHeight, maxWidth, maxHeight) {
-        let width = origWidth;
-        let height = origHeight;
+    _calculateDimensions(originalWidth, originalHeight, maxWidth, maxHeight) {
+        const scale = Math.min(
+            1,
+            maxWidth / originalWidth,
+            maxHeight / originalHeight
+        );
 
-        if (width > maxWidth) {
-            height = Math.round((height * maxWidth) / width);
-            width = maxWidth;
-        }
-        if (height > maxHeight) {
-            width = Math.round((width * maxHeight) / height);
-            height = maxHeight;
-        }
+        return {
+            width: Math.max(1, Math.round(originalWidth * scale)),
+            height: Math.max(1, Math.round(originalHeight * scale)),
+        };
+    },
 
-        return { width, height };
+    _scaleDimensions(dimensions, scale, minDimension) {
+        const longestSide = Math.max(dimensions.width, dimensions.height);
+        const nextLongestSide = Math.max(minDimension, Math.floor(longestSide * scale));
+        const ratio = nextLongestSide / longestSide;
+
+        return {
+            width: Math.max(1, Math.round(dimensions.width * ratio)),
+            height: Math.max(1, Math.round(dimensions.height * ratio)),
+        };
     },
 
     _canvasToBlob(canvas, mimeType, quality) {
         return new Promise((resolve, reject) => {
-            canvas.toBlob(
-                (blob) => {
-                    if (blob) resolve(blob);
-                    else reject(new Error('Canvas toBlob failed'));
-                },
-                mimeType,
-                quality
-            );
+            canvas.toBlob((blob) => {
+                if (blob) {
+                    resolve(blob);
+                } else {
+                    reject(this._compressionError());
+                }
+            }, mimeType, quality);
         });
     },
+};
 
-    _formatSize(bytes) {
-        if (bytes < 1024) return bytes + ' B';
-        if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
-        return (bytes / (1024 * 1024)).toFixed(2) + ' MB';
-    },
+/**
+ * Alpine state shared by the Livewire upload forms and the public form.
+ */
+window.imageUploadForm = function imageUploadForm() {
+    return {
+        submitting: false,
+        uploadState: 'idle',
+        progress: 0,
+        statusText: '',
+        originalSize: '',
+        compressedSize: '',
+        errorMessage: '',
+
+        init() {
+            // Return the form to an interactive state if Livewire responds
+            // with validation errors instead of closing the modal.
+            if (!this.$wire?.$hook) {
+                return;
+            }
+
+            this.$wire.$hook('commit', ({ succeed }) => {
+                succeed(() => {
+                    if (this.uploadState === 'saving') {
+                        this.uploadState = 'ready';
+                        this.statusText = 'Foto siap dikirim';
+                    }
+                });
+            });
+        },
+
+        isInputBusy() {
+            return ['compressing', 'uploading'].includes(this.uploadState);
+        },
+
+        isSubmitBusy() {
+            return this.submitting || ['compressing', 'uploading', 'saving'].includes(this.uploadState);
+        },
+
+        hasUploadStatus() {
+            return ['compressing', 'uploading', 'saving', 'error'].includes(this.uploadState);
+        },
+
+        async uploadLivewire($wire, property, event) {
+            const input = event.target;
+            const file = input.files?.[0];
+
+            if (!file || this.isInputBusy()) {
+                return;
+            }
+
+            // Prevent a previous temporary upload from being submitted while
+            // the newly selected image is still being compressed/uploaded.
+            $wire.$set(property, null, false);
+            this._beginCompression(file);
+
+            try {
+                const result = await window.ImageCompressor.compressWithStats(file);
+
+                window.ImageCompressor.replaceInputFile(input, result.file);
+                this._setCompressionStats(result);
+                this.uploadState = 'uploading';
+                this.progress = 0;
+                this.statusText = 'Mengupload...';
+                this.errorMessage = '';
+
+                $wire.upload(
+                    property,
+                    result.file,
+                    () => {
+                        this.progress = 100;
+                        this.uploadState = 'ready';
+                        this.statusText = 'Foto siap dikirim';
+                    },
+                    () => {
+                        this._handleFailure(input, $wire, property, false);
+                    },
+                    (uploadEvent) => {
+                        this.progress = this._progressFromEvent(uploadEvent);
+                    },
+                    () => {
+                        this._handleFailure(input, $wire, property, false);
+                    }
+                );
+            } catch (error) {
+                this._handleFailure(input, $wire, property, true);
+            }
+        },
+
+        async compressPlain(event) {
+            const input = event.target;
+            const file = input.files?.[0];
+
+            if (!file || this.isInputBusy()) {
+                return;
+            }
+
+            this._beginCompression(file);
+
+            try {
+                const result = await window.ImageCompressor.compressWithStats(file);
+
+                window.ImageCompressor.replaceInputFile(input, result.file);
+                this._setCompressionStats(result);
+                this.progress = 100;
+                this.uploadState = 'ready';
+                this.statusText = 'Foto siap dikirim';
+            } catch (error) {
+                this._handleFailure(input, null, null, true);
+            }
+        },
+
+        markSaving(event) {
+            if (this.submitting || ['compressing', 'uploading', 'saving'].includes(this.uploadState)) {
+                event.preventDefault();
+                return;
+            }
+
+            this.uploadState = 'saving';
+            this.progress = 100;
+            this.statusText = 'Menyimpan data...';
+        },
+
+        submitPlain(event) {
+            if (this.submitting || ['compressing', 'uploading', 'saving'].includes(this.uploadState)) {
+                event.preventDefault();
+                return;
+            }
+
+            const form = event.currentTarget;
+            const input = form.querySelector('[data-image-upload-input]');
+
+            // Let the browser show its native required-field message when no
+            // file has been selected.
+            if (!input?.files?.length) {
+                return;
+            }
+
+            event.preventDefault();
+            this.submitting = true;
+            this.uploadState = 'uploading';
+            this.progress = 0;
+            this.statusText = 'Mengupload...';
+            this.errorMessage = '';
+
+            const request = new XMLHttpRequest();
+            this.xhr = request;
+
+            request.open('POST', form.action, true);
+            request.setRequestHeader('X-Requested-With', 'XMLHttpRequest');
+
+            request.upload.addEventListener('progress', (progressEvent) => {
+                if (!progressEvent.lengthComputable) {
+                    return;
+                }
+
+                this.progress = Math.min(99, Math.round((progressEvent.loaded / progressEvent.total) * 100));
+            });
+
+            request.onload = () => {
+                this.progress = 100;
+
+                if (request.status >= 200 && request.status < 400) {
+                    this.uploadState = 'saving';
+                    this.statusText = 'Menyimpan data...';
+                    window.location.assign(request.responseURL || form.action);
+
+                    return;
+                }
+
+                this._handleFailure(input, null, null, false);
+            };
+
+            request.onerror = () => this._handleFailure(input, null, null, false);
+            request.onabort = () => this._handleFailure(input, null, null, false);
+            request.send(new FormData(form));
+        },
+
+        _beginCompression(file) {
+            this.uploadState = 'compressing';
+            this.progress = 0;
+            this.statusText = 'Mengompresi foto...';
+            this.originalSize = window.ImageCompressor.formatSize(file.size);
+            this.compressedSize = '';
+            this.errorMessage = '';
+        },
+
+        _setCompressionStats(result) {
+            this.originalSize = window.ImageCompressor.formatSize(result.originalSize);
+            this.compressedSize = window.ImageCompressor.formatSize(result.compressedSize);
+        },
+
+        _progressFromEvent(uploadEvent) {
+            const value = uploadEvent?.detail?.progress ?? uploadEvent?.progress ?? 0;
+
+            return Math.max(0, Math.min(99, Number(value) || 0));
+        },
+
+        _handleFailure(input, $wire, property, isCompressionFailure) {
+            window.ImageCompressor.clearInput(input);
+
+            if ($wire && property) {
+                $wire.$set(property, null, false);
+            }
+
+            this.uploadState = 'error';
+            this.progress = 0;
+            this.statusText = 'Upload gagal';
+            this.errorMessage = isCompressionFailure
+                ? IMAGE_COMPRESSION_FAILURE_MESSAGE
+                : IMAGE_UPLOAD_FAILURE_MESSAGE;
+
+            if (isCompressionFailure) {
+                window.ImageCompressor.showCompressionFailure();
+            } else {
+                window.ImageCompressor.showUploadFailure();
+            }
+        },
+    };
 };
