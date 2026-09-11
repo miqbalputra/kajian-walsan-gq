@@ -39,7 +39,7 @@ php artisan view:cache
 mkdir -p /var/www/html/storage/app/public/attendance-proofs
 mkdir -p /var/www/html/storage/app/public/izin-documents
 mkdir -p /var/www/html/storage/app/public/reupload-proofs
-mkdir -p /var/www/html/storage/app/livewire-tmp
+mkdir -p /var/www/html/storage/app/private/livewire-tmp
 
 # Pastikan /tmp writable
 chmod 1777 /tmp 2>/dev/null || true

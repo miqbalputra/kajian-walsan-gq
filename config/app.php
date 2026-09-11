@@ -60,8 +60,9 @@ return [
     |--------------------------------------------------------------------------
     |
     | Only proxy addresses explicitly configured here may set forwarded
-    | protocol/host headers. Leaving this empty is safer than trusting an
-    | arbitrary client supplied X-Forwarded-* header.
+    | protocol/host headers. The bootstrap fallback uses Symfony's
+    | PRIVATE_SUBNETS token when this value is empty; deployments with a
+    | different proxy topology should provide explicit IPs or CIDR ranges.
     |
     */
 

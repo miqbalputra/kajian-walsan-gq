@@ -19,7 +19,7 @@ Konsep produk dan layout utama dipertahankan. Pekerjaan difokuskan pada hardenin
 | Routing/RBAC surface | **PASS statis** | `php artisan route:list` lulus, 89 route terdaftar; group `auth` dan role tetap dipertahankan. |
 | Query/performa | **PASS terarah; benchmark produksi CONDITIONAL** | Agregasi SurveyAnalysis dan index baru diterapkan. EXPLAIN produksi belum dapat diambil dari environment lokal karena driver `pdo_mysql` tidak terpasang. |
 | UI/UX | **PASS polish terarah** | Konsep visual tidak dirombak; fokus state submit, focus-visible, reduced motion, touch behavior, spacing/feedback yang sudah ada. |
-| Production readiness | **CONDITIONAL** | Wajib set `APP_DEBUG=false`, `TRUSTED_PROXIES` ke IP proxy nyata, secret production, HTTPS, dan menjalankan migration pada database production. |
+| Production readiness | **CONDITIONAL** | Wajib set `APP_DEBUG=false`, pertahankan `TRUSTED_PROXIES=PRIVATE_SUBNETS` untuk Coolify/Docker (atau isi IP proxy nyata), secret production, HTTPS, dan jalankan migration pada database production. |
 
 ### Rencana perbaikan berjenjang
 
@@ -73,7 +73,7 @@ Kesimpulan: tidak ada indikasi data lama hilang akibat pekerjaan audit ini. Sebe
 
 | Risiko | Temuan | Patch | Status |
 |---|---|---|---|
-| High | `trustProxies('*')` memungkinkan header forwarded spoofing | Proxy sekarang hanya dipercaya dari `TRUSTED_PROXIES`; default kosong | **Applied** |
+| High | `trustProxies('*')` memungkinkan header forwarded spoofing | Proxy dipercaya dari `TRUSTED_PROXIES`; default production `PRIVATE_SUBNETS` hanya mencakup jaringan privat | **Applied** |
 | High | Secret Hermes dapat dikirim melalui body dan berpotensi masuk access log | Hanya `X-Hermes-Secret` atau `Authorization: Bearer`; body/query tidak diterima | **Applied + tested** |
 | Medium | Endpoint Hermes tidak memiliki throttling khusus | Tambah `throttle:120,1` pada seluruh group Hermes | **Applied** |
 | High | CSRF exception global untuk Hermes terlalu luas | Exception dihapus; endpoint memakai header secret dan tetap berada pada alur middleware yang aman | **Applied** |
@@ -94,7 +94,7 @@ Kesimpulan: tidak ada indikasi data lama hilang akibat pekerjaan audit ini. Sebe
 ### Kontrol yang tetap wajib di production
 
 1. Set `APP_ENV=production`, `APP_DEBUG=false`, `APP_URL=https://...`, dan `SESSION_SECURE_COOKIE=true`.
-2. Isi `TRUSTED_PROXIES` hanya dengan IP/CIDR reverse proxy yang benar. Jangan memakai `*`.
+2. Untuk topologi Coolify/Docker, gunakan `TRUSTED_PROXIES=PRIVATE_SUBNETS`; pada topologi lain isi hanya IP/CIDR reverse proxy yang benar. Jangan memakai `*`.
 3. Gunakan secret kuat untuk Hermes, Google, Cloudinary, Telegram, queue, dan database; rotasi secret setelah deployment pertama.
 4. Jalankan Cloudinary atau private object storage untuk bukti yang sensitif. Fallback local `public` tetap memakai nama acak dan validasi ketat, tetapi URL public bukan kontrol authorization.
 5. CSP sengaja belum dipaksakan karena aplikasi masih memiliki inline script/CDN. Tahap berikutnya adalah migrasi ke nonce/hash lalu menambahkan `Content-Security-Policy` bertahap (`Report-Only` kemudian enforcement).

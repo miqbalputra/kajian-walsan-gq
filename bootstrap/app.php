@@ -23,6 +23,15 @@ return Application::configure(basePath: dirname(__DIR__))
             'trim',
             explode(',', (string) env('TRUSTED_PROXIES', ''))
         )));
+
+        // Coolify terminates TLS in a private Docker network before the
+        // request reaches this container. PRIVATE_SUBNETS covers that
+        // managed hop (including the local nginx/FPM hop) without trusting
+        // arbitrary public clients when TRUSTED_PROXIES is omitted.
+        if (blank($trustedProxies)) {
+            $trustedProxies = ['PRIVATE_SUBNETS'];
+        }
+
         if (filled($trustedProxies)) {
             $middleware->trustProxies(at: $trustedProxies);
         }

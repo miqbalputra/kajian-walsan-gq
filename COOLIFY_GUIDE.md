@@ -58,6 +58,10 @@ APP_ENV=production
 APP_KEY=base64:EGtvPn/CmtaGp3r+HXVZn5hgBoRwcSPd0DRAogX8vPg=
 APP_DEBUG=false
 APP_URL=https://kajian.griyaquran.web.id
+# Laravel harus mempercayai hop proxy internal agar Livewire membuat
+# signed upload URL dengan skema HTTPS. PRIVATE_SUBNETS aman untuk topologi
+# Docker/Coolify; ganti dengan IP/CIDR proxy nyata bila topologinya berbeda.
+TRUSTED_PROXIES=PRIVATE_SUBNETS
 
 # DATABASE (Ambil dari detail MariaDB di Coolify)
 # Tips: Di Coolify, DB_HOST biasanya adalah nama resource database-nya (misal: kajian-walsan-db)
