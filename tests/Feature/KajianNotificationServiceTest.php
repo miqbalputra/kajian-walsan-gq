@@ -71,7 +71,11 @@ class KajianNotificationServiceTest extends TestCase
             'kajian_event_id' => $event->id,
             'notification_type' => KajianNotificationDispatch::TYPE_LATE,
         ]);
-        Queue::assertPushed(SendKajianNotification::class, 2);
+        $this->assertDatabaseHas('kajian_notification_dispatches', [
+            'kajian_event_id' => $event->id,
+            'notification_type' => KajianNotificationDispatch::TYPE_EMAIL_MISSING_ATTENDANCE,
+        ]);
+        Queue::assertPushed(SendKajianNotification::class, 3);
     }
 
     public function test_after_end_messages_are_grouped_by_incomplete_action(): void

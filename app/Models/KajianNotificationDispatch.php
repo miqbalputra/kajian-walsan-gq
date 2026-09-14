@@ -13,6 +13,8 @@ class KajianNotificationDispatch extends Model
 
     public const TYPE_LATE = 'late';
 
+    public const TYPE_EMAIL_MISSING_ATTENDANCE = 'email_missing_attendance_2030';
+
     public const STATUS_QUEUED = 'queued';
 
     public const STATUS_SENT = 'sent';

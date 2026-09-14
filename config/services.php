@@ -42,6 +42,12 @@ return [
         'password_reset_secret' => env('N8N_PASSWORD_RESET_SECRET', ''),
     ],
 
+    'n8n_email' => [
+        'enabled' => env('N8N_EMAIL_WEBHOOK_ENABLED', false),
+        'webhook_url' => env('N8N_EMAIL_WEBHOOK_URL', ''),
+        'webhook_secret' => env('N8N_EMAIL_WEBHOOK_SECRET', ''),
+    ],
+
     'google' => [
         'client_id' => env('GOOGLE_CLIENT_ID'),
         'client_secret' => env('GOOGLE_CLIENT_SECRET'),

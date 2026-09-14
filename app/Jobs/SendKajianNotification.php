@@ -69,7 +69,7 @@ class SendKajianNotification implements ShouldQueue
                 'last_error' => $exception->getMessage(),
             ]);
 
-        Log::error('[Kajian Push] Notification job failed permanently', [
+        Log::error('[Kajian Notification] Notification job failed permanently', [
             'dispatch_id' => $this->dispatchId,
             'error' => $exception->getMessage(),
         ]);

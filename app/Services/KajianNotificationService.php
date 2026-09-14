@@ -12,7 +12,10 @@ use Illuminate\Support\Collection;
 
 class KajianNotificationService
 {
-    public function __construct(private WebPushService $webPush) {}
+    public function __construct(
+        private WebPushService $webPush,
+        private N8nKajianEmailReminderService $emailReminder,
+    ) {}
 
     /**
      * Return the scheduled notification stages that are due for an event.
@@ -56,6 +59,16 @@ class KajianNotificationService
             ];
         }
 
+        $emailReminderAt = $start->copy()->setTime(20, 30);
+        if (in_array($event->status, ['draft', 'open', 'ongoing'], true)
+            && $now->toDateString() === $event->date->toDateString()
+            && $now->greaterThanOrEqualTo($emailReminderAt)) {
+            $due[] = [
+                'type' => KajianNotificationDispatch::TYPE_EMAIL_MISSING_ATTENDANCE,
+                'scheduled_for' => $emailReminderAt,
+            ];
+        }
+
         return $due;
     }
 
@@ -90,6 +103,10 @@ class KajianNotificationService
                 'failed' => 0,
                 'error' => null,
             ];
+        }
+
+        if ($dispatch->notification_type === KajianNotificationDispatch::TYPE_EMAIL_MISSING_ATTENDANCE) {
+            return $this->emailReminder->send($dispatch, $event);
         }
 
         $parents = $this->targetParents($event);
