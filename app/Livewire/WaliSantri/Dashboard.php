@@ -23,6 +23,10 @@ class Dashboard extends Component
 {
     use WithFileUploads;
 
+    public ?int $notificationEventId = null;
+
+    public ?string $notificationAction = null;
+
     public $showQrModal = false;
 
     public $showPhysicalModal = false;
@@ -57,6 +61,30 @@ class Dashboard extends Component
 
     public $notes = '';
 
+    public function mount(): void
+    {
+        $eventId = request()->integer('kajian');
+        $action = request()->query('action');
+
+        if ($eventId > 0 && in_array($action, ['choose', 'online', 'izin', 'physical-note'], true)) {
+            $this->notificationEventId = $eventId;
+            $this->notificationAction = $action;
+
+            if (! $this->activeEvent) {
+                $this->notificationEventId = null;
+                $this->notificationAction = null;
+
+                return;
+            }
+
+            if ($action === 'online') {
+                $this->showOnlineModal = true;
+            } elseif ($action === 'izin') {
+                $this->showIzinModal = true;
+            }
+        }
+    }
+
     protected function rules(): array
     {
         return [
@@ -87,10 +115,23 @@ class Dashboard extends Component
             return null;
         }
 
-        return KajianEvent::openForAttendance()
+        if ($this->notificationEventId) {
+            $event = KajianEvent::query()
+                ->whereKey($this->notificationEventId)
+                ->whereIn('status', ['open', 'ongoing'])
+                ->whereDate('date', '<=', today())
+                ->with('targetClasses')
+                ->first();
+
+            return $event && $event->targetsParent($this->parent) ? $event : null;
+        }
+
+        $events = KajianEvent::openForAttendance()
             ->with('targetClasses')
-            ->get()
-            ->first(fn (KajianEvent $event) => $event->targetsParent($this->parent));
+            ->when($this->notificationEventId, fn ($query) => $query->whereKey($this->notificationEventId))
+            ->get();
+
+        return $events->first(fn (KajianEvent $event) => $event->targetsParent($this->parent));
     }
 
     public function getQrCodeSvgProperty()

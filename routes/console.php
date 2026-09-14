@@ -14,3 +14,9 @@ if (config('data-induk.scheduled')) {
     Schedule::command('data-induk:sync-changes')->everyFifteenMinutes()->withoutOverlapping();
     Schedule::command('data-induk:sync-references')->hourly()->withoutOverlapping();
 }
+
+// Push kajian harus diperiksa tiap menit agar pengingat 30 menit sebelum mulai,
+// setelah selesai, dan pukul 21.00 WIB tetap tepat waktu.
+Schedule::command('kajian:send-notifications')
+    ->everyMinute()
+    ->withoutOverlapping();

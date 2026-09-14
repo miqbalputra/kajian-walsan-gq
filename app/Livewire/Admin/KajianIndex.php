@@ -6,9 +6,8 @@ use App\Models\AcademicYear;
 use App\Models\ClassRoom;
 use App\Models\KajianEvent;
 use App\Models\PublicAttendanceLink;
-use App\Services\WebPushService;
 use App\Services\AttendanceFinalizationService;
-use Carbon\Carbon;
+use App\Services\KajianNotificationService;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Livewire\Component;
@@ -331,14 +330,7 @@ class KajianIndex extends Component
     public function sendReminder($id)
     {
         $kajian = KajianEvent::with('targetClasses')->findOrFail($id);
-        $service = new WebPushService;
-
-        $title = $kajian->category_display.': '.$kajian->title;
-        $body = 'Akan dimulai pada '.$kajian->date->translatedFormat('d M Y').' jam '.Carbon::parse($kajian->time_start)->format('H:i').'. '.
-                ($kajian->speaker ? 'Pemateri: '.$kajian->speaker.'. ' : '').
-                'Klik untuk melihat detail.';
-
-        $result = $service->sendToWaliForEvent($kajian, $title, $body, '/wali-santri/schedule');
+        $result = app(KajianNotificationService::class)->sendManualReminder($kajian);
 
         $this->dispatch('notify', [
             'type' => 'success',
