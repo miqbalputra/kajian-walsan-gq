@@ -47,16 +47,15 @@
 .public-page .public-link { color: var(--public-green); text-decoration: underline; text-underline-offset: 4px; border-radius: 2px; }
 .public-page .public-link:hover { color: #14532d; }
 .public-page .public-panel { background: white; border: 1px solid var(--public-border); border-radius: 16px; }
-.public-page .public-schedule { padding: 24px; min-width: 0; border-top: 4px solid var(--public-green); box-shadow: 0 4px 20px #233d2510; }
+.public-page .public-schedule { padding: 24px; min-width: 0; border-color: #dedfd7; box-shadow: 0 6px 18px rgb(32 43 35 / 4%); }
 .public-page .public-schedule-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-bottom: 20px; }
-.public-page .public-schedule-heading .public-eyebrow { color: var(--public-green); }
 .public-page .public-status { display: inline-flex; align-items: center; gap: 8px; font-size: 14px; font-weight: 600; line-height: 1.5; padding: 4px 10px; border-radius: 6px; background: #f4f5f1; color: var(--public-muted); }
 .public-page .public-status-open { background: #edf5ea; color: var(--public-green); }
 .public-page .public-status-open::before { content: ''; height: 6px; width: 6px; border-radius: 50%; background: currentColor; flex-shrink: 0; }
 .public-page .public-schedule h2 { font-size: 24px; }
 .public-page .public-event-details { display: grid; gap: 20px 12px; margin-top: 24px; }
 .public-page .public-event-details > div { min-width: 0; }
-.public-page .public-event-details .public-event-key { padding: 14px; background: #f5f7f1; border: 1px solid #edf0e7; border-radius: 12px; }
+.public-page .public-event-details .public-event-key { padding: 14px; background: #f7f7f3; border: 1px solid #eeeee7; border-radius: 12px; }
 .public-page .public-event-details dt { display: flex; align-items: center; gap: 8px; color: var(--public-muted); font-size: 14px; }
 .public-page .public-event-details dt .public-icon { width: 18px; height: 18px; color: var(--public-green); }
 .public-page .public-event-details dd { margin: 5px 0 0 26px; font-weight: 500; overflow-wrap: anywhere; }
