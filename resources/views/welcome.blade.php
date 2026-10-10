@@ -36,8 +36,8 @@
                     </div>
                     <h2 id="schedule-title">{{ $currentKajian->title }}</h2>
                     <dl class="public-event-details">
-                        <div><dt><x-public.icon name="calendar" /> Tanggal</dt><dd>{{ $currentKajian->formatted_date }}</dd></div>
-                        <div><dt><x-public.icon name="clock" /> Waktu</dt><dd>{{ $currentKajian->time_range }}</dd></div>
+                        <div class="public-event-key"><dt><x-public.icon name="calendar" /> Tanggal</dt><dd>{{ $currentKajian->formatted_date }}</dd></div>
+                        <div class="public-event-key"><dt><x-public.icon name="clock" /> Waktu</dt><dd>{{ $currentKajian->time_range }}</dd></div>
                         @if ($currentKajian->location)
                             <div class="public-event-wide"><dt><x-public.icon name="pin" /> Tempat</dt><dd>{{ $currentKajian->location }}</dd></div>
                         @endif
@@ -69,24 +69,24 @@
                 <p>Pilih cara yang sesuai dengan kehadiran Bapak/Ibu.</p>
             </div>
             <div class="public-guide-grid">
-                <article class="public-guide-item">
-                    <h3>Hadir langsung</h3>
+                <article class="public-guide-item public-guide-direct">
+                    <div class="public-guide-heading"><span class="public-guide-symbol"><x-public.icon name="pin" /></span><h3>Hadir langsung</h3></div>
                     <p>Tunjukkan kartu presensi atau QR kepada petugas di lokasi kajian.</p>
                     <details class="public-inline-detail">
                         <summary>Belum membawa kartu? <x-public.icon name="chevron-down" /></summary>
                         <p>Sebutkan nama Bapak/Ibu dan nama ananda kepada petugas agar kehadiran dapat dicatat.</p>
                     </details>
                 </article>
-                <article class="public-guide-item">
-                    <h3>Hadir online</h3>
+                <article class="public-guide-item public-guide-online">
+                    <div class="public-guide-heading"><span class="public-guide-symbol"><x-public.icon name="notebook" /></span><h3>Hadir online</h3></div>
                     <p>Masuk ke akun, pilih <strong>Hadir Online</strong>, lalu unggah foto catatan kajian.</p>
                     <details class="public-inline-detail">
                         <summary>Ketentuan catatan <x-public.icon name="chevron-down" /></summary>
                         <p>Gunakan foto catatan tulisan tangan Bapak/Ibu sendiri. Bukti akan diperiksa petugas. Pantau statusnya di akun dan unggah ulang jika diminta.</p>
                     </details>
                 </article>
-                <article class="public-guide-item">
-                    <h3>Berhalangan hadir</h3>
+                <article class="public-guide-item public-guide-permission">
+                    <div class="public-guide-heading"><span class="public-guide-symbol"><x-public.icon name="document" /></span><h3>Berhalangan hadir</h3></div>
                     <p>Masuk ke akun, pilih <strong>Izin</strong>, lalu unggah dokumen keterangan.</p>
                     <details class="public-inline-detail">
                         <summary>Setelah mengirim izin <x-public.icon name="chevron-down" /></summary>
@@ -141,6 +141,7 @@
                         : null;
                 @endphp
                 <aside class="public-support" aria-labelledby="support-title">
+                    <p class="public-support-label"><x-public.icon name="message" /> Bantuan akun</p>
                     <h3 id="support-title">Minta bantuan petugas</h3>
                     <p>Kesulitan masuk atau ada data yang belum sesuai? Petugas dapat membantu Bapak/Ibu.</p>
                     @if ($supportUrl)

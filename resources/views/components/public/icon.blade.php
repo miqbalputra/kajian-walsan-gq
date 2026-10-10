@@ -19,6 +19,15 @@
         @case('user')
             <circle cx="12" cy="8" r="4" /><path d="M4 21v-2a8 8 0 0 1 16 0v2" />
             @break
+        @case('notebook')
+            <rect x="5" y="3" width="15" height="18" rx="2" /><path d="M3 7h4M3 12h4M3 17h4m4-9h5m-5 4h5m-5 4h3" />
+            @break
+        @case('document')
+            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z" /><path d="M14 2v6h6M8 13h8m-8 4h5" />
+            @break
+        @case('message')
+            <path d="M21 11.5a8.5 8.5 0 0 1-8.5 8.5H3l2-5a8.5 8.5 0 1 1 16-3.5Z" /><path d="M8 11h8m-8 4h5" />
+            @break
         @case('chevron-down')
             <path d="m6 9 6 6 6-6" />
             @break
