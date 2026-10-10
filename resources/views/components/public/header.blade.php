@@ -1,5 +1,5 @@
 @props(['login' => false])
-<header class="public-header public-container">
+<header class="public-header public-container {{ $login ? 'public-header-login' : '' }}">
     <a class="public-brand" href="{{ route('home') }}" aria-label="Presensi Wali Santri — Beranda">
         <img src="{{ asset('icons/icon.svg') }}" width="40" height="40" alt="">
         <span>

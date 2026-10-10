@@ -17,55 +17,12 @@
                     x-data="{ submitting: false, googlePending: false }"
                     @pageshow.window="submitting = false; googlePending = false">
                     <h1 id="login-title">Masuk ke akun</h1>
-                    <p class="public-form-intro">Gunakan username atau email yang terdaftar.</p>
+                    <p class="public-form-intro">Pilih salah satu cara masuk di bawah.</p>
 
                     @if (session('status'))
                         <p class="public-message" role="status">{{ session('status') }}</p>
                     @endif
 
-                    <form class="public-login-form" method="POST" action="{{ route('login') }}"
-                        @submit="if (submitting || googlePending) { $event.preventDefault(); return; } submitting = true"
-                        :aria-busy="submitting">
-                        @csrf
-                        <div class="public-field">
-                            <label for="username">Username atau email</label>
-                            <input type="text" id="username" name="username" value="{{ old('username') }}"
-                                placeholder="Masukkan username atau email" required autocomplete="username"
-                                autocapitalize="none" autocorrect="off" spellcheck="false"
-                                aria-invalid="{{ $errors->has('username') ? 'true' : 'false' }}"
-                                @if ($errors->has('username')) aria-describedby="username-error" @endif>
-                            @error('username')
-                                <p id="username-error" class="public-field-error" role="alert">{{ $message }}</p>
-                            @enderror
-                        </div>
-                        <div class="public-field" x-data="{ showPassword: false }">
-                            <label for="password">Kata sandi</label>
-                            <div class="public-password-field">
-                                <input type="password" :type="showPassword ? 'text' : 'password'" id="password" name="password"
-                                    placeholder="Masukkan kata sandi" required autocomplete="current-password"
-                                    aria-invalid="{{ $errors->has('password') ? 'true' : 'false' }}"
-                                    @if ($errors->has('password')) aria-describedby="password-error" @endif>
-                                <button type="button" class="public-password-toggle" x-cloak @click="showPassword = !showPassword"
-                                    aria-label="Tampilkan kata sandi" :aria-label="showPassword ? 'Sembunyikan kata sandi' : 'Tampilkan kata sandi'"
-                                    :aria-pressed="showPassword" aria-controls="password">
-                                    <span x-show="!showPassword"><x-public.icon name="eye" /></span>
-                                    <span x-show="showPassword" x-cloak><x-public.icon name="eye-off" /></span>
-                                </button>
-                            </div>
-                            @error('password')
-                                <p id="password-error" class="public-field-error" role="alert">{{ $message }}</p>
-                            @enderror
-                        </div>
-                        <div class="public-form-tools">
-                            <a class="public-link" href="{{ route('password.request') }}">Lupa kata sandi?</a>
-                        </div>
-                        <button type="submit" class="public-button public-button-primary" :disabled="submitting || googlePending">
-                            <span x-text="submitting ? 'Sedang masuk…' : 'Masuk'">Masuk</span>
-                            <x-public.icon name="arrow-right" />
-                        </button>
-                    </form>
-
-                    <div class="public-divider">atau</div>
                     <div class="public-google-login">
                         @if ($errors->has('google'))
                             <p class="public-message public-message-error" role="alert">{{ $errors->first('google') }}</p>
@@ -81,8 +38,50 @@
                             </svg>
                             <span x-text="googlePending ? 'Membuka Google…' : 'Masuk dengan Google'">Masuk dengan Google</span>
                         </a>
-                        <p>Gunakan akun Google dengan email yang sudah terdaftar di aplikasi.</p>
+                        <p>Email Google harus sudah terdaftar di aplikasi.</p>
                     </div>
+                    <div class="public-divider">atau gunakan username</div>
+
+                    <form class="public-login-form" method="POST" action="{{ route('login') }}"
+                        @submit="if (submitting || googlePending) { $event.preventDefault(); return; } submitting = true"
+                        :aria-busy="submitting">
+                        @csrf
+                        <div class="public-field">
+                            <label for="username">Username atau email</label>
+                            <input type="text" id="username" name="username" value="{{ old('username') }}"
+                                placeholder="Username / email" required autocomplete="username"
+                                autocapitalize="none" autocorrect="off" spellcheck="false"
+                                aria-invalid="{{ $errors->has('username') ? 'true' : 'false' }}"
+                                @if ($errors->has('username')) aria-describedby="username-error" @endif>
+                            @error('username')
+                                <p id="username-error" class="public-field-error" role="alert">{{ $message }}</p>
+                            @enderror
+                        </div>
+                        <div class="public-field" x-data="{ showPassword: false }">
+                            <label for="password">Kata sandi</label>
+                            <div class="public-password-field">
+                                <input type="password" :type="showPassword ? 'text' : 'password'" id="password" name="password"
+                                    placeholder="Kata sandi" required autocomplete="current-password"
+                                    aria-invalid="{{ $errors->has('password') ? 'true' : 'false' }}"
+                                    @if ($errors->has('password')) aria-describedby="password-error" @endif>
+                                <button type="button" class="public-password-toggle" x-cloak @click="showPassword = !showPassword"
+                                    aria-label="Tampilkan kata sandi" :aria-label="showPassword ? 'Sembunyikan kata sandi' : 'Tampilkan kata sandi'"
+                                    :aria-pressed="showPassword" aria-controls="password">
+                                    <span x-text="showPassword ? 'Tutup' : 'Lihat'">Lihat</span>
+                                </button>
+                            </div>
+                            @error('password')
+                                <p id="password-error" class="public-field-error" role="alert">{{ $message }}</p>
+                            @enderror
+                        </div>
+                        <div class="public-form-tools">
+                            <a class="public-link" href="{{ route('password.request') }}">Lupa kata sandi?</a>
+                        </div>
+                        <button type="submit" class="public-button public-button-primary" :disabled="submitting || googlePending">
+                            <span x-text="submitting ? 'Sedang masuk…' : 'Masuk'">Masuk</span>
+                            <x-public.icon name="arrow-right" />
+                        </button>
+                    </form>
                 </section>
                 <p class="public-login-help">Kesulitan masuk? <a class="public-link" href="{{ route('home') }}#bantuan">Lihat bantuan</a></p>
             </div>

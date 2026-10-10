@@ -48,12 +48,12 @@ class PublicEntryPagesTest extends TestCase
     }
 
     #[DataProvider('scheduleStatuses')]
-    public function test_schedule_labels_follow_attendance_status_not_just_the_clock(string $date, string $status, string $label): void
+    public function test_schedule_labels_follow_attendance_status_not_just_the_clock(string $date, string $status, string $label, string $attendanceLabel): void
     {
         $this->event(['date' => $date, 'status' => $status, 'time_start' => '07:30']);
-        $response = $this->get('/')->assertOk()->assertSee($label);
+        $response = $this->get('/')->assertOk()->assertSee($label)->assertSee('Status presensi')->assertSee($attendanceLabel);
 
-        if ($label !== 'Presensi dibuka') {
+        if ($attendanceLabel !== 'Presensi dibuka') {
             $response->assertDontSee('Presensi dibuka');
         }
         $response->assertDontSee('Sedang Berlangsung');
@@ -62,13 +62,13 @@ class PublicEntryPagesTest extends TestCase
     public static function scheduleStatuses(): array
     {
         return [
-            'today before admin opens' => ['2026-10-10', 'draft', 'Hari ini'],
-            'today open' => ['2026-10-10', 'open', 'Presensi dibuka'],
-            'today closed' => ['2026-10-10', 'closed', 'Kajian selesai'],
-            'past event accepting uploads' => ['2026-10-09', 'open', 'Presensi dibuka'],
-            'tomorrow' => ['2026-10-11', 'draft', 'Besok'],
-            'future' => ['2026-10-12', 'draft', 'Kajian berikutnya'],
-            'future open is not active yet' => ['2026-10-12', 'open', 'Kajian berikutnya'],
+            'today before admin opens' => ['2026-10-10', 'draft', 'Hari ini', 'Presensi belum dibuka'],
+            'today open' => ['2026-10-10', 'open', 'Presensi dibuka', 'Presensi dibuka'],
+            'today closed' => ['2026-10-10', 'closed', 'Kajian selesai', 'Presensi ditutup'],
+            'past event accepting uploads' => ['2026-10-09', 'open', 'Kajian sebelumnya', 'Presensi dibuka'],
+            'tomorrow' => ['2026-10-11', 'draft', 'Besok', 'Presensi belum dibuka'],
+            'future' => ['2026-10-12', 'draft', 'Kajian berikutnya', 'Presensi belum dibuka'],
+            'future open is not active yet' => ['2026-10-12', 'open', 'Kajian berikutnya', 'Presensi belum dibuka'],
         ];
     }
 
@@ -151,7 +151,7 @@ class PublicEntryPagesTest extends TestCase
         $errors = (new ViewErrorBag)->put('default', new MessageBag(['google' => 'Email Google ini belum terdaftar.']));
         $this->withSession(['errors' => $errors])->get('/login')
             ->assertOk()
-            ->assertSeeInOrder(['Email Google ini belum terdaftar.', 'Masuk dengan Google'])
+            ->assertSeeInOrder(['Email Google ini belum terdaftar.', 'Masuk dengan Google', 'Username atau email'])
             ->assertSee(route('google.redirect'), false)
             ->assertSee(route('password.request'), false)
             ->assertDontSee(route('qr.login'), false)
