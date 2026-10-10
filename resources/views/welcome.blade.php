@@ -1,804 +1,192 @@
-<x-layouts.app title="Selamat Datang" :force-light="true">
-    <div class="relative min-h-screen overflow-hidden bg-slate-50 font-sans selection:bg-primary-500 selection:text-white"
-        x-data="{ showInfo: false, showGuide: false, showUpdatesGuide: false }">
-
-        <!-- Animated Background (Matching login page) -->
-        <div class="fixed inset-0 w-full h-full bg-gradient-to-br from-primary-600 via-primary-700 to-secondary-700">
-            <!-- Decorative Blobs - Simplified for performance -->
-            <div class="absolute top-[10%] right-[5%] w-[400px] h-[400px] rounded-full bg-primary-400/20 blur-3xl">
-            </div>
-            <div class="absolute bottom-[10%] left-[5%] w-[350px] h-[350px] rounded-full bg-secondary-400/15 blur-3xl">
-            </div>
-
-            <!-- Pattern Overlay -->
-            <div class="absolute inset-0 opacity-[0.03]"
-                style="background-image: url('data:image/svg+xml,%3Csvg width=\'60\' height=\'60\' viewBox=\'0 0 60 60\' xmlns=\'http://www.w3.org/2000/svg\'%3E%3Cg fill=\'none\' fill-rule=\'evenodd\'%3E%3Cg fill=\'%23ffffff\' fill-opacity=\'1\'%3E%3Cpath d=\'M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z\'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E')">
-            </div>
-        </div>
-
-        <!-- Header -->
-        <header class="relative z-20 flex items-center justify-between px-6 py-6 max-w-7xl mx-auto">
-            <div class="flex items-center gap-3 group cursor-default">
-                <div class="relative">
-                    <div
-                        class="relative w-10 h-10 bg-white/15 border border-white/20 rounded-xl flex items-center justify-center shadow-lg">
-                        <span class="material-symbols-rounded text-white text-2xl">mosque</span>
-                    </div>
+<x-layouts.app title="Beranda" surface="public" :force-light="true">
+    <x-public.header />
+    <main id="main-content" class="public-container" tabindex="-1">
+        <section class="public-hero" aria-labelledby="welcome-title">
+            <div class="public-intro">
+                <p class="public-eyebrow">Selamat datang, Bapak/Ibu</p>
+                <h1 id="welcome-title">Presensi<br class="public-desktop-break"> Wali Santri</h1>
+                <p class="public-lead">Lihat jadwal kajian dan kelola kehadiran Bapak/Ibu.</p>
+                <div class="public-entry">
+                    @auth
+                        <a class="public-button public-button-primary" href="{{ route('dashboard') }}">Buka akun saya <x-public.icon name="arrow-right" /></a>
+                    @else
+                        <a class="public-button public-button-primary" href="{{ route('login') }}">Masuk sebagai wali santri <x-public.icon name="arrow-right" /></a>
+                    @endauth
+                    <p>Untuk kartu presensi, hadir online, dan pengajuan izin.</p>
                 </div>
-                <div class="flex flex-col">
-                    <span class="text-white font-bold text-xl tracking-tight leading-none">Presensi</span>
-                    <span class="text-white/70 text-[10px] font-medium uppercase tracking-wider">Wali Santri</span>
-                </div>
+                @guest
+                    <p class="public-staff-entry">Anda petugas? <a class="public-link" href="{{ route('login') }}">Masuk sebagai petugas</a></p>
+                @endguest
             </div>
-
-            <div class="flex items-center gap-3">
-                @auth
-                    <a href="{{ route('dashboard') }}"
-                        class="px-5 py-2.5 rounded-full bg-white/10 hover:bg-white/20 border border-white/10 backdrop-blur-md transition-all text-white text-sm font-semibold shadow-lg hover:shadow-xl transform hover:-translate-y-0.5">
-                        Dashboard
-                    </a>
-                @else
-                    <a href="{{ route('login') }}"
-                        class="px-5 py-2.5 rounded-full bg-white text-primary-700 hover:bg-gray-50 transition-all text-sm font-bold shadow-lg hover:shadow-xl transform hover:-translate-y-0.5">
-                        Masuk
-                    </a>
-                @endauth
-                <button @click="showInfo = !showInfo"
-                    class="p-2.5 rounded-full bg-white/10 hover:bg-white/20 border border-white/10 backdrop-blur-md transition-all text-white shadow-lg hover:rotate-12">
-                    <span class="material-symbols-rounded text-xl">info</span>
-                </button>
-            </div>
-        </header>
-
-        <!-- Main Content -->
-        <main class="relative z-10 w-full max-w-xl mx-auto px-6 pb-12 pt-4 flex flex-col items-center">
-
-            <!-- Hero Section -->
-            <div class="text-center mb-8 relative">
-                <div class="inline-block relative mb-4">
-                    <div
-                        class="relative w-24 h-24 bg-gradient-to-tr from-white/15 to-white/5 border border-white/20 rounded-[2rem] flex items-center justify-center shadow-2xl">
-                        <span class="material-symbols-rounded text-6xl text-white drop-shadow-md">qr_code_scanner</span>
+            <section class="public-panel public-schedule" aria-labelledby="schedule-title">
+                @if ($currentKajian)
+                    @php
+                        $attendanceOpen = $currentKajian->status === 'open' && $currentKajian->date->toDateString() <= today()->toDateString();
+                        $scheduleStatus = match (true) {
+                            $currentKajian->status === 'closed' => 'Kajian selesai',
+                            $attendanceOpen => 'Presensi dibuka',
+                            $currentKajian->date->isToday() => 'Hari ini',
+                            $currentKajian->date->isTomorrow() => 'Besok',
+                            default => 'Kajian berikutnya',
+                        };
+                    @endphp
+                    <div class="public-schedule-heading">
+                        <p class="public-eyebrow">Jadwal kajian</p>
+                        <span class="public-status {{ $attendanceOpen ? 'public-status-open' : '' }}">{{ $scheduleStatus }}</span>
                     </div>
-                </div>
-                <h1 class="text-4xl md:text-5xl font-black text-white mb-3 tracking-tight drop-shadow-sm">
-                    Presensi Wali Santri
-                </h1>
-                <p class="text-lg text-white/80 font-medium max-w-sm mx-auto leading-relaxed">
-                    Sistem Presensi & Informasi Kehadiran Wali Santri
-                </p>
-            </div>
-
-            <!-- Current/Next Kajian Info Card -->
-            @if($currentKajian)
-                <div class="w-full mb-8 transform hover:scale-[1.02] transition-transform duration-300">
-                    <div class="relative bg-white rounded-3xl shadow-2xl overflow-hidden border border-white/40">
-                        <!-- Decorative Header Background -->
-                        <div class="absolute top-0 inset-x-0 h-32 bg-gradient-to-b from-gray-50 to-white opacity-50"></div>
-
-                        <!-- Status Badge Strip -->
-                        <div class="relative px-6 py-4 flex items-center justify-between border-b border-gray-100">
-                            <div class="flex items-center gap-3">
-                                @php
-                                    $badgeClasses = match ($timeStatus) {
-                                        'ongoing' => 'bg-green-100 text-green-700 border-green-200',
-                                        'soon' => 'bg-amber-100 text-amber-700 border-amber-200',
-                                        'today' => 'bg-blue-100 text-blue-700 border-blue-200',
-                                        'tomorrow' => 'bg-indigo-100 text-indigo-700 border-indigo-200',
-                                        default => 'bg-gray-100 text-gray-700 border-gray-200'
-                                    };
-
-                                    $icon = match ($timeStatus) {
-                                        'ongoing' => 'graphic_eq',
-                                        'soon' => 'timer',
-                                        'today' => 'today',
-                                        'tomorrow' => 'event',
-                                        default => 'calendar_month'
-                                    };
-
-                                    $staticStatusText = match ($timeStatus) {
-                                        'ongoing' => 'Sedang Berlangsung',
-                                        'today' => 'Hari Ini',
-                                        'tomorrow' => 'Besok',
-                                        default => 'Kajian Berikutnya'
-                                    };
-                                @endphp
-
-                                @if($timeStatus === 'soon' && isset($eventTimestamp))
-                                    {{-- Live Countdown Timer --}}
-                                    <div x-data="countdownTimer({{ $eventTimestamp }})"
-                                        class="px-3 py-1.5 rounded-full border transition-all duration-300"
-                                        :class="isFinished ? 'bg-green-100 text-green-700 border-green-200' : 'bg-amber-100 text-amber-700 border-amber-200'">
-                                        <div class="flex items-center gap-2">
-                                            <template x-if="isFinished">
-                                                <span class="relative flex h-2.5 w-2.5">
-                                                    <span
-                                                        class="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-500 opacity-75"></span>
-                                                    <span
-                                                        class="relative inline-flex rounded-full h-2.5 w-2.5 bg-green-500"></span>
-                                                </span>
-                                            </template>
-                                            <template x-if="!isFinished">
-                                                <span class="material-symbols-rounded text-lg">timer</span>
-                                            </template>
-                                            <span class="text-xs font-bold uppercase tracking-wide" x-text="displayText"></span>
-                                        </div>
-                                    </div>
-                                @else
-                                    {{-- Static Status Badge --}}
-                                    <div class="px-3 py-1.5 rounded-full border {{ $badgeClasses }} flex items-center gap-2">
-                                        @if($timeStatus === 'ongoing')
-                                            <span class="relative flex h-2.5 w-2.5">
-                                                <span
-                                                    class="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-500 opacity-75"></span>
-                                                <span class="relative inline-flex rounded-full h-2.5 w-2.5 bg-green-500"></span>
-                                            </span>
-                                        @else
-                                            <span class="material-symbols-rounded text-lg">{{ $icon }}</span>
-                                        @endif
-                                        <span class="text-xs font-bold uppercase tracking-wide">{{ $staticStatusText }}</span>
-                                    </div>
-                                @endif
-                            </div>
-
-                            @if($currentKajian->status === 'open')
-                                <div
-                                    class="px-2.5 py-1 rounded-lg bg-primary-50 text-primary-600 text-[10px] font-bold uppercase border border-primary-100 tracking-wider">
-                                    Terbuka
-                                </div>
-                            @endif
-                        </div>
-
-                        <!-- Content -->
-                        <div class="relative p-6">
-                            <h3 class="text-2xl font-bold text-gray-900 mb-6 leading-tight">
-                                {{ $currentKajian->title }}
-                            </h3>
-
-                            <div class="grid gap-4">
-                                @if($currentKajian->speaker)
-                                    <div
-                                        class="flex items-start gap-4 p-3 rounded-2xl bg-gray-50 border border-gray-100 hover:bg-white hover:shadow-md transition-all group">
-                                        <div
-                                            class="w-10 h-10 bg-white rounded-xl flex items-center justify-center shadow-sm border border-gray-100 group-hover:border-primary-100 group-hover:bg-primary-50 transition-colors">
-                                            <span class="material-symbols-rounded text-primary-500 text-xl">person</span>
-                                        </div>
-                                        <div>
-                                            <p class="text-[10px] uppercase tracking-wider text-gray-400 font-bold mb-0.5">
-                                                Pemateri</p>
-                                            <p class="text-gray-900 font-semibold text-sm">{{ $currentKajian->speaker }}</p>
-                                        </div>
-                                    </div>
-                                @endif
-
-                                <div class="grid grid-cols-2 gap-4">
-                                    <div
-                                        class="flex flex-col p-3 rounded-2xl bg-gray-50 border border-gray-100 hover:bg-white hover:shadow-md transition-all group">
-                                        <div class="flex items-center gap-2 mb-2">
-                                            <span
-                                                class="material-symbols-rounded text-secondary-500 text-lg">calendar_today</span>
-                                            <p class="text-[10px] uppercase tracking-wider text-gray-400 font-bold">Tanggal
-                                            </p>
-                                        </div>
-                                        <p class="text-gray-900 font-semibold text-sm pl-7">
-                                            {{ $currentKajian->formatted_date }}
-                                        </p>
-                                    </div>
-
-                                    <div
-                                        class="flex flex-col p-3 rounded-2xl bg-gray-50 border border-gray-100 hover:bg-white hover:shadow-md transition-all group">
-                                        <div class="flex items-center gap-2 mb-2">
-                                            <span class="material-symbols-rounded text-accent-500 text-lg">schedule</span>
-                                            <p class="text-[10px] uppercase tracking-wider text-gray-400 font-bold">Waktu
-                                            </p>
-                                        </div>
-                                        <p class="text-gray-900 font-semibold text-sm pl-7">{{ $currentKajian->time_range }}
-                                        </p>
-                                    </div>
-                                </div>
-
-                                @if($currentKajian->location)
-                                    <div class="flex items-start gap-3 px-3 py-2 text-gray-500 text-sm">
-                                        <span class="material-symbols-rounded text-lg mt-0.5">location_on</span>
-                                        <span>{{ $currentKajian->location }}</span>
-                                    </div>
-                                @endif
-                            </div>
-
-                            @if($timeStatus === 'ongoing' && $currentKajian->attendance_count > 0)
-                                <div
-                                    class="mt-6 flex items-center justify-center py-3 bg-green-50 rounded-xl border border-green-100">
-                                    <div class="flex items-center gap-2 text-green-700">
-                                        <span class="material-symbols-rounded">groups</span>
-                                        <span class="font-bold">{{ $currentKajian->attendance_count }}</span>
-                                        <span class="text-sm font-medium">wali santri sudah hadir</span>
-                                    </div>
-                                </div>
-                            @endif
-                        </div>
-                    </div>
-                </div>
-            @else
-                <!-- Empty State -->
-                <div class="w-full mb-8">
-                    <div class="bg-white rounded-3xl shadow-xl p-8 text-center border-2 border-dashed border-gray-200">
-                        <div
-                            class="inline-flex w-16 h-16 bg-gray-50 rounded-2xl items-center justify-center mb-4 shadow-inner">
-                            <span class="material-symbols-rounded text-gray-300 text-3xl">event_busy</span>
-                        </div>
-                        <h3 class="text-xl font-bold text-gray-900 mb-2">Belum Ada Jadwal</h3>
-                        <p class="text-gray-500 text-sm">Jadwal kajian berikutnya belum tersedia.</p>
-                    </div>
-                </div>
-            @endif
-
-            <!-- Attendance Guide Prompt -->
-            <button @click="showGuide = true"
-                class="w-full mb-8 group relative overflow-hidden bg-gradient-to-r from-primary-600 to-secondary-600 p-1 rounded-3xl shadow-xl transition-all duration-300 hover:shadow-primary-500/20 hover:-translate-y-1">
-                <div class="bg-white dark:bg-slate-900 group-hover:bg-transparent rounded-[1.35rem] p-5 flex items-center justify-between transition-colors duration-300">
-                    <div class="flex items-center gap-4">
-                        <div class="w-12 h-12 rounded-2xl bg-primary-50 text-primary-600 flex items-center justify-center group-hover:bg-white/20 group-hover:text-white transition-all">
-                            <span class="material-symbols-rounded text-2xl font-bold">menu_book</span>
-                        </div>
-                        <div class="text-left">
-                            <h3 class="font-black text-gray-900 group-hover:text-white text-base leading-tight">Panduan Alur Presensi</h3>
-                            <p class="text-gray-500 group-hover:text-white/80 text-[10px] uppercase font-bold tracking-widest mt-0.5">Wajib dibaca Wali Santri</p>
-                        </div>
-                    </div>
-                    <span class="material-symbols-rounded text-primary-300 group-hover:text-white transition-colors">arrow_forward_ios</span>
-                </div>
-            </button>
-
-            <!-- Login Actions -->
-            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 w-full mb-5">
-                <a href="{{ route('login') }}" aria-label="Masuk sebagai petugas"
-                    class="group flex items-center gap-4 w-full rounded-2xl bg-white px-4 py-4 text-left shadow-lg shadow-black/10 border border-white/70 motion-safe:transition-colors motion-safe:duration-200 hover:bg-emerald-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-primary-700">
-                    <span class="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-emerald-50 text-emerald-700 border border-emerald-100 group-hover:bg-emerald-100">
-                        <span class="material-symbols-rounded text-2xl" aria-hidden="true">admin_panel_settings</span>
-                    </span>
-                    <span class="min-w-0 flex-1">
-                        <span class="block text-xs font-semibold text-emerald-700">Petugas</span>
-                        <span class="mt-0.5 block text-base font-bold leading-tight text-slate-900">Masuk sebagai petugas</span>
-                        <span class="mt-1 block text-xs leading-snug text-slate-500">Kelola jadwal dan presensi</span>
-                    </span>
-                    <span class="material-symbols-rounded shrink-0 text-xl text-emerald-600" aria-hidden="true">chevron_right</span>
-                </a>
-
-                <a href="{{ route('login') }}" aria-label="Masuk sebagai wali santri"
-                    class="group flex items-center gap-4 w-full rounded-2xl bg-white px-4 py-4 text-left shadow-lg shadow-black/10 border border-white/70 motion-safe:transition-colors motion-safe:duration-200 hover:bg-sky-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-primary-700">
-                    <span class="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-sky-50 text-sky-700 border border-sky-100 group-hover:bg-sky-100">
-                        <span class="material-symbols-rounded text-2xl" aria-hidden="true">family_restroom</span>
-                    </span>
-                    <span class="min-w-0 flex-1">
-                        <span class="block text-xs font-semibold text-sky-700">Wali santri</span>
-                        <span class="mt-0.5 block text-base font-bold leading-tight text-slate-900">Masuk ke akun</span>
-                        <span class="mt-1 block text-xs leading-snug text-slate-500">Jadwal, riwayat, dan izin</span>
-                    </span>
-                    <span class="material-symbols-rounded shrink-0 text-xl text-sky-600" aria-hidden="true">chevron_right</span>
-                </a>
-            </div>
-
-            <!-- Compact Feature Updates Trigger -->
-            <button @click="showUpdatesGuide = true"
-                class="w-full mb-8 group relative overflow-hidden rounded-2xl bg-white/12 hover:bg-white/18 border border-white/20 backdrop-blur-md p-4 text-left transition-all duration-300 hover:-translate-y-0.5">
-                <div class="flex items-center gap-3">
-                    <div class="w-11 h-11 rounded-xl bg-white/15 text-white flex items-center justify-center border border-white/20 shrink-0 group-hover:scale-105 transition-transform">
-                        <span class="material-symbols-rounded text-2xl">new_releases</span>
-                    </div>
-                    <div class="min-w-0 flex-1">
-                        <div class="flex items-center gap-2 mb-1">
-                            <span class="text-[10px] font-black uppercase tracking-widest text-emerald-100">Update Fitur</span>
-                            <span class="h-1 w-1 rounded-full bg-white/40"></span>
-                            <span class="text-[10px] font-bold uppercase tracking-wider text-white/60">Panduan</span>
-                        </div>
-                        <p class="text-sm font-black text-white leading-tight">Install aplikasi, login Google, dan fitur wali santri</p>
-                    </div>
-                    <span class="material-symbols-rounded text-white/70">arrow_forward_ios</span>
-                </div>
-            </button>
-
-            <!-- Last Stats Mini Card -->
-            @if($lastKajian)
-                <div class="w-full">
-                    <div
-                        class="bg-white/10 backdrop-blur-md border border-white/20 rounded-2xl p-4 flex items-center justify-between">
-                        <div class="flex items-center gap-3">
-                            <div class="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center text-white">
-                                <span class="material-symbols-rounded text-xl">history</span>
-                            </div>
-                            <div>
-                                <p class="text-white/60 text-[10px] font-bold uppercase tracking-wider">Kajian Terakhir</p>
-                                <p class="text-white font-medium text-sm truncate max-w-[150px] sm:max-w-xs">
-                                    {{ $lastKajian->title }}
-                                </p>
-                            </div>
-                        </div>
-                        @if($lastKajian->attendance_count > 0)
-                            <div class="text-right">
-                                <span
-                                    class="block text-2xl font-bold text-white leading-none">{{ $lastKajian->attendance_count }}</span>
-                                <span class="text-white/60 text-[10px]">Hadir</span>
-                            </div>
+                    <h2 id="schedule-title">{{ $currentKajian->title }}</h2>
+                    <dl class="public-event-details">
+                        <div><dt><x-public.icon name="calendar" /> Tanggal</dt><dd>{{ $currentKajian->formatted_date }}</dd></div>
+                        <div><dt><x-public.icon name="clock" /> Waktu</dt><dd>{{ $currentKajian->time_range }}</dd></div>
+                        @if ($currentKajian->location)
+                            <div class="public-event-wide"><dt><x-public.icon name="pin" /> Tempat</dt><dd>{{ $currentKajian->location }}</dd></div>
                         @endif
+                        @if ($currentKajian->speaker)
+                            <div class="public-event-wide"><dt><x-public.icon name="user" /> Pemateri</dt><dd>{{ $currentKajian->speaker }}</dd></div>
+                        @endif
+                    </dl>
+                    @if ($timeStatus === 'soon' && $eventTimestamp && $currentKajian->status !== 'closed')
+                        <p class="public-schedule-note" x-data="publicKajianCountdown({{ $eventTimestamp }})"><span x-text="label">Dimulai dalam {{ (int) ceil($countdownMinutes) }} menit</span></p>
+                    @elseif ($attendanceOpen && $currentKajian->attendance_count > 0)
+                        <p class="public-schedule-note">{{ $currentKajian->attendance_count }} wali santri tercatat hadir.</p>
+                    @endif
+                @else
+                    <p class="public-eyebrow">Jadwal kajian</p>
+                    <div class="public-empty-schedule">
+                        <x-public.icon name="calendar" />
+                        <h2 id="schedule-title">Jadwal akan diumumkan</h2>
+                        <p>Jadwal kajian berikutnya belum tersedia.</p>
+                        <p class="public-muted">Bapak/Ibu tetap dapat masuk untuk melihat akun.</p>
                     </div>
-                </div>
-            @endif
-        </main>
+                @endif
+            </section>
+        </section>
 
-        <!-- Rights Footer -->
-        <footer class="relative z-10 py-6 text-center">
-            <p class="text-white/60 text-xs font-medium">
-                &copy; {{ date('Y') }} by <span
-                    class="text-white/80 hover:text-white transition-colors cursor-pointer">Kelompok Tahfidz Griya
-                    Qur'an "Tunas Ilmu"</span>
-            </p>
-        </footer>
-
-        <!-- Info Modal -->
-        <div x-cloak x-show="showInfo" x-transition:enter="transition-opacity ease-out duration-200"
-            x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100"
-            x-transition:leave="transition-opacity ease-in duration-150" x-transition:leave-start="opacity-100"
-            x-transition:leave-end="opacity-0" class="fixed inset-0 z-[100] overflow-y-auto bg-slate-900/70"
-            @click.self="showInfo = false">
-
-            <div class="flex min-h-full items-center justify-center p-4">
-                <div x-cloak x-show="showInfo" x-transition:enter="transition ease-out duration-200"
-                    x-transition:enter-start="opacity-0 scale-95" x-transition:enter-end="opacity-100 scale-100"
-                    x-transition:leave="transition ease-in duration-150"
-                    x-transition:leave-start="opacity-100 scale-100" x-transition:leave-end="opacity-0 scale-95"
-                    class="bg-white rounded-[2.5rem] shadow-2xl w-full max-w-sm overflow-hidden relative border border-white/50 my-8"
-                    @click.stop>
-
-                    <!-- Premium Header -->
-                    <div class="relative h-40 bg-gradient-to-br from-primary-600 via-primary-700 to-secondary-600">
-                        <!-- Elements that need clipping -->
-                        <div class="absolute inset-0 overflow-hidden">
-                            <!-- Geometric Pattern Overlay -->
-                            <div class="absolute inset-0 opacity-20"
-                                style="background-image: url('data:image/svg+xml,%3Csvg width=\'100\' height=\'100\' viewBox=\'0 0 100 100\' xmlns=\'http://www.w3.org/2000/svg\'%3E%3Cpath d=\'M50 0 L100 50 L50 100 L0 50 Z\' fill=\'none\' stroke=\'white\' stroke-width=\'1\'/%3E%3C/svg%3E'); background-size: 40px 40px;">
-                            </div>
-
-                            <!-- Decorative Light Effects - Simplified -->
-                            <div class="absolute -top-20 -right-20 w-48 h-48 bg-white/20 rounded-full blur-2xl"></div>
-                            <div class="absolute -bottom-20 -left-20 w-48 h-48 bg-primary-400/30 rounded-full blur-2xl">
-                            </div>
-                        </div>
-
-                        <!-- Close Button -->
-                        <button @click="showInfo = false"
-                            class="absolute top-6 right-6 z-20 w-10 h-10 bg-black/20 hover:bg-black/30 rounded-2xl text-white transition-colors flex items-center justify-center">
-                            <span class="material-symbols-rounded">close</span>
-                        </button>
-
-                        <!-- Icon Assembly -->
-                        <div class="absolute left-1/2 bottom-0 -translate-x-1/2 translate-y-1/2 z-[11]">
-                            <div class="w-24 h-24 p-2 bg-white rounded-[2rem] shadow-2xl">
-                                <div
-                                    class="w-full h-full bg-gradient-to-br from-primary-500 to-primary-600 rounded-[1.5rem] flex items-center justify-center text-white">
-                                    <span class="material-symbols-rounded text-5xl">mosque</span>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="relative px-8 pt-16 pb-10 text-center">
-                        <!-- App Title -->
-                        <div class="mb-8">
-                            <h3 class="text-3xl font-black text-slate-900 tracking-tight mb-1">Presensi Wali Santri</h3>
-                            <div class="flex items-center justify-center gap-2">
-                                <div class="h-1 w-8 bg-primary-500 rounded-full"></div>
-                                <p class="text-xs font-bold text-slate-400 uppercase tracking-[0.2em]">Pusat Kendali
-                                    Presensi</p>
-                                <div class="h-1 w-8 bg-primary-500 rounded-full"></div>
-                            </div>
-                        </div>
-
-                        <!-- Description Box -->
-                        <div
-                            class="p-5 bg-slate-50 rounded-[2rem] border border-slate-100 mb-8 relative group overflow-hidden">
-                            <div class="absolute top-0 right-0 p-2 opacity-5">
-                                <span class="material-symbols-rounded text-4xl">info</span>
-                            </div>
-                            <p class="text-slate-600 text-sm leading-relaxed relative z-10 font-medium">
-                                Solusi digital terintegrasi untuk pengelolaan data kehadiran & pemantauan kegiatan
-                                pertemuan wali santri di lingkungan pesantren secara modern, akurat, dan transparan.
-                            </p>
-                        </div>
-
-                        <!-- Feature Grid -->
-                        <div class="grid grid-cols-2 gap-4">
-                            <!-- Feature 1 -->
-                            <div
-                                class="group p-4 bg-white border border-slate-100 shadow-sm rounded-3xl hover:border-primary-100 hover:shadow-xl hover:shadow-primary-500/10 transition-all duration-300 transform hover:-translate-y-1">
-                                <div
-                                    class="w-12 h-12 bg-primary-50 rounded-2xl flex items-center justify-center text-primary-600 mb-3 mx-auto group-hover:scale-110 group-hover:bg-primary-500 group-hover:text-white transition-all duration-300">
-                                    <span class="material-symbols-rounded text-2xl">qr_code_2</span>
-                                </div>
-                                <span class="text-xs font-bold text-slate-900 uppercase tracking-wider">QR
-                                    Presensi</span>
-                            </div>
-
-                            <!-- Feature 2 -->
-                            <div
-                                class="group p-4 bg-white border border-slate-100 shadow-sm rounded-3xl hover:border-secondary-100 hover:shadow-xl hover:shadow-secondary-500/10 transition-all duration-300 transform hover:-translate-y-1">
-                                <div
-                                    class="w-12 h-12 bg-secondary-50 rounded-2xl flex items-center justify-center text-secondary-600 mb-3 mx-auto group-hover:scale-110 group-hover:bg-secondary-500 group-hover:text-white transition-all duration-300">
-                                    <span class="material-symbols-rounded text-2xl">insert_chart</span>
-                                </div>
-                                <span class="text-xs font-bold text-slate-900 uppercase tracking-wider">Realtime
-                                    Stat</span>
-                            </div>
-
-                            <!-- Feature 3 -->
-                            <div
-                                class="group p-4 bg-white border border-slate-100 shadow-sm rounded-3xl hover:border-amber-100 hover:shadow-xl hover:shadow-amber-500/10 transition-all duration-300 transform hover:-translate-y-1">
-                                <div
-                                    class="w-12 h-12 bg-amber-50 rounded-2xl flex items-center justify-center text-amber-600 mb-3 mx-auto group-hover:scale-110 group-hover:bg-amber-500 group-hover:text-white transition-all duration-300">
-                                    <span class="material-symbols-rounded text-2xl">calendar_month</span>
-                                </div>
-                                <span class="text-xs font-bold text-slate-900 uppercase tracking-wider">Jadwal
-                                    Kajian</span>
-                            </div>
-
-                            <!-- Feature 4 -->
-                            <div
-                                class="group p-4 bg-white border border-slate-100 shadow-sm rounded-3xl hover:border-indigo-100 hover:shadow-xl hover:shadow-indigo-500/10 transition-all duration-300 transform hover:-translate-y-1">
-                                <div
-                                    class="w-12 h-12 bg-indigo-50 rounded-2xl flex items-center justify-center text-indigo-600 mb-3 mx-auto group-hover:scale-110 group-hover:bg-indigo-500 group-hover:text-white transition-all duration-300">
-                                    <span class="material-symbols-rounded text-2xl">verified_user</span>
-                                </div>
-                                <span class="text-xs font-bold text-slate-900 uppercase tracking-wider">ID
-                                    Terpadu</span>
-                            </div>
-                        </div>
-
-                        <!-- Footer Info -->
-                        <div class="mt-10 pt-8 border-t border-slate-100 relative">
-                            <div class="absolute -top-3 left-1/2 -translate-x-1/2 px-4 bg-white">
-                                <span
-                                    class="text-[10px] font-black uppercase tracking-[0.3em] text-slate-300">Identity</span>
-                            </div>
-                            <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Developed by
-                            </p>
-                            <p
-                                class="text-sm font-black bg-gradient-to-r from-primary-600 to-secondary-500 bg-clip-text text-transparent">
-                                Muhammad Iqbal Putra</p>
-
-                            <!-- Contact Links -->
-                            <div class="flex items-center justify-center gap-3 mt-4">
-                                <a href="https://wa.me/6281390292177" target="_blank"
-                                    class="flex items-center gap-2 px-3 py-1.5 bg-emerald-50 text-emerald-600 rounded-xl hover:bg-emerald-500 hover:text-white transition-all duration-300 transform hover:-translate-y-0.5 shadow-sm border border-emerald-100/50">
-                                    <span class="material-symbols-rounded text-lg">chat</span>
-                                    <span class="text-[10px] font-bold uppercase tracking-wider">WhatsApp</span>
-                                </a>
-                                <a href="mailto:iqbalmarketist@gmail.com"
-                                    class="flex items-center gap-2 px-3 py-1.5 bg-blue-50 text-blue-600 rounded-xl hover:bg-blue-500 hover:text-white transition-all duration-300 transform hover:-translate-y-0.5 shadow-sm border border-blue-100/50">
-                                    <span class="material-symbols-rounded text-lg">mail</span>
-                                    <span class="text-[10px] font-bold uppercase tracking-wider">Email</span>
-                                </a>
-                            </div>
-
-                            <p class="text-[9px] text-slate-300 mt-6 font-medium">&copy; {{ date('Y') }} • Presensi Wali Santri
-                                Digital Ecosystem v2.0</p>
-                        </div>
-                    </div>
-                </div>
+        <section id="cara-presensi" class="public-section" aria-labelledby="guide-title">
+            <div class="public-section-heading">
+                <p class="public-eyebrow">Panduan singkat</p>
+                <h2 id="guide-title">Cara presensi</h2>
+                <p>Pilih cara yang sesuai dengan kehadiran Bapak/Ibu.</p>
             </div>
-        </div>
-
-        <!-- Feature Updates Guide Modal -->
-        <div x-cloak x-show="showUpdatesGuide" x-transition:enter="transition-opacity ease-out duration-300"
-            x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100"
-            x-transition:leave="transition-opacity ease-in duration-200" x-transition:leave-start="opacity-100"
-            x-transition:leave-end="opacity-0" class="fixed inset-0 z-[115] overflow-y-auto bg-slate-950/70 backdrop-blur-md"
-            @click.self="showUpdatesGuide = false">
-
-            <div class="flex min-h-screen items-center justify-center p-0 sm:p-6 lg:p-8">
-                <div x-cloak x-show="showUpdatesGuide" x-transition:enter="transition ease-out duration-500"
-                    x-transition:enter-start="opacity-0 translate-y-12 scale-95" x-transition:enter-end="opacity-100 translate-y-0 scale-100"
-                    x-transition:leave="transition ease-in duration-300"
-                    x-transition:leave-start="opacity-100 translate-y-0 scale-100" x-transition:leave-end="opacity-0 translate-y-12 scale-95"
-                    class="bg-white rounded-t-[3rem] sm:rounded-[3rem] shadow-2xl w-full max-w-lg mb-0 sm:mb-8 overflow-hidden relative border border-white/20"
-                    @click.stop>
-
-                    <button @click="showUpdatesGuide = false"
-                        class="absolute top-6 right-6 w-12 h-12 bg-black/10 hover:bg-black/20 backdrop-blur-xl rounded-full flex items-center justify-center text-white transition-all z-20 border border-white/20 group">
-                        <span class="material-symbols-rounded group-hover:rotate-90 transition-transform duration-300">close</span>
-                    </button>
-
-                    <div class="relative h-56 bg-gradient-to-br from-slate-900 via-primary-800 to-emerald-700 overflow-hidden">
-                        <div class="absolute inset-0 opacity-10"
-                            style="background-image: url('data:image/svg+xml,%3Csvg width=\'80\' height=\'80\' viewBox=\'0 0 80 80\' xmlns=\'http://www.w3.org/2000/svg\'%3E%3Cg fill=\'none\' stroke=\'white\' stroke-width=\'1\'%3E%3Cpath d=\'M10 10h20v20H10zM50 10h20v20H50zM10 50h20v20H10zM50 50h20v20H50z\'/%3E%3C/g%3E%3C/svg%3E'); background-size: 44px 44px;">
-                        </div>
-                        <div class="absolute inset-0 bg-gradient-to-t from-white via-white/10 to-transparent"></div>
-                        <div class="absolute bottom-10 left-8 right-20">
-                            <span class="inline-flex items-center gap-2 px-3 py-1 bg-white/15 text-white text-[10px] font-black uppercase tracking-[0.25em] rounded-full border border-white/20 mb-3">
-                                <span class="material-symbols-rounded text-base">tips_and_updates</span>
-                                Panduan Baru
-                            </span>
-                            <h3 class="text-3xl sm:text-4xl font-black text-white tracking-tight leading-none">Update Fitur Wali Santri</h3>
-                            <p class="text-white/75 text-sm font-medium mt-2">Langkah singkat agar aplikasi lebih praktis dipakai.</p>
-                        </div>
-                    </div>
-
-                    <div class="px-6 sm:px-10 py-8 space-y-4 max-h-[62vh] sm:max-h-[54vh] overflow-y-auto overscroll-contain custom-scrollbar">
-                        <div class="group bg-slate-50 rounded-2xl p-5 border border-slate-100">
-                            <div class="flex items-start gap-5">
-                                <div class="w-12 h-12 bg-white text-emerald-600 rounded-xl flex-shrink-0 flex items-center justify-center border border-emerald-100 shadow-sm">
-                                    <span class="material-symbols-rounded text-2xl fill-1">install_mobile</span>
-                                </div>
-                                <div class="flex-1">
-                                    <h4 class="text-base font-black text-slate-900 mb-2">Install di HP atau Laptop</h4>
-                                    <ul class="space-y-2">
-                                        <li class="flex items-start gap-3 text-slate-500 text-xs leading-relaxed">
-                                            <div class="w-1 h-1 rounded-full bg-emerald-500 mt-1.5 shrink-0"></div>
-                                            <span>Di Android atau Chrome laptop, buka aplikasi lalu pilih <strong class="text-slate-800">Install Sekarang</strong> jika tombol muncul.</span>
-                                        </li>
-                                        <li class="flex items-start gap-3 text-slate-500 text-xs leading-relaxed">
-                                            <div class="w-1 h-1 rounded-full bg-emerald-500 mt-1.5 shrink-0"></div>
-                                            <span>Jika tombol belum muncul, buka menu browser titik tiga lalu pilih <strong class="text-slate-800">Install app</strong> atau <strong class="text-slate-800">Add to Home screen</strong>.</span>
-                                        </li>
-                                        <li class="flex items-start gap-3 text-slate-500 text-xs leading-relaxed">
-                                            <div class="w-1 h-1 rounded-full bg-emerald-500 mt-1.5 shrink-0"></div>
-                                            <span>Untuk iPhone, buka lewat Safari, tekan tombol Share, lalu pilih <strong class="text-slate-800">Add to Home Screen</strong>.</span>
-                                        </li>
-                                    </ul>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="group bg-slate-50 rounded-2xl p-5 border border-slate-100">
-                            <div class="flex items-start gap-5">
-                                <div class="w-12 h-12 bg-white text-sky-600 rounded-xl flex-shrink-0 flex items-center justify-center border border-sky-100 shadow-sm">
-                                    <span class="material-symbols-rounded text-2xl fill-1">account_circle</span>
-                                </div>
-                                <div class="flex-1">
-                                    <h4 class="text-base font-black text-slate-900 mb-2">Login dengan Google / Gmail</h4>
-                                    <ul class="space-y-2">
-                                        <li class="flex items-start gap-3 text-slate-500 text-xs leading-relaxed">
-                                            <div class="w-1 h-1 rounded-full bg-sky-500 mt-1.5 shrink-0"></div>
-                                            <span>Pastikan email Gmail wali santri sudah tersimpan di akun aplikasi.</span>
-                                        </li>
-                                        <li class="flex items-start gap-3 text-slate-500 text-xs leading-relaxed">
-                                            <div class="w-1 h-1 rounded-full bg-sky-500 mt-1.5 shrink-0"></div>
-                                            <span>Tekan tombol <strong class="text-slate-800">Masuk dengan Google</strong> di halaman login, lalu pilih akun Gmail yang sesuai.</span>
-                                        </li>
-                                        <li class="flex items-start gap-3 text-slate-500 text-xs leading-relaxed">
-                                            <div class="w-1 h-1 rounded-full bg-sky-500 mt-1.5 shrink-0"></div>
-                                            <span>Jika email cocok, akun Google akan tersambung dan login berikutnya bisa lebih cepat.</span>
-                                        </li>
-                                    </ul>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="group bg-slate-50 rounded-2xl p-5 border border-slate-100">
-                            <div class="flex items-start gap-5">
-                                <div class="w-12 h-12 bg-white text-amber-600 rounded-xl flex-shrink-0 flex items-center justify-center border border-amber-100 shadow-sm">
-                                    <span class="material-symbols-rounded text-2xl fill-1">notifications_active</span>
-                                </div>
-                                <div class="flex-1">
-                                    <h4 class="text-base font-black text-slate-900 mb-2">Aktifkan Pengingat Kajian</h4>
-                                    <ul class="space-y-2">
-                                        <li class="flex items-start gap-3 text-slate-500 text-xs leading-relaxed">
-                                            <div class="w-1 h-1 rounded-full bg-amber-500 mt-1.5 shrink-0"></div>
-                                            <span>Masuk ke dashboard wali santri, lalu izinkan notifikasi saat diminta oleh browser.</span>
-                                        </li>
-                                        <li class="flex items-start gap-3 text-slate-500 text-xs leading-relaxed">
-                                            <div class="w-1 h-1 rounded-full bg-amber-500 mt-1.5 shrink-0"></div>
-                                            <span>Setelah aktif, pengingat jadwal dan pengumuman penting bisa diterima langsung di HP.</span>
-                                        </li>
-                                    </ul>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="group bg-slate-50 rounded-2xl p-5 border border-slate-100">
-                            <div class="flex items-start gap-5">
-                                <div class="w-12 h-12 bg-white text-indigo-600 rounded-xl flex-shrink-0 flex items-center justify-center border border-indigo-100 shadow-sm">
-                                    <span class="material-symbols-rounded text-2xl fill-1">dashboard</span>
-                                </div>
-                                <div class="flex-1">
-                                    <h4 class="text-base font-black text-slate-900 mb-2">Fitur Dashboard Wali Santri</h4>
-                                    <ul class="space-y-2">
-                                        <li class="flex items-start gap-3 text-slate-500 text-xs leading-relaxed">
-                                            <div class="w-1 h-1 rounded-full bg-indigo-500 mt-1.5 shrink-0"></div>
-                                            <span>Cek jadwal kajian berikutnya, QR presensi, serta riwayat kehadiran dari dashboard.</span>
-                                        </li>
-                                        <li class="flex items-start gap-3 text-slate-500 text-xs leading-relaxed">
-                                            <div class="w-1 h-1 rounded-full bg-indigo-500 mt-1.5 shrink-0"></div>
-                                            <span>Gunakan <strong class="text-slate-800">Hadir Online</strong> untuk upload foto catatan kajian, atau <strong class="text-slate-800">Izin</strong> untuk upload dokumen keterangan.</span>
-                                        </li>
-                                        <li class="flex items-start gap-3 text-slate-500 text-xs leading-relaxed">
-                                            <div class="w-1 h-1 rounded-full bg-indigo-500 mt-1.5 shrink-0"></div>
-                                            <span>Jika bukti belum disetujui atau ditolak, wali santri bisa upload ulang dari dashboard.</span>
-                                        </li>
-                                        <li class="flex items-start gap-3 text-slate-500 text-xs leading-relaxed">
-                                            <div class="w-1 h-1 rounded-full bg-indigo-500 mt-1.5 shrink-0"></div>
-                                            <span>Setelah kajian selesai, isi rating dan masukan agar pelaksanaan berikutnya makin rapi.</span>
-                                        </li>
-                                    </ul>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="p-6 bg-slate-50 border-t border-slate-100">
-                        <button @click="showUpdatesGuide = false"
-                            class="w-full py-4 bg-primary-600 hover:bg-primary-700 text-white rounded-2xl font-black text-sm transition-all active:scale-95 shadow-lg shadow-primary-500/20">
-                            SAYA MENGERTI
-                        </button>
-                    </div>
-                </div>
+            <div class="public-guide-grid">
+                <article class="public-guide-item">
+                    <h3>Hadir langsung</h3>
+                    <p>Tunjukkan kartu presensi atau QR kepada petugas di lokasi kajian.</p>
+                    <details class="public-inline-detail">
+                        <summary>Belum membawa kartu? <x-public.icon name="chevron-down" /></summary>
+                        <p>Sebutkan nama Bapak/Ibu dan nama ananda kepada petugas agar kehadiran dapat dicatat.</p>
+                    </details>
+                </article>
+                <article class="public-guide-item">
+                    <h3>Hadir online</h3>
+                    <p>Masuk ke akun, pilih <strong>Hadir Online</strong>, lalu unggah foto catatan kajian.</p>
+                    <details class="public-inline-detail">
+                        <summary>Ketentuan catatan <x-public.icon name="chevron-down" /></summary>
+                        <p>Gunakan foto catatan tulisan tangan Bapak/Ibu sendiri. Bukti akan diperiksa petugas. Pantau statusnya di akun dan unggah ulang jika diminta.</p>
+                    </details>
+                </article>
+                <article class="public-guide-item">
+                    <h3>Berhalangan hadir</h3>
+                    <p>Masuk ke akun, pilih <strong>Izin</strong>, lalu unggah dokumen keterangan.</p>
+                    <details class="public-inline-detail">
+                        <summary>Setelah mengirim izin <x-public.icon name="chevron-down" /></summary>
+                        <p>Dokumen akan diperiksa petugas. Bapak/Ibu dapat melihat status pengajuan dan mengunggah ulang dokumen dari akun.</p>
+                    </details>
+                </article>
             </div>
-        </div>
+        </section>
 
-        {{-- Countdown Timer Alpine.js Component --}}
-        <script>
-            document.addEventListener('alpine:init', () => {
-                Alpine.data('countdownTimer', (targetTimestamp) => ({
-                    targetTime: Number(targetTimestamp),
-                    displayText: 'Memuat...',
-                    isFinished: false,
-                    intervalId: null,
-
-                    init() {
-                        // Alpine.js automatic lifecycle hook
-                        this.updateCountdown();
-                        this.intervalId = setInterval(() => {
-                            this.updateCountdown();
-                        }, 1000);
-                    },
-
-                    updateCountdown() {
-                        const now = Date.now();
-                        const diff = this.targetTime - now;
-
-                        if (diff <= 0) {
-                            this.isFinished = true;
-                            this.displayText = 'Sedang Berlangsung';
-                            if (this.intervalId) {
-                                clearInterval(this.intervalId);
-                            }
-                            return;
-                        }
-
-                        const hours = Math.floor(diff / (1000 * 60 * 60));
-                        const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
-                        const seconds = Math.floor((diff % (1000 * 60)) / 1000);
-
-                        // Format the display text with Indonesian labels
-                        if (hours > 0) {
-                            this.displayText = `Dimulai dalam ${hours} jam ${minutes} menit ${seconds} detik`;
-                        } else if (minutes > 0) {
-                            this.displayText = `Dimulai dalam ${minutes} menit ${seconds} detik`;
-                        } else {
-                            this.displayText = `Dimulai dalam ${seconds} detik`;
-                        }
-                    },
-
-                    destroy() {
-                        if (this.intervalId) {
-                            clearInterval(this.intervalId);
-                        }
+        <section id="bantuan" class="public-section" aria-labelledby="help-title">
+            <div class="public-section-heading"><h2 id="help-title">Perlu bantuan?</h2><p>Jawaban untuk pertanyaan yang sering muncul.</p></div>
+            <div class="public-help-grid">
+                <div class="public-faq">
+                    <details>
+                        <summary><span>Bagaimana cara masuk dengan Google?</span> <x-public.icon name="chevron-down" /></summary>
+                        <div class="public-faq-content">
+                            <p>Pada halaman masuk, pilih <strong>Masuk dengan Google</strong>. Gunakan akun Google dengan email yang sudah terdaftar di aplikasi.</p>
+                            <p>Jika email belum terdaftar, masuk dengan username dan kata sandi atau minta bantuan petugas untuk memperbarui email akun.</p>
+                        </div>
+                    </details>
+                    <details>
+                        <summary><span>Bagaimana jika lupa kata sandi?</span> <x-public.icon name="chevron-down" /></summary>
+                        <div class="public-faq-content"><p>Pilih <a class="public-link" href="{{ route('password.request') }}">Lupa kata sandi?</a>, lalu isi username atau email yang terdaftar. Ikuti petunjuk pemulihan akun yang diberikan.</p></div>
+                    </details>
+                    <details>
+                        <summary><span>Bagaimana cara memasang aplikasi di HP?</span> <x-public.icon name="chevron-down" /></summary>
+                        <div class="public-faq-content">
+                            <p><strong>Android atau Chrome:</strong> buka menu browser titik tiga, lalu pilih <strong>Install app</strong> atau <strong>Add to Home screen</strong>. Bapak/Ibu juga dapat menggunakan tombol pemasangan setelah masuk.</p>
+                            <p><strong>iPhone:</strong> buka melalui Safari, tekan tombol Bagikan (Share), lalu pilih <strong>Add to Home Screen</strong>.</p>
+                            <p>Aplikasi tetap dapat digunakan melalui browser tanpa dipasang.</p>
+                        </div>
+                    </details>
+                    <details>
+                        <summary><span>Bagaimana cara menerima pengingat kajian?</span> <x-public.icon name="chevron-down" /></summary>
+                        <div class="public-faq-content"><p>Setelah masuk ke akun wali santri, aktifkan notifikasi dan izinkan saat browser meminta persetujuan. Pengingat kajian dan pengumuman dapat diterima di perangkat Bapak/Ibu.</p></div>
+                    </details>
+                    <details>
+                        <summary><span>Di mana melihat status kehadiran?</span> <x-public.icon name="chevron-down" /></summary>
+                        <div class="public-faq-content">
+                            <p>Masuk ke akun untuk melihat riwayat kehadiran serta status pemeriksaan catatan kajian atau izin. Jika bukti ditolak atau perlu diperbaiki, unggah ulang dari akun.</p>
+                            <p>Setelah kajian selesai, Bapak/Ibu juga dapat memberikan penilaian dan masukan.</p>
+                        </div>
+                    </details>
+                </div>
+                @php
+                    $adminPhone = trim((string) \App\Models\Setting::get('admin_whatsapp', config('kajian.admin_whatsapp')));
+                    if (preg_match('/^0[0-9]{9,12}$/', $adminPhone)) {
+                        $adminPhone = '62' . substr($adminPhone, 1);
                     }
-                }));
-            });
-        </script>
-        <!-- Attendance Guide Modal -->
-        <div x-cloak x-show="showGuide" x-transition:enter="transition-opacity ease-out duration-300"
-            x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100"
-            x-transition:leave="transition-opacity ease-in duration-200" x-transition:leave-start="opacity-100"
-            x-transition:leave-end="opacity-0" class="fixed inset-0 z-[110] overflow-y-auto bg-primary-950/60 backdrop-blur-md"
-            @click.self="showGuide = false">
-
-            <div class="flex min-h-screen items-center justify-center p-0 sm:p-6 lg:p-8">
-                <div x-cloak x-show="showGuide" x-transition:enter="transition ease-out duration-500"
-                    x-transition:enter-start="opacity-0 translate-y-12 scale-95" x-transition:enter-end="opacity-100 translate-y-0 scale-100"
-                    x-transition:leave="transition ease-in duration-300"
-                    x-transition:leave-start="opacity-100 translate-y-0 scale-100" x-transition:leave-end="opacity-0 translate-y-12 scale-95"
-                    class="bg-white dark:bg-slate-900 rounded-t-[3rem] sm:rounded-[3rem] shadow-2xl w-full max-w-lg mb-0 sm:mb-8 overflow-hidden relative border border-white/20 dark:border-slate-800"
-                    @click.stop>
-
-                    <!-- Close Button -->
-                    <button @click="showGuide = false" 
-                        class="absolute top-6 right-6 w-12 h-12 bg-black/10 hover:bg-black/20 dark:bg-white/10 dark:hover:bg-white/20 backdrop-blur-xl rounded-full flex items-center justify-center text-slate-800 dark:text-white transition-all z-20 border border-black/5 dark:border-white/20 group">
-                        <span class="material-symbols-rounded group-hover:rotate-90 transition-transform duration-300">close</span>
-                    </button>
-
-                    <!-- Header Section -->
-                    <div class="relative h-56 sm:h-64 bg-slate-100 dark:bg-slate-900 border-b border-slate-100 dark:border-slate-800 overflow-hidden">
-                        <!-- Decorative Shapes -->
-                        <div class="absolute -top-24 -right-24 w-64 h-64 bg-primary-500/10 rounded-full blur-[80px]"></div>
-                        
-                        <img src="/api/files/C:/Users/LENOVO/.gemini/antigravity/brain/82638b85-fafd-433c-97f2-a5759e773c4a/attendance_flow_guide_1776301777931.png" 
-                            class="w-full h-full object-cover opacity-40 mix-blend-multiply dark:mix-blend-overlay contrast-125 brightness-110 dark:brightness-75 scale-110 select-none pointer-events-none" alt="">
-                        
-                        <div class="absolute inset-0 bg-gradient-to-t from-white dark:from-slate-900 via-white/50 dark:via-slate-900/40 to-transparent"></div>
-                        
-                        <div class="absolute bottom-10 left-10 right-10">
-                            <span class="inline-block px-3 py-1 bg-primary-500/10 text-primary-600 dark:text-primary-400 text-[10px] font-black uppercase tracking-[0.3em] rounded-full border border-primary-500/20 mb-3">Official Guide</span>
-                            <h3 class="text-3xl sm:text-4xl font-black text-slate-900 dark:text-white tracking-tight leading-none">Alur Presensi</h3>
-                            <p class="text-slate-500 dark:text-slate-400 text-sm font-medium mt-2">Panduan kehadiran Wali Santri</p>
-                        </div>
-                    </div>
-
-                    <div class="px-6 sm:px-10 py-8 space-y-4 max-h-[60vh] sm:max-h-[50vh] overflow-y-auto overscroll-contain custom-scrollbar">
-                        <!-- Step 1: Hadir Langsung -->
-                        <div class="group bg-slate-50 dark:bg-slate-800/50 rounded-2xl p-5 border border-slate-100 dark:border-slate-800 hover:border-primary-500/30 transition-all duration-300">
-                            <div class="flex items-start gap-5">
-                                <div class="w-12 h-12 bg-white dark:bg-slate-800 text-primary-600 dark:text-primary-400 rounded-xl flex-shrink-0 flex items-center justify-center border border-slate-100 dark:border-slate-700 shadow-sm transition-all duration-300">
-                                    <span class="material-symbols-rounded text-2xl font-bold fill-1">qr_code_scanner</span>
-                                </div>
-                                <div class="flex-1">
-                                    <h4 class="text-base font-bold text-slate-900 dark:text-white mb-2">Hadir Langsung (Fisik)</h4>
-                                    <ul class="space-y-2">
-                                        <li class="flex items-start gap-3 text-slate-500 dark:text-slate-400 text-xs leading-relaxed">
-                                            <div class="w-1 h-1 rounded-full bg-primary-500 mt-1.5 shrink-0"></div>
-                                            <span>Scan <strong class="text-slate-800 dark:text-white">QR Code</strong> di aplikasi atau bawa <strong class="text-slate-800 dark:text-white">Kartu Identitas</strong> fisik.</span>
-                                        </li>
-                                        <li class="flex items-start gap-3 text-slate-500 dark:text-slate-400 text-xs leading-relaxed">
-                                            <div class="w-1 h-1 rounded-full bg-primary-500 mt-1.5 shrink-0"></div>
-                                            <span>Bisa juga sebutkan <strong class="text-slate-800 dark:text-white">Nama Ortu & Ananda</strong> ke petugas.</span>
-                                        </li>
-                                    </ul>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Step 2: Hadir Online -->
-                        <div class="group bg-slate-50 dark:bg-slate-800/50 rounded-2xl p-5 border border-slate-100 dark:border-slate-800 hover:border-secondary-500/30 transition-all duration-300">
-                            <div class="flex items-start gap-5">
-                                <div class="w-12 h-12 bg-white dark:bg-slate-800 text-secondary-600 dark:text-secondary-400 rounded-xl flex-shrink-0 flex items-center justify-center border border-slate-100 dark:border-slate-700 shadow-sm transition-all duration-300">
-                                    <span class="material-symbols-rounded text-2xl font-bold fill-1">videocam</span>
-                                </div>
-                                <div class="flex-1">
-                                    <h4 class="text-base font-bold text-slate-900 dark:text-white mb-2">Hadir Online (Streaming)</h4>
-                                    <ul class="space-y-2">
-                                        <li class="flex items-start gap-3 text-slate-500 dark:text-slate-400 text-xs leading-relaxed">
-                                            <div class="w-1 h-1 rounded-full bg-secondary-500 mt-1.5 shrink-0"></div>
-                                            <span>Klik tombol <strong class="text-slate-800 dark:text-white">"Hadir Online"</strong> di dashboard Anda.</span>
-                                        </li>
-                                        <li class="flex items-start gap-3 text-slate-500 dark:text-slate-400 text-xs leading-relaxed">
-                                            <div class="w-1 h-1 rounded-full bg-secondary-500 mt-1.5 shrink-0"></div>
-                                            <span>Upload <strong class="text-slate-800 dark:text-white">Foto Catatan Kajian</strong> tulisan tangan sendiri.</span>
-                                        </li>
-                                    </ul>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Step 3: Izin -->
-                        <div class="group bg-slate-50 dark:bg-slate-800/50 rounded-2xl p-5 border border-slate-100 dark:border-slate-800 hover:border-amber-500/30 transition-all duration-300">
-                            <div class="flex items-start gap-5">
-                                <div class="w-12 h-12 bg-white dark:bg-slate-800 text-amber-600 dark:text-amber-400 rounded-xl flex-shrink-0 flex items-center justify-center border border-slate-100 dark:border-slate-700 shadow-sm transition-all duration-300">
-                                    <span class="material-symbols-rounded text-2xl font-bold fill-1">event_busy</span>
-                                </div>
-                                <div class="flex-1">
-                                    <h4 class="text-base font-bold text-slate-900 dark:text-white mb-2">Izin (Berhalangan)</h4>
-                                    <ul class="space-y-2">
-                                        <li class="flex items-start gap-3 text-slate-500 dark:text-slate-400 text-xs leading-relaxed">
-                                            <div class="w-1 h-1 rounded-full bg-amber-500 mt-1.5 shrink-0"></div>
-                                            <span>Klik tombol <strong class="text-slate-800 dark:text-white">"Izin"</strong> jika tidak bisa hadir sama sekali.</span>
-                                        </li>
-                                        <li class="flex items-start gap-3 text-slate-500 dark:text-slate-400 text-xs leading-relaxed">
-                                            <div class="w-1 h-1 rounded-full bg-amber-500 mt-1.5 shrink-0"></div>
-                                            <span>Upload <strong class="text-slate-800 dark:text-white">Dokumen Keterangan</strong> alasan berhalangan.</span>
-                                        </li>
-                                    </ul>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <!-- Bottom CTA/Safety -->
-                    <div class="p-6 bg-slate-50 dark:bg-slate-800/50 border-t border-slate-100 dark:border-slate-800">
-                        <button @click="showGuide = false" 
-                            class="w-full py-4 bg-primary-600 hover:bg-primary-700 text-white rounded-2xl font-black text-sm transition-all active:scale-95 shadow-lg shadow-primary-500/20">
-                            SAYA MENGERTI
-                        </button>
-                    </div>
-                </div>
+                    $supportUrl = preg_match('/^62[0-9]{8,13}$/', $adminPhone) && $adminPhone !== '6281234567890'
+                        ? 'https://wa.me/' . $adminPhone
+                        : null;
+                @endphp
+                <aside class="public-support" aria-labelledby="support-title">
+                    <h3 id="support-title">Minta bantuan petugas</h3>
+                    <p>Kesulitan masuk atau ada data yang belum sesuai? Petugas dapat membantu Bapak/Ibu.</p>
+                    @if ($supportUrl)
+                        <a class="public-button public-button-secondary" href="{{ $supportUrl }}" target="_blank" rel="noopener noreferrer">Hubungi admin <x-public.icon name="arrow-right" /></a>
+                        <p class="public-support-note">Bantuan melalui WhatsApp.</p>
+                    @else
+                        <p class="public-support-note">Silakan hubungi petugas kajian atau wali kelas ananda.</p>
+                    @endif
+                </aside>
             </div>
-        </div>
+        </section>
+
+        @if ($lastKajian && $lastKajian->id !== $currentKajian?->id)
+            <section class="public-last-event" aria-label="Kajian terakhir">
+                <div><p class="public-eyebrow">Kajian terakhir</p><p class="public-last-title">{{ $lastKajian->title }}</p><p class="public-muted">{{ $lastKajian->formatted_date }}</p></div>
+                @if ($lastKajian->attendance_count > 0)
+                    <p class="public-last-count"><strong>{{ $lastKajian->attendance_count }}</strong> wali santri tercatat hadir</p>
+                @endif
+            </section>
+        @endif
+    </main>
+    <x-public.footer />
+    @if ($timeStatus === 'soon' && $eventTimestamp)
+        @push('scripts')
+            <script>
+                function publicKajianCountdown(timestamp) {
+                    return {
+                        label: '',
+                        interval: null,
+                        init() {
+                            this.update();
+                            if (Number(timestamp) > Date.now()) {
+                                this.interval = setInterval(() => this.update(), 30000);
+                            }
+                        },
+                        update() {
+                            const minutes = Math.ceil((Number(timestamp) - Date.now()) / 60000);
+                            this.label = minutes > 0 ? 'Dimulai dalam ' + minutes + ' menit' : 'Waktu mulai kajian telah tiba';
+                            if (minutes <= 0 && this.interval) clearInterval(this.interval);
+                        },
+                        destroy() {
+                            if (this.interval) clearInterval(this.interval);
+                        }
+                    };
+                }
+            </script>
+        @endpush
+    @endif
 </x-layouts.app>

@@ -21,7 +21,7 @@ class InjectPwaInstallPrompt
             return $response;
         }
 
-        if (str_contains($content, 'kajian-pwa-install-middleware')) {
+        if (str_contains($content, 'data-kajian-pwa-bootstrap') || str_contains($content, 'kajian-pwa-install-middleware')) {
             return $response;
         }
 
@@ -29,7 +29,9 @@ class InjectPwaInstallPrompt
             $content = str_replace('</head>', $this->headHtml() . '</head>', $content);
         }
 
-        $response->setContent(str_replace('</body>', $this->bodyHtml() . '</body>', $content));
+        // Keep PWA registration active without covering the public entry forms.
+        $banner = $request->routeIs('home', 'login') ? '' : $this->bodyHtml();
+        $response->setContent(str_replace('</body>', $this->bootstrapHtml() . $banner . '</body>', $content));
 
         return $response;
     }
@@ -68,13 +70,20 @@ class InjectPwaInstallPrompt
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Presensi Wali Santri">
 <link rel="apple-touch-icon" href="/icons/icon-192x192.png">
-<script>
+HTML;
+    }
+
+    private function bootstrapHtml(): string
+    {
+        return <<<'HTML'
+<script data-kajian-pwa-bootstrap>
 window.pwaDeferredPrompt = window.pwaDeferredPrompt || null;
 window.addEventListener('beforeinstallprompt', function(event) {
     event.preventDefault();
     window.pwaDeferredPrompt = event;
     window.dispatchEvent(new CustomEvent('kajian-pwa-ready-to-install'));
 });
+if ('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js').catch(function(){});
 </script>
 HTML;
     }
@@ -115,7 +124,6 @@ HTML;
         if (installButton && promptEvent) installButton.textContent = 'Install Sekarang';
     }
     if (installed() || dismissed()) hide();
-    window.addEventListener('beforeinstallprompt', function(event){ event.preventDefault(); promptEvent = event; window.pwaDeferredPrompt = event; setReady(); });
     window.addEventListener('kajian-pwa-ready-to-install', setReady);
     window.addEventListener('appinstalled', function(){ localStorage.removeItem(key); hide(); });
     document.querySelectorAll('[data-kajian-pwa-close],[data-kajian-pwa-later]').forEach(function(button){
@@ -134,7 +142,6 @@ HTML;
         if (ios) alert('Untuk install di iPhone: tekan tombol Share di Safari, lalu pilih Add to Home Screen.');
         else alert('Untuk install aplikasi: buka menu browser titik tiga, lalu pilih Install app atau Add to Home screen.');
     });
-    if ('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js').catch(function(){});
     setReady();
 })();
 </script>
