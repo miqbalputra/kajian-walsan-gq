@@ -4,7 +4,7 @@
         <section class="public-hero" aria-labelledby="welcome-title">
             <div class="public-intro">
                 <p class="public-eyebrow">Selamat datang, Bapak/Ibu</p>
-                <h1 id="welcome-title">Presensi<br class="public-desktop-break"> Wali Santri</h1>
+                <h1 id="welcome-title">Presensi <span>Wali Santri</span></h1>
                 <p class="public-lead">Lihat jadwal kajian dan kelola kehadiran Bapak/Ibu.</p>
                 <div class="public-entry">
                     @auth
@@ -34,17 +34,27 @@
                         <p class="public-eyebrow">Jadwal kajian</p>
                         <span class="public-status {{ $attendanceOpen ? 'public-status-open' : '' }}">{{ $scheduleStatus }}</span>
                     </div>
-                    <h2 id="schedule-title">{{ $currentKajian->title }}</h2>
-                    <dl class="public-event-details">
-                        <div class="public-event-key"><dt><x-public.icon name="calendar" /> Tanggal</dt><dd>{{ $currentKajian->formatted_date }}</dd></div>
-                        <div class="public-event-key"><dt><x-public.icon name="clock" /> Waktu</dt><dd>{{ $currentKajian->time_range }}</dd></div>
-                        @if ($currentKajian->location)
-                            <div class="public-event-wide"><dt><x-public.icon name="pin" /> Tempat</dt><dd>{{ $currentKajian->location }}</dd></div>
-                        @endif
-                        @if ($currentKajian->speaker)
-                            <div class="public-event-wide"><dt><x-public.icon name="user" /> Pemateri</dt><dd>{{ $currentKajian->speaker }}</dd></div>
-                        @endif
-                    </dl>
+                    <div class="public-event-overview">
+                        <div class="public-event-date" aria-hidden="true">
+                            <span>{{ $currentKajian->date->translatedFormat('M') }}</span>
+                            <strong>{{ $currentKajian->date->format('d') }}</strong>
+                        </div>
+                        <div class="public-event-overview-content">
+                            <h2 id="schedule-title">{{ $currentKajian->title }}</h2>
+                            <p class="public-event-date-line"><time datetime="{{ $currentKajian->date->toDateString() }}">{{ $currentKajian->formatted_date }}</time></p>
+                            <p class="public-event-time"><x-public.icon name="clock" /> {{ $currentKajian->time_range }}</p>
+                        </div>
+                    </div>
+                    @if ($currentKajian->location || $currentKajian->speaker)
+                        <dl class="public-event-details">
+                            @if ($currentKajian->location)
+                                <div><dt><x-public.icon name="pin" /> Tempat</dt><dd>{{ $currentKajian->location }}</dd></div>
+                            @endif
+                            @if ($currentKajian->speaker)
+                                <div><dt><x-public.icon name="user" /> Pemateri</dt><dd>{{ $currentKajian->speaker }}</dd></div>
+                            @endif
+                        </dl>
+                    @endif
                     @if ($timeStatus === 'soon' && $eventTimestamp && $currentKajian->status !== 'closed')
                         <p class="public-schedule-note" x-data="publicKajianCountdown({{ $eventTimestamp }})"><span x-text="label">Dimulai dalam {{ (int) ceil($countdownMinutes) }} menit</span></p>
                     @elseif ($attendanceOpen && $currentKajian->attendance_count > 0)
@@ -64,8 +74,7 @@
 
         <section id="cara-presensi" class="public-section" aria-labelledby="guide-title">
             <div class="public-section-heading">
-                <p class="public-eyebrow">Panduan singkat</p>
-                <h2 id="guide-title">Cara presensi</h2>
+                <div><p class="public-eyebrow">Panduan singkat</p><h2 id="guide-title">Cara presensi</h2></div>
                 <p>Pilih cara yang sesuai dengan kehadiran Bapak/Ibu.</p>
             </div>
             <div class="public-guide-grid">
@@ -97,7 +106,7 @@
         </section>
 
         <section id="bantuan" class="public-section" aria-labelledby="help-title">
-            <div class="public-section-heading"><h2 id="help-title">Perlu bantuan?</h2><p>Jawaban untuk pertanyaan yang sering muncul.</p></div>
+            <div class="public-section-heading"><div><h2 id="help-title">Perlu bantuan?</h2></div><p>Jawaban untuk pertanyaan yang sering muncul.</p></div>
             <div class="public-help-grid">
                 <div class="public-faq">
                     <details>
