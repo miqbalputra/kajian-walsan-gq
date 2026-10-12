@@ -26,11 +26,23 @@ class PwaInstallPromptTest extends TestCase
         return [['/', 'home'], ['/login', 'login']];
     }
 
-    public function test_dashboard_keeps_the_install_prompt(): void
+    #[DataProvider('waliRoutes')]
+    public function test_wali_pages_register_pwa_without_the_overlay(string $path, string $name): void
     {
-        $response = $this->inject('/wali-santri', 'wali-santri.dashboard');
-        $this->assertStringContainsString('kajian-pwa-install-middleware', $response->getContent());
+        $response = $this->inject($path, $name);
+        $this->assertStringNotContainsString('kajian-pwa-install-middleware', $response->getContent());
         $this->assertSame(1, substr_count($response->getContent(), "serviceWorker.register('/sw.js')"));
+    }
+
+    public static function waliRoutes(): array
+    {
+        return [['/wali-santri', 'wali-santri.dashboard'], ['/wali-santri/schedule', 'wali-santri.schedule'], ['/wali-santri/profile', 'wali-santri.profile']];
+    }
+
+    public function test_other_supported_pages_keep_the_install_prompt(): void
+    {
+        $response = $this->inject('/wali-kelas', 'wali-kelas.dashboard');
+        $this->assertStringContainsString('kajian-pwa-install-middleware', $response->getContent());
     }
 
     public function test_bootstrap_and_banner_are_not_injected_twice(): void

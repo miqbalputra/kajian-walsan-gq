@@ -21,6 +21,12 @@ class KajianSchedule extends Component
 
     public $showEventDetail = false;
 
+    public bool $showDayPicker = false;
+
+    public ?string $selectedDay = null;
+
+    public array $selectedDayEvents = [];
+
     public function mount()
     {
         $this->currentMonth = now()->month;
@@ -116,7 +122,20 @@ class KajianSchedule extends Component
         }
 
         $this->selectedEvent = $event;
+        $this->showDayPicker = false;
         $this->showEventDetail = true;
+    }
+
+    public function showDay(string $date): void
+    {
+        $events = array_values($this->events[$date] ?? []);
+        if (count($events) === 1) {
+            $this->showDetail($events[0]['id']);
+        } elseif (count($events) > 1) {
+            $this->selectedDay = $date;
+            $this->selectedDayEvents = $events;
+            $this->showDayPicker = true;
+        }
     }
 
     protected function parent(): ?ParentModel

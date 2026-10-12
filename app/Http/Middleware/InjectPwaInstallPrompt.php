@@ -29,8 +29,8 @@ class InjectPwaInstallPrompt
             $content = str_replace('</head>', $this->headHtml() . '</head>', $content);
         }
 
-        // Keep PWA registration active without covering the public entry forms.
-        $banner = $request->routeIs('home', 'login') ? '' : $this->bodyHtml();
+        // Register PWA on every supported page; wali pages have their own install panel.
+        $banner = $request->routeIs('home', 'login', 'wali-santri.dashboard', 'wali-santri.schedule', 'wali-santri.profile') ? '' : $this->bodyHtml();
         $response->setContent(str_replace('</body>', $this->bootstrapHtml() . $banner . '</body>', $content));
 
         return $response;

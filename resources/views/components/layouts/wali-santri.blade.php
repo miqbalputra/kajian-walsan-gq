@@ -4,16 +4,17 @@
 
 <head>
     <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <meta name="webpush-vapid-public-key" content="{{ config('webpush.vapid_public_key') }}">
     <meta name="pwa-push-script-url" content="{{ asset('js/pwa-push.js') }}?v=20260519-push-v4">
-    <meta name="theme-color" content="#10B981">
+    <meta name="theme-color" content="#166534">
 
     {{-- PWA Meta --}}
     @include('components.pwa-meta')
 
-    <title>{{ $title ?? 'Beranda' }} - Presensi Wali Santri</title>
+    <style>[x-cloak]{display:none!important}</style>
+    <title>{{ $title ?? (request()->routeIs('wali-santri.schedule') ? 'Jadwal Kajian' : (request()->routeIs('wali-santri.profile') ? 'Profil Saya' : 'Beranda')) }} - Presensi Wali Santri</title>
 
     <!-- Favicon -->
     <link rel="icon" type="image/svg+xml"
@@ -42,54 +43,20 @@
     @livewireStyles
 </head>
 
-<body
-    class="min-h-screen bg-gray-100 {{ $forceLight ? '' : 'dark:bg-slate-950' }} font-sans transition-colors duration-300">
-    {{ $slot }}
-
+<body class="wali-page font-sans">
+    <a href="#wali-main" class="wali-skip">Lewati ke isi utama</a>
+    <x-wali.header />
+    <main id="wali-main" class="wali-main wali-container" tabindex="-1">{{ $slot }}</main>
+    <x-wali.install />
+    <x-wali.navigation />
+    <form id="wali-logout-form" method="POST" action="{{ route('logout') }}" hidden>@csrf</form>
     @livewireScripts
     @stack('scripts')
-
-    <!-- Global Password Warning Modal -->
     @if(auth()->check() && auth()->user()->hasRole('wali_santri') && (\Illuminate\Support\Facades\Hash::check(auth()->user()->username, auth()->user()->password) || \Illuminate\Support\Facades\Hash::check('PasswordSementara123', auth()->user()->password)) && !request()->routeIs('wali-santri.profile'))
-        <div x-data="{ showWarning: true }" 
-             x-show="showWarning" 
-             style="display: none;"
-             class="fixed inset-0 z-[80] overflow-y-auto" aria-modal="true">
-            <div class="flex items-center justify-center min-h-screen px-4">
-                <div class="fixed inset-0 bg-slate-900/60 dark:bg-black/80 backdrop-blur-sm"></div>
-
-                <div class="relative bg-white dark:bg-slate-900 rounded-[2.5rem] shadow-2xl w-full max-w-sm p-8 z-10 text-center transition-all"
-                     x-transition:enter="transition ease-out duration-300 transform"
-                     x-transition:enter-start="opacity-0 translate-y-4 scale-95"
-                     x-transition:enter-end="opacity-100 translate-y-0 scale-100"
-                     x-transition:leave="transition ease-in duration-200 transform"
-                     x-transition:leave-start="opacity-100 translate-y-0 scale-100"
-                     x-transition:leave-end="opacity-0 translate-y-4 scale-95">
-                     
-                    <div class="w-20 h-20 bg-amber-50 dark:bg-amber-950/30 text-amber-500 dark:text-amber-400 rounded-3xl flex items-center justify-center mx-auto mb-6 border border-amber-100 dark:border-amber-900/50 shadow-inner">
-                        <span class="material-symbols-rounded text-4xl">shield_person</span>
-                    </div>
-                    
-                    <h3 class="text-2xl font-black text-slate-900 dark:text-white mb-2">Akun Belum Aman!</h3>
-                    <p class="text-slate-500 dark:text-gray-400 text-sm leading-relaxed mb-8">
-                        Demi privasi dan keamanan data anak Anda, mohon segera ganti password bawaan Anda dengan password baru yang lebih kuat.
-                    </p>
-
-                    <div class="flex flex-col gap-3">
-                        <a href="{{ route('wali-santri.profile') }}" 
-                           class="w-full py-4 bg-amber-500 hover:bg-amber-600 text-white rounded-2xl font-bold flex items-center justify-center gap-2 shadow-xl shadow-amber-500/20 transition-all active:scale-95">
-                            <span class="material-symbols-rounded">key</span>
-                            Ganti Password Sekarang
-                        </a>
-                        <button @click="showWarning = false"
-                           class="w-full py-3.5 border-2 border-slate-100 dark:border-slate-800 text-slate-400 dark:text-gray-500 rounded-2xl font-bold hover:bg-slate-50 dark:hover:bg-slate-800 transition-all mt-1">
-                            Nanti Saja
-                        </button>
-                    </div>
-                </div>
-            </div>
-        </div>
+        <x-wali.dialog id="wali-password-warning" title="Ganti kata sandi bawaan">
+            <p class="wali-dialog-description">Untuk menjaga keamanan akun Bapak/Ibu, ganti kata sandi bawaan melalui halaman Profil.</p>
+            <div class="wali-dialog-actions"><button type="button" class="wali-button wali-button-secondary" @click="requestClose()">Nanti Saja</button><a class="wali-button wali-button-primary" href="{{ route('wali-santri.profile') }}">Ganti Password Sekarang</a></div>
+        </x-wali.dialog>
     @endif
 </body>
-
 </html>

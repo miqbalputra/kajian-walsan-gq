@@ -1,0 +1,187 @@
+/* Wali UI only. The printed ID card deliberately keeps its physical design. */
+.wali-page { --wali-bg:#fafaf7; --wali-panel:#fff; --wali-text:#26322b; --wali-muted:#5c655e; --wali-border:#e3e6df; --wali-soft:#f3f4ee; --wali-green:#166534; --wali-on-green:#fff; --wali-red:#a52a21; --wali-amber:#79540c; background:var(--wali-bg); color:var(--wali-text); font-size:16px; line-height:1.6; min-height:100dvh; padding-bottom:calc(88px + env(safe-area-inset-bottom)); }
+.dark body.wali-page { --wali-bg:#101713; --wali-panel:#19211c; --wali-text:#f3f5f0; --wali-muted:#b7c1b7; --wali-border:#364139; --wali-soft:#202b23; --wali-green:#4ade80; --wali-on-green:#052e16; --wali-red:#fca5a5; --wali-amber:#f8d783; background:var(--wali-bg)!important; color:var(--wali-text)!important; }
+.wali-page :where(h1,h2,h3,h4,p,dl) { margin:0; }
+.wali-page :where(h1,h2,h3,h4) { line-height:1.3; letter-spacing:-.025em; overflow-wrap:anywhere; }
+.wali-page h1 { font-size:28px; font-weight:700; }
+.wali-page h2 { font-size:22px; font-weight:650; }
+.wali-page h3 { font-size:18px; font-weight:650; }
+.wali-page :where(a,button,input,textarea,summary):focus-visible { outline:3px solid var(--wali-green); outline-offset:3px; }
+.wali-page [tabindex="-1"]:focus { outline:none; }
+.wali-page .material-symbols-rounded { font-size:22px; line-height:1; flex-shrink:0; }
+.dark body.wali-page .material-symbols-rounded { color:inherit; }
+.wali-page .wali-container { width:min(1120px,calc(100% - 32px)); margin-inline:auto; }
+.wali-page .wali-skip { position:fixed; top:12px; left:16px; z-index:200; background:var(--wali-panel); color:var(--wali-green); padding:12px 16px; border-radius:10px; transform:translateY(-150%); }
+.wali-page .wali-skip:focus { transform:translateY(0); }
+.wali-page .wali-header { display:flex; align-items:center; justify-content:space-between; gap:12px; padding-block:16px; border-bottom:1px solid var(--wali-border); }
+.wali-page .wali-brand { display:flex; align-items:center; gap:10px; text-decoration:none; color:inherit; min-width:0; font-size:14px; font-weight:650; line-height:1.35; }
+.wali-page .wali-brand img { flex-shrink:0; border-radius:9px; }
+.wali-page .wali-header-tools { display:flex; gap:4px; align-items:center; flex-shrink:0; }
+.wali-page .wali-header-avatar { display:inline-flex; align-items:center; justify-content:center; width:32px; height:32px; border-radius:10px; color:white; flex-shrink:0; }
+.wali-page .wali-header-name { display:none; }
+.wali-page .wali-icon-button { display:inline-flex; align-items:center; justify-content:center; width:48px; height:48px; border:1px solid var(--wali-border); border-radius:10px; background:var(--wali-panel); color:var(--wali-text); cursor:pointer; flex-shrink:0; }
+.wali-page .wali-icon-button:hover { background:var(--wali-soft); }
+.wali-page .wali-main { padding-block:20px; }
+.wali-page-heading { margin-bottom:20px; }
+.wali-page-heading > p { color:var(--wali-muted); }
+.wali-page-heading h1 + p { margin-top:8px; }
+.wali-page .wali-children { display:flex; gap:6px 12px; flex-wrap:wrap; margin-top:6px; color:var(--wali-muted); }
+.wali-page .wali-children > span { font-size:14px; min-width:0; max-width:100%; overflow-wrap:anywhere; }
+.wali-page .wali-nav { display:flex; }
+.wali-page .wali-nav a { display:flex; align-items:center; justify-content:center; text-decoration:none; color:var(--wali-muted); font-size:14px; font-weight:500; border-radius:9px; min-height:48px; }
+.wali-page .wali-nav a[aria-current="page"] { color:var(--wali-green); background:var(--wali-soft); font-weight:650; }
+.wali-page .wali-nav-mobile { position:fixed; inset:auto 0 0; padding:8px 16px calc(8px + env(safe-area-inset-bottom)); border-top:1px solid var(--wali-border); background:var(--wali-panel); z-index:30; gap:8px; }
+.wali-page .wali-nav-mobile a { flex:1; flex-direction:column; gap:4px; }
+.wali-page .wali-nav-desktop { display:none; gap:6px; }
+.wali-page .wali-nav-desktop a { padding:10px 14px; gap:8px; }
+.wali-page .wali-panel { background:var(--wali-panel); border:1px solid var(--wali-border); border-radius:16px; padding:20px; min-width:0; }
+.wali-page .wali-panel-heading { display:flex; align-items:start; justify-content:space-between; gap:16px; margin-bottom:12px; }
+.wali-page .wali-panel-heading > div { min-width:0; }
+.wali-page .wali-eyebrow,.wali-page .wali-small { color:var(--wali-muted); font-size:14px; line-height:1.5; }
+.wali-page .wali-eyebrow { font-weight:600; margin-bottom:8px; }
+.wali-page .wali-muted { color:var(--wali-muted); }
+.wali-page .wali-stack { display:grid; gap:20px; min-width:0; }
+.wali-page .wali-dashboard { display:grid; gap:24px; }
+.wali-page .wali-current,.wali-page .wali-history,.wali-page .wali-extras { min-width:0; }
+.wali-page .wali-button { display:inline-flex; align-items:center; justify-content:center; gap:9px; min-height:48px; padding:11px 16px; border:1px solid transparent; border-radius:10px; font-size:16px; font-weight:600; line-height:1.5; text-align:center; text-decoration:none; cursor:pointer; color:var(--wali-text); }
+.wali-page .wali-button-primary { background:var(--wali-green); color:var(--wali-on-green); }
+.wali-page .wali-button-primary:hover { filter:brightness(.95); }
+.wali-page .wali-button-secondary { background:var(--wali-panel); border-color:var(--wali-border); }
+.wali-page .wali-button-secondary:hover { background:var(--wali-soft); }
+.wali-page .wali-button-danger { border-color:var(--wali-red); color:var(--wali-red); background:var(--wali-panel); }
+.wali-page .wali-button-full { width:100%; }
+.wali-page button:disabled { opacity:.6; cursor:wait; }
+.wali-page .wali-link { color:var(--wali-green); text-decoration:underline; text-underline-offset:4px; display:inline-flex; align-items:center; min-height:48px; }
+.wali-page .wali-actions { display:grid; gap:12px; margin-top:16px; }
+.wali-page .wali-actions [data-focus-key="show-qr"] { padding-inline:10px; gap:8px; }
+.wali-page .wali-actions [data-focus-key="show-qr"] .material-symbols-rounded { font-size:20px; }
+.wali-page .wali-action-options { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px; }
+.wali-page .wali-action-options.one-option { grid-template-columns:1fr; }
+.wali-page .wali-actions > .wali-small { text-align:center; }
+.wali-page .wali-event-details { display:grid; gap:12px; }
+.wali-page .wali-event-details > div { display:grid; grid-template-columns:90px minmax(0,1fr); gap:12px; align-items:baseline; }
+.wali-page .wali-event-details dt { display:flex; align-items:center; gap:7px; font-size:14px; color:var(--wali-muted); }
+.wali-page .wali-event-details dt .material-symbols-rounded { font-size:18px; align-self:center; }
+.wali-page .wali-event-details dd { margin:0; overflow-wrap:anywhere; }
+.wali-page .wali-event-title { font-size:22px; margin-bottom:14px!important; }
+.wali-page .wali-event-secondary { border-top:1px solid var(--wali-border); margin-top:20px; padding-top:16px; }
+.wali-page .wali-chip { display:inline-flex; align-items:center; gap:6px; padding:4px 9px; border:1px solid var(--wali-border); background:var(--wali-soft); border-radius:6px; font-size:14px; font-weight:600; line-height:1.5; color:var(--wali-muted); }
+.wali-page .wali-chip-success { color:var(--wali-green); }
+.wali-page .wali-chip-warning { color:var(--wali-amber); }
+.wali-page .wali-chip-danger { color:var(--wali-red); }
+.wali-page .wali-attendance { margin-top:16px; border-top:1px solid var(--wali-border); padding-top:12px; }
+.wali-page .wali-attendance h3 { margin-top:6px; }
+.wali-page .wali-attendance p + p { margin-top:8px; }
+.wali-page .wali-attendance-approved h3 { color:var(--wali-green); }
+.wali-page .wali-attendance-pending h3 { color:var(--wali-amber); }
+.wali-page .wali-attendance-rejected h3 { color:var(--wali-red); }
+.wali-page .wali-notice { padding:14px 16px; border:1px solid var(--wali-border); border-radius:12px; margin-bottom:20px; background:var(--wali-panel); }
+.wali-page .wali-notice-error,.wali-page .wali-error { color:var(--wali-red); }
+.wali-page .wali-notice-success { color:var(--wali-green); }
+.wali-page .wali-error { font-size:14px; margin-top:6px!important; overflow-wrap:anywhere; }
+.wali-page .wali-error:empty { display:none; }
+.wali-page .wali-reason { padding:12px; margin-top:12px; background:var(--wali-soft); border-radius:10px; }
+.wali-page .wali-reason strong { display:block; margin-bottom:4px; font-size:14px; }
+.wali-page .wali-history-list,.wali-page .wali-rejected-list { list-style:none; margin:0; padding:0; }
+.wali-page .wali-history-list > li,.wali-page .wali-rejected-list > li { padding-block:16px; border-top:1px solid var(--wali-border); }
+.wali-page .wali-history-list > li:first-child,.wali-page .wali-rejected-list > li:first-child { border-top:0; padding-top:0; }
+.wali-page .wali-history-list h3 { font-size:16px; letter-spacing:0; }
+.wali-page .wali-history-status { display:flex; flex-wrap:wrap; gap:6px 12px; align-items:center; margin-top:10px; }
+.wali-page .wali-history-status > span:not(.wali-chip) { font-size:14px; color:var(--wali-muted); }
+.wali-page .wali-empty { padding-block:12px; color:var(--wali-muted); }
+.wali-page .wali-empty h2,.wali-page .wali-empty h3 { color:var(--wali-text); margin-bottom:10px; }
+.wali-page .wali-prompt p { color:var(--wali-muted); margin-top:8px; }
+.wali-page .wali-prompt .wali-button { margin-top:16px; }
+.wali-page .wali-survey-item + .wali-survey-item { border-top:1px solid var(--wali-border); padding-top:20px; }
+.wali-page .wali-install { display:flex; align-items:start; flex-wrap:wrap; gap:16px 32px; border-top:1px solid var(--wali-border); padding-block:24px; }
+.wali-page .wali-install > div:first-child { flex:1; min-width:min(100%,260px); }
+.wali-page .wali-install h2 { font-size:18px; margin-bottom:6px; }
+.wali-page .wali-install p { color:var(--wali-muted); }
+.wali-page .wali-install-instructions { flex-basis:100%; }
+.wali-page .wali-install-instructions p + p { margin-top:10px; }
+.wali-page .wali-dialog { width:min(600px,calc(100% - 24px)); max-height:calc(100dvh - 32px); margin:auto; padding:0; background:var(--wali-panel); color:var(--wali-text); border:1px solid var(--wali-border); border-radius:16px; box-shadow:0 16px 48px rgb(0 0 0 / 15%); overflow:auto; }
+.wali-page .wali-dialog::backdrop { background:rgb(10 20 14 / 58%); }
+.wali-page .wali-dialog-content { padding:20px; }
+.wali-page .wali-dialog-heading { display:flex; align-items:start; justify-content:space-between; gap:14px; margin-bottom:20px; }
+.wali-page .wali-dialog-heading h2 { font-size:22px; align-self:center; }
+.wali-page .wali-dialog-description { color:var(--wali-muted); margin-bottom:20px!important; }
+.wali-page .wali-dialog-actions { display:flex; flex-wrap:wrap; gap:10px; margin-top:24px; }
+.wali-page .wali-dialog-actions > * { flex:1; min-width:min(100%,160px); }
+.wali-page:has(.wali-dialog[open]) { overflow:hidden; }
+.wali-page .wali-field { margin-top:20px; }
+.wali-page .wali-field:first-child { margin-top:0; }
+.wali-page .wali-field label,.wali-page .wali-rating legend { display:block; font-size:14px; font-weight:600; margin-bottom:8px; }
+.wali-page .wali-field input:not([type=file]),.wali-page .wali-field textarea { display:block; width:100%; border:1px solid var(--wali-border); background:var(--wali-panel); color:var(--wali-text); border-radius:10px; padding:11px 12px; min-height:48px; font:inherit; }
+.wali-page .wali-field input[aria-invalid=true],.wali-page .wali-field textarea[aria-invalid=true] { border-color:var(--wali-red); }
+.wali-page .wali-field input::placeholder,.wali-page .wali-field textarea::placeholder { color:var(--wali-muted); }
+.wali-page .wali-password { position:relative; }
+.wali-page .wali-password input { padding-right:78px!important; }
+.wali-page .wali-password button { position:absolute; right:0; top:0; min-height:48px; width:68px; font-size:14px; font-weight:600; color:var(--wali-green); cursor:pointer; border-radius:10px; }
+.wali-page .wali-upload { border:1px dashed var(--wali-border); border-radius:12px; padding:16px; }
+.wali-page .wali-upload input { display:block; width:100%; min-height:48px; font-size:16px; color:var(--wali-text); }
+.wali-page .wali-upload input::file-selector-button { padding:11px 12px; margin-right:8px; border:1px solid var(--wali-border); background:var(--wali-soft); color:var(--wali-text); border-radius:8px; font:inherit; cursor:pointer; }
+.wali-page .wali-upload-preview { display:block; max-height:220px; width:auto; max-width:100%; margin:12px auto; border-radius:8px; }
+.wali-page .wali-upload > p { margin-top:10px; }
+.wali-page .wali-upload-status { margin-top:14px; padding:12px; background:var(--wali-soft); border-radius:10px; }
+.wali-page .wali-upload-status > div:first-child { display:flex; align-items:center; justify-content:space-between; gap:10px; font-size:14px; }
+.wali-page .wali-progress { height:8px; background:var(--wali-border); border-radius:10px; overflow:hidden; margin-block:10px; }
+.wali-page .wali-progress > span { display:block; height:100%; background:var(--wali-green); }
+.wali-page .wali-qr { background:#fff; padding:16px; border:1px solid #e3e6df; border-radius:12px; width:min(100%,280px); margin:20px auto; color:#000; }
+.wali-page .wali-qr svg { display:block; width:100%; height:auto; }
+.wali-page .wali-qr-text { text-align:center; overflow-wrap:anywhere; }
+.wali-page .wali-rating { margin-top:20px; border:0; padding:0; }
+.wali-page .wali-rating-buttons { display:flex; flex-wrap:wrap; gap:4px; }
+.wali-page .wali-rating-buttons button { width:44px; height:48px; display:inline-flex; align-items:center; justify-content:center; border:1px solid var(--wali-border); background:var(--wali-panel); color:var(--wali-muted); border-radius:8px; cursor:pointer; }
+.wali-page .wali-rating-buttons button[data-filled=true] { color:var(--wali-amber); background:var(--wali-soft); border-color:var(--wali-amber); }
+.wali-page .wali-rating-buttons .material-symbols-rounded { font-size:28px; }
+.wali-page .wali-calendar-layout { display:grid; gap:24px; align-items:start; }
+.wali-page .wali-calendar-controls { display:flex; justify-content:space-between; align-items:center; gap:10px; margin-bottom:20px; }
+.wali-page .wali-calendar-controls h2 { font-size:20px; }
+.wali-page .wali-calendar-controls > div { display:flex; gap:6px; flex-shrink:0; }
+.wali-page .wali-calendar-grid { display:grid; grid-template-columns:repeat(7,minmax(0,1fr)); gap:4px; }
+.wali-page .wali-calendar-weekdays { margin-bottom:8px; font-size:14px; color:var(--wali-muted); text-align:center; }
+.wali-page .wali-calendar-day { min-height:52px; display:flex; flex-direction:column; align-items:center; justify-content:center; border:1px solid transparent; border-radius:8px; font-size:16px; color:var(--wali-text); }
+.wali-page button.wali-calendar-day { background:var(--wali-soft); border-color:var(--wali-border); cursor:pointer; color:var(--wali-green); font-weight:600; }
+.wali-page .wali-calendar-day.is-outside { color:var(--wali-muted); }
+.wali-page .wali-calendar-day.is-today { outline:2px solid var(--wali-green); outline-offset:-2px; }
+.wali-page .wali-calendar-day small { font-size:14px; font-weight:500; }
+.wali-page .wali-agenda-list { display:grid; gap:12px; margin-top:20px; }
+.wali-page .wali-agenda-item { width:100%; display:grid; grid-template-columns:48px minmax(0,1fr) 20px; gap:12px; align-items:start; padding:16px; border:1px solid var(--wali-border); border-radius:12px; background:var(--wali-panel); text-align:left; color:var(--wali-text); cursor:pointer; }
+.wali-page .wali-agenda-item:hover { border-color:var(--wali-green); }
+.wali-page .wali-date-tile { display:flex; flex-direction:column; align-items:center; padding:6px; background:var(--wali-soft); border-radius:8px; }
+.wali-page .wali-date-tile > small { font-size:14px; color:var(--wali-muted); }
+.wali-page .wali-date-tile > strong { font-size:22px; line-height:1.2; }
+.wali-page .wali-agenda-item strong,.wali-page .wali-agenda-item p { overflow-wrap:anywhere; }
+.wali-page .wali-agenda-item p { margin-top:6px; color:var(--wali-muted); font-size:14px; }
+.wali-page .wali-agenda-item .material-symbols-rounded { font-size:20px; margin-top:8px; }
+.wali-page .wali-profile { display:grid; gap:24px; }
+.wali-page .wali-profile-side { display:contents; }
+.wali-page .wali-profile-contact { order:1; }
+.wali-page .wali-profile-card { order:2; }
+.wali-page .wali-profile-avatar-panel { order:3; }
+.wali-page .wali-profile-security { order:4; }
+.wali-page .wali-profile-logout { order:5; }
+.wali-page .wali-profile-heading { display:flex; align-items:center; gap:14px; }
+.wali-page .wali-profile-heading > div:last-child { min-width:0; overflow-wrap:anywhere; }
+.wali-page .wali-profile-avatar { width:56px; height:56px; display:flex; align-items:center; justify-content:center; border-radius:14px; color:white; flex-shrink:0; }
+.wali-page .wali-profile-avatar .material-symbols-rounded { font-size:28px; }
+.wali-page .wali-avatar-grid { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:10px; margin-block:18px; }
+.wali-page .wali-avatar-grid button { display:flex; flex-direction:column; align-items:center; justify-content:center; gap:6px; min-height:60px; padding:6px; border:2px solid transparent; border-radius:12px; cursor:pointer; color:white; }
+.wali-page .wali-avatar-grid button[aria-pressed=true] { border-color:var(--wali-green); outline:2px solid var(--wali-panel); outline-offset:-4px; }
+.wali-page .wali-avatar-grid .material-symbols-rounded { font-size:28px; }
+.wali-page .wali-card-preview { width:100%; }
+.wali-page .wali-card-frame { width:calc(323.4px * var(--card-scale,1)); height:calc(204px * var(--card-scale,1)); margin:20px auto; }
+.wali-page .wali-card-paper { width:323.4px; height:204px; transform:scale(var(--card-scale,1)); transform-origin:top left; color:#26322b; }
+.dark .wali-page .wali-card-paper .bg-white { background:#fff!important; }
+.dark .wali-page .wali-card-paper .text-slate-800 { color:#1e293b!important; }
+.dark .wali-page .wali-card-paper .text-slate-700 { color:#334155!important; }
+.dark .wali-page .wali-card-paper .text-slate-400 { color:#94a3b8!important; }
+.wali-page .wali-card-paper .material-symbols-rounded { font-size:8px; }
+.wali-page .wali-card-paper .material-symbols-rounded.text-base { font-size:16px; }
+.wali-page .wali-card-paper .material-symbols-rounded.text-white { color:#fff; }
+.wali-page .wali-card-paper .qrcode-svg-container-ws svg { width:100%!important; height:100%!important; }
+@media (min-width:640px) { .wali-page .wali-container { width:min(1120px,calc(100% - 64px)); } .wali-page .wali-brand { font-size:16px; } .wali-page .wali-header-avatar { display:inline-flex; } .wali-page .wali-panel,.wali-page .wali-dialog-content { padding:24px; } .wali-page .wali-main { padding-block:32px; } .wali-page .wali-avatar-grid { grid-template-columns:repeat(6,minmax(0,1fr)); } }
+@media (min-width:1024px) { .wali-page { padding-bottom:32px; } .wali-page .wali-header { padding-block:20px; } .wali-page .wali-nav-mobile { display:none; } .wali-page .wali-nav-desktop { display:flex; } .wali-page .wali-header-tools { gap:8px; } .wali-page .wali-dashboard { grid-template-columns:minmax(0,1.15fr) minmax(0,1fr); } .wali-page .wali-current { grid-column:1; grid-row:1/span 2; } .wali-page .wali-history { grid-column:2; grid-row:1; } .wali-page .wali-extras { grid-column:2; grid-row:2; } .wali-page .wali-calendar-layout { grid-template-columns:420px minmax(0,1fr); } .wali-page .wali-profile { grid-template-columns:minmax(0,1.15fr) minmax(0,1fr); align-items:start; } .wali-page .wali-profile-side { display:grid; gap:24px; grid-column:2; grid-row:1/span 3; align-content:start; } .wali-page .wali-profile-contact { grid-column:1; grid-row:1; } .wali-page .wali-profile-security { grid-column:1; grid-row:2; } .wali-page .wali-profile-logout { grid-column:1; grid-row:3; } .wali-page .wali-profile section { order:initial; } .wali-page .wali-avatar-grid { grid-template-columns:repeat(4,minmax(0,1fr)); } }
+@media (max-width:359px) { .wali-page .wali-brand img { width:32px; height:32px; } .wali-page .wali-brand { gap:8px; } .wali-page .wali-header { gap:8px; } .wali-page .wali-header-tools { gap:2px; } .wali-page .wali-panel,.wali-page .wali-dialog-content { padding:16px; } .wali-page .wali-event-details > div { grid-template-columns:76px minmax(0,1fr); gap:8px; } .wali-page .wali-button { padding-inline:12px; } .wali-page .wali-calendar-grid { gap:2px; } }
+@media (min-width:1280px) { .wali-page .wali-header-name { display:block; font-size:14px; max-width:16ch; overflow-wrap:anywhere; } }
+@media (prefers-reduced-motion:reduce) { .wali-page *, .wali-page *::before, .wali-page *::after { scroll-behavior:auto!important; } }
