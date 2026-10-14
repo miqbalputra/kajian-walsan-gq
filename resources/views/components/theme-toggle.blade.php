@@ -17,7 +17,7 @@
     <button @click="toggle()" type="button"
         class="relative inline-flex h-8 w-14 items-center rounded-full transition-all duration-500 focus:outline-none focus:ring-2 focus:ring-primary-500/20 group {{ $class ?? '' }}"
         :class="isDark ? 'bg-slate-800 border border-slate-700' : 'bg-gray-100 border border-gray-200'"
-        aria-label="Toggle Theme">
+        aria-label="Ganti tema warna">
 
         <!-- Icons inside track (Static) -->
         <div class="absolute inset-0 flex items-center justify-between px-1.5 pointer-events-none">

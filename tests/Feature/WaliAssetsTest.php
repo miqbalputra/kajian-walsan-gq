@@ -51,11 +51,17 @@ class WaliAssetsTest extends TestCase
         foreach ((new Profile)->avatarPresets as $preset) {
             $used[] = $preset['icon'];
         }
-        $views = array_merge(glob(resource_path('views/components/wali/*.blade.php')), glob(resource_path('views/livewire/wali-santri/*.blade.php')));
+        $views = array_merge(
+            glob(resource_path('views/components/wali/*.blade.php')),
+            glob(resource_path('views/livewire/wali-santri/*.blade.php')),
+            glob(resource_path('views/livewire/panitia/*.blade.php')),
+            [resource_path('views/components/layouts/panitia.blade.php')],
+        );
         foreach ($views as $view) {
             preg_match_all('/<span[^>]*class="[^"]*material-symbols-rounded[^"]*"[^>]*>\s*([a-z][a-z0-9_]*)\s*<\/span>/', file_get_contents($view), $matches);
             $used = array_merge($used, $matches[1]);
         }
-        $this->assertEmpty(array_diff(array_unique($used), $icons), 'Update the icon subset when adding wali icons.');
+        $used = array_merge($used, ['front_camera', 'rear_camera', 'fullscreen', 'fullscreen_exit', 'play_arrow', 'stop', 'error', 'info']);
+        $this->assertEmpty(array_diff(array_unique($used), $icons), 'Update the local icon subset when adding Wali or Panitia icons.');
     }
 }
