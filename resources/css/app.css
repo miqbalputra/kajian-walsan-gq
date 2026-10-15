@@ -288,3 +288,260 @@ body {
     text-rendering: optimizeLegibility;
     font-feature-settings: 'liga';
 }
+
+/* Admin workspace design system. Kept scoped so other roles retain their own layouts. */
+.admin-ui {
+    --admin-canvas: #f5f8f6;
+    --admin-surface: #ffffff;
+    --admin-border: #e3ebe6;
+    --admin-ink: #172b22;
+    --admin-muted: #64746b;
+    background: var(--admin-canvas);
+    color: var(--admin-ink);
+    min-width: 320px;
+}
+
+.dark .admin-ui {
+    --admin-canvas: #07110d;
+    --admin-surface: #0f1b15;
+    --admin-border: #24362d;
+    --admin-ink: #edf5ef;
+    --admin-muted: #a3b2a9;
+}
+
+.admin-ui .admin-layout {
+    min-width: 0;
+}
+
+.admin-ui .admin-sidebar {
+    overscroll-behavior: contain;
+    padding-bottom: env(safe-area-inset-bottom);
+}
+
+.admin-ui .admin-nav-group {
+    display: grid;
+    gap: 0.25rem;
+}
+
+.admin-ui .admin-nav-heading {
+    margin: 0 0 0.35rem;
+    padding: 0 0.75rem;
+    color: var(--admin-muted);
+    font-size: 0.67rem;
+    font-weight: 800;
+    letter-spacing: 0.11em;
+    line-height: 1.25rem;
+    text-transform: uppercase;
+}
+
+.admin-ui .admin-nav-link {
+    min-height: 2.75rem;
+    text-decoration: none;
+}
+
+.admin-ui .admin-nav-link:focus-visible {
+    outline-offset: 1px;
+}
+
+.admin-ui .admin-topbar {
+    padding-top: env(safe-area-inset-top);
+}
+
+.admin-ui .admin-main {
+    width: 100%;
+    max-width: 100%;
+    padding-bottom: max(1.5rem, env(safe-area-inset-bottom));
+}
+
+.admin-ui .admin-main > * {
+    min-width: 0;
+}
+
+.admin-ui .admin-stat-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.admin-ui .admin-stat-grid > :is(div, a) {
+    min-width: 0;
+    padding: 1rem;
+}
+
+.admin-ui .admin-stat-grid > :is(div, a) > div {
+    min-width: 0;
+    gap: 0.75rem;
+}
+
+.admin-ui .admin-stat-grid > :is(div, a) > div > div:first-child {
+    width: 2.75rem;
+    height: 2.75rem;
+    flex: 0 0 2.75rem;
+}
+
+.admin-ui .admin-stat-grid > :is(div, a) .text-3xl {
+    font-size: clamp(1.25rem, 3.4vw, 1.75rem);
+    line-height: 1.15;
+}
+
+.admin-ui .admin-stat-grid > :is(div, a) .text-sm {
+    font-size: 0.72rem;
+    line-height: 1.1rem;
+}
+
+.admin-ui .admin-main h1,
+.admin-ui .admin-main h2,
+.admin-ui .admin-main h3 {
+    letter-spacing: -0.025em;
+}
+
+.admin-ui .admin-main :is(.bg-white.rounded-xl, .bg-white.rounded-2xl) {
+    border-color: var(--admin-border);
+    box-shadow: 0 1px 2px rgb(19 51 34 / 4%), 0 8px 24px rgb(19 51 34 / 3%);
+}
+
+.dark .admin-ui .admin-main :is(.bg-white.rounded-xl, .bg-white.rounded-2xl) {
+    border-color: var(--admin-border);
+    box-shadow: 0 8px 24px rgb(0 0 0 / 12%);
+}
+
+.dark .admin-ui .admin-main :is(.bg-gray-50, .bg-gray-100, .bg-slate-50) {
+    background-color: #15221b !important;
+}
+
+.admin-ui .admin-main :is(input:not([type='checkbox']):not([type='radio']):not([type='range']):not([type='file']), select, textarea) {
+    max-width: 100%;
+    border-radius: 0.8rem;
+    font-size: 0.9rem;
+}
+
+.admin-ui .admin-main :is(input:not([type='checkbox']):not([type='radio']):not([type='range']):not([type='file']), select) {
+    min-height: 2.75rem;
+}
+
+.admin-ui .admin-main textarea {
+    min-height: 6rem;
+}
+
+.admin-ui .admin-main :is(input[type='checkbox'], input[type='radio']) {
+    accent-color: #168044;
+}
+
+.admin-ui .admin-main table {
+    border-collapse: separate;
+    border-spacing: 0;
+}
+
+.admin-ui .admin-main table thead th {
+    font-size: 0.7rem;
+    font-weight: 800;
+    letter-spacing: 0.07em;
+    line-height: 1.2rem;
+    vertical-align: middle;
+}
+
+.admin-ui .admin-main table tbody td {
+    vertical-align: middle;
+}
+
+.admin-ui .admin-main .overflow-x-auto {
+    max-width: 100%;
+    overscroll-behavior-inline: contain;
+    scrollbar-color: #9caf9f transparent;
+    scrollbar-width: thin;
+}
+
+.admin-ui .admin-main .overflow-x-auto > table {
+    min-width: 100%;
+}
+
+.admin-ui .admin-main .fixed.inset-0.z-50 [class*='max-w-'] {
+    max-height: min(90dvh, 56rem);
+    overflow-y: auto;
+    overscroll-behavior: contain;
+}
+
+.admin-ui .admin-main :is(.apexcharts-canvas, .apexcharts-svg) {
+    max-width: 100%;
+}
+
+.dark .admin-ui .admin-main .apexcharts-canvas :is(.apexcharts-text, .apexcharts-text tspan) {
+    fill: #cbd5e1 !important;
+}
+
+.dark .admin-ui .admin-main .apexcharts-canvas .apexcharts-legend-text {
+    color: #cbd5e1 !important;
+}
+
+.dark .admin-ui .admin-main .apexcharts-canvas .apexcharts-gridline {
+    stroke: #334155 !important;
+}
+
+.admin-ui .admin-main :is(button, a)[class*='bg-primary-500'] {
+    box-shadow: 0 6px 16px rgb(22 128 68 / 13%);
+}
+
+@media (max-width: 639px) {
+    .admin-ui .admin-topbar {
+        gap: 0.4rem;
+    }
+
+    .admin-ui .admin-main {
+        padding-inline: 0.75rem;
+    }
+
+    .admin-ui .admin-main :is(.overflow-x-auto > table, table[class*='min-w-']) {
+        min-width: 38rem;
+    }
+
+    .admin-ui .admin-main :is(.fixed.inset-0.z-50 [class*='max-w-']) {
+        width: min(100%, 42rem);
+        max-height: calc(100dvh - 1.5rem);
+        overflow-y: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    .admin-ui .admin-main :is(input:not([type='checkbox']):not([type='radio']):not([type='range']):not([type='file']), select, textarea) {
+        font-size: 16px;
+    }
+}
+
+@media (max-width: 359px) {
+    .admin-ui .admin-stat-grid {
+        grid-template-columns: minmax(0, 1fr);
+    }
+}
+
+@media (min-width: 640px) {
+    .admin-ui .admin-stat-grid {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+
+    .admin-ui .admin-stat-grid > :is(div, a) {
+        padding: 1.25rem;
+    }
+
+    .admin-ui .admin-stat-grid > :is(div, a) > div > div:first-child {
+        width: 3.5rem;
+        height: 3.5rem;
+        flex-basis: 3.5rem;
+    }
+
+    .admin-ui .admin-stat-grid > :is(div, a) .text-3xl {
+        font-size: 1.875rem;
+    }
+
+    .admin-ui .admin-stat-grid > :is(div, a) .text-sm {
+        font-size: 0.875rem;
+        line-height: 1.25rem;
+    }
+}
+
+@media (min-width: 1600px) {
+    .admin-ui .admin-stat-grid {
+        grid-template-columns: repeat(6, minmax(0, 1fr));
+    }
+
+    .admin-ui .admin-main {
+        margin-inline: auto;
+        max-width: 1800px;
+    }
+}

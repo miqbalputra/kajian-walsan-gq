@@ -1,6 +1,6 @@
 <div @if(! $showFollowUpModal) wire:poll.15s.keep-alive="refreshDashboard" @endif>
     <!-- Stats Grid -->
-    <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-6 gap-4 mb-6">
+    <div class="admin-stat-grid grid grid-cols-2 gap-3 mb-6 sm:gap-4">
         <!-- Total Kajian -->
         <div class="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 hover:shadow-md transition-shadow">
             <div class="flex items-center gap-4">
@@ -117,7 +117,7 @@
     </div>
 
     <!-- Monthly Trend & Class Performance -->
-    <div class="grid grid-cols-1 xl:grid-cols-3 gap-6 mb-6">
+    <div class="grid grid-cols-1 xl:grid-cols-2 gap-6 mb-6">
         <!-- Monthly Comparison -->
         <div class="xl:col-span-2 bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
             <div class="flex items-center justify-between mb-6">
