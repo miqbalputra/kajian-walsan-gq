@@ -23,6 +23,8 @@ class KajianIndex extends Component
 
     public $perPage = 10;
 
+    public bool $showTrash = false;
+
     // Modal state
     public $showModal = false;
 
@@ -91,6 +93,18 @@ class KajianIndex extends Component
 
     public function updatingSearch()
     {
+        $this->resetPage();
+    }
+
+    public function showTrashList(): void
+    {
+        $this->showTrash = true;
+        $this->resetPage();
+    }
+
+    public function showActiveList(): void
+    {
+        $this->showTrash = false;
         $this->resetPage();
     }
 
@@ -310,6 +324,7 @@ class KajianIndex extends Component
 
     public function confirmDelete($id)
     {
+        KajianEvent::findOrFail($id);
         $this->kajianId = $id;
         $this->showDeleteModal = true;
     }
@@ -317,14 +332,22 @@ class KajianIndex extends Component
     public function delete()
     {
         $kajian = KajianEvent::findOrFail($this->kajianId);
-        // Kegiatan memiliki relasi cascade ke presensi, feedback, dan target
-        // kelas. Arsipkan dengan status closed agar histori tidak ikut hilang.
-        if ($kajian->status !== 'closed') {
-            app(AttendanceFinalizationService::class)->close($kajian, auth()->id());
-        }
+        $kajian->delete();
         $this->showDeleteModal = false;
         $this->kajianId = null;
-        $this->dispatch('notify', ['type' => 'success', 'message' => 'Kegiatan diarsipkan. Histori presensi tetap tersimpan.']);
+        $this->resetPage();
+        $this->dispatch('notify', ['type' => 'success', 'message' => 'Kajian dipindahkan ke Sampah. Data presensi dan detailnya tetap tersimpan dan dapat dipulihkan.']);
+    }
+
+    public function restore(int $id): void
+    {
+        $kajian = KajianEvent::onlyTrashed()->findOrFail($id);
+        $kajian->restore();
+
+        $this->dispatch('notify', [
+            'type' => 'success',
+            'message' => 'Kajian berhasil dipulihkan dan kembali terlihat oleh wali sesuai jadwal serta sasaran kelas.',
+        ]);
     }
 
     public function sendReminder($id)
@@ -340,7 +363,12 @@ class KajianIndex extends Component
 
     public function render()
     {
-        $kajians = KajianEvent::with(['academicYear', 'targetClasses'])
+        $query = KajianEvent::with(['academicYear', 'targetClasses']);
+        if ($this->showTrash) {
+            $query->onlyTrashed();
+        }
+
+        $kajians = $query
             ->when($this->search, function ($query) {
                 $query->where(function ($query) {
                     $query->where('title', 'like', '%'.$this->search.'%')
@@ -363,6 +391,7 @@ class KajianIndex extends Component
 
         return view('livewire.admin.kajian-index', [
             'kajians' => $kajians,
+            'trashedCount' => KajianEvent::onlyTrashed()->count(),
             'academicYears' => $academicYears,
             'allClasses' => $allClasses,
             'categories' => collect(config('event_categories', []))->map(fn ($cfg, $key) => [

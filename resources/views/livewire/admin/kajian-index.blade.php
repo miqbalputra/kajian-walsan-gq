@@ -2,14 +2,34 @@
     <!-- Header -->
     <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
         <div>
-            <h1 class="text-2xl font-bold text-gray-900">Manajemen Kegiatan</h1>
-            <p class="text-gray-500">Kelola kegiatan (kajian, rapor, pertemuan) dan presensi</p>
+            <h1 class="text-2xl font-bold text-gray-900">{{ $showTrash ? 'Sampah Kajian' : 'Manajemen Kegiatan' }}</h1>
+            <p class="text-gray-500">
+                {{ $showTrash ? 'Kajian di sini tidak terlihat oleh wali. Pulihkan untuk menampilkannya kembali.' : 'Kelola kegiatan (kajian, rapor, pertemuan) dan presensi' }}
+            </p>
         </div>
-        <button wire:click="openCreateModal"
-            class="inline-flex items-center justify-center gap-2 px-6 py-3 bg-primary-500 text-white rounded-xl font-semibold hover:bg-primary-600 transition-colors shadow-lg shadow-primary-500/25">
-            <span class="material-symbols-rounded">add</span>
-            Buat Kegiatan
-        </button>
+        <div class="flex flex-wrap items-center gap-2">
+            @if($showTrash)
+                <button wire:click="showActiveList"
+                    class="inline-flex items-center justify-center gap-2 px-5 py-3 border border-gray-200 bg-white text-gray-700 rounded-xl font-semibold hover:bg-gray-50 transition-colors">
+                    <span class="material-symbols-rounded">arrow_back</span>
+                    Kembali ke Kegiatan
+                </button>
+            @else
+                <button wire:click="showTrashList"
+                    class="inline-flex items-center justify-center gap-2 px-5 py-3 border border-gray-200 bg-white text-gray-700 rounded-xl font-semibold hover:bg-gray-50 transition-colors">
+                    <span class="material-symbols-rounded">delete</span>
+                    Sampah Kajian
+                    @if($trashedCount > 0)
+                        <span class="rounded-full bg-red-100 px-2 py-0.5 text-xs text-red-700">{{ $trashedCount }}</span>
+                    @endif
+                </button>
+                <button wire:click="openCreateModal"
+                    class="inline-flex items-center justify-center gap-2 px-6 py-3 bg-primary-500 text-white rounded-xl font-semibold hover:bg-primary-600 transition-colors shadow-lg shadow-primary-500/25">
+                    <span class="material-symbols-rounded">add</span>
+                    Buat Kegiatan
+                </button>
+            @endif
+        </div>
     </div>
 
     <!-- Flash Message -->
@@ -21,6 +41,7 @@
     @endif
 
     <!-- Form khusus wali Mustawa 1 yang benar-benar baru -->
+    @unless($showTrash)
     <section class="mb-6 rounded-2xl border border-sky-100 bg-gradient-to-br from-sky-50 to-white p-5 shadow-sm">
         <div class="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
             <div class="min-w-0">
@@ -59,6 +80,7 @@
             @endif
         </div>
     </section>
+    @endunless
 
     <!-- Filters -->
     <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 mb-6">
@@ -91,25 +113,37 @@
                 class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden hover:shadow-md transition-shadow">
                 <div class="p-5">
                     <div class="flex items-start justify-between mb-3">
-                        <span
-                            class="px-3 py-1 rounded-full text-xs font-medium 
-                                    {{ $kajian->status === 'open' ? 'bg-green-100 text-green-700' : ($kajian->status === 'closed' ? 'bg-gray-100 text-gray-700' : ($kajian->status === 'ongoing' ? 'bg-blue-100 text-blue-700' : 'bg-yellow-100 text-yellow-700')) }}">
-                            {{ ucfirst($kajian->status) }}
-                        </span>
+                        @if($showTrash)
+                            <span class="px-3 py-1 rounded-full text-xs font-medium bg-red-100 text-red-700">Dalam Sampah</span>
+                        @else
+                            <span
+                                class="px-3 py-1 rounded-full text-xs font-medium
+                                        {{ $kajian->status === 'open' ? 'bg-green-100 text-green-700' : ($kajian->status === 'closed' ? 'bg-gray-100 text-gray-700' : ($kajian->status === 'ongoing' ? 'bg-blue-100 text-blue-700' : 'bg-yellow-100 text-yellow-700')) }}">
+                                {{ ucfirst($kajian->status) }}
+                            </span>
+                        @endif
                         <div class="flex items-center gap-1">
-                            <button wire:click="sendReminder({{ $kajian->id }})" wire:loading.attr="disabled"
-                                class="p-1.5 text-gray-600 hover:text-amber-600 hover:bg-amber-50 rounded-lg transition-colors" title="Kirim Pengingat (Notifikasi Push)">
-                                <span wire:loading.remove wire:target="sendReminder({{ $kajian->id }})" class="material-symbols-rounded text-lg">notifications_active</span>
-                                <span wire:loading wire:target="sendReminder({{ $kajian->id }})" class="material-symbols-rounded text-lg animate-spin">progress_activity</span>
-                            </button>
-                            <button wire:click="openEditModal({{ $kajian->id }})"
-                                class="p-1.5 text-gray-600 hover:text-primary-600 hover:bg-primary-50 rounded-lg transition-colors">
-                                <span class="material-symbols-rounded text-lg">edit</span>
-                            </button>
-                            <button wire:click="confirmDelete({{ $kajian->id }})"
-                                class="p-1.5 text-gray-600 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors">
-                                <span class="material-symbols-rounded text-lg">archive</span>
-                            </button>
+                            @if($showTrash)
+                                <button wire:click="restore({{ $kajian->id }})" wire:loading.attr="disabled"
+                                    class="inline-flex items-center gap-1 rounded-lg bg-green-50 px-3 py-2 text-sm font-semibold text-green-700 hover:bg-green-100 transition-colors">
+                                    <span class="material-symbols-rounded text-lg">restore</span>
+                                    Pulihkan
+                                </button>
+                            @else
+                                <button wire:click="sendReminder({{ $kajian->id }})" wire:loading.attr="disabled"
+                                    class="p-1.5 text-gray-600 hover:text-amber-600 hover:bg-amber-50 rounded-lg transition-colors" title="Kirim Pengingat (Notifikasi Push)">
+                                    <span wire:loading.remove wire:target="sendReminder({{ $kajian->id }})" class="material-symbols-rounded text-lg">notifications_active</span>
+                                    <span wire:loading wire:target="sendReminder({{ $kajian->id }})" class="material-symbols-rounded text-lg animate-spin">progress_activity</span>
+                                </button>
+                                <button wire:click="openEditModal({{ $kajian->id }})"
+                                    class="p-1.5 text-gray-600 hover:text-primary-600 hover:bg-primary-50 rounded-lg transition-colors">
+                                    <span class="material-symbols-rounded text-lg">edit</span>
+                                </button>
+                                <button wire:click="confirmDelete({{ $kajian->id }})" title="Pindahkan kajian ke Sampah"
+                                    class="p-1.5 text-gray-600 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors">
+                                    <span class="material-symbols-rounded text-lg">delete</span>
+                                </button>
+                            @endif
                         </div>
                     </div>
 
@@ -142,29 +176,40 @@
                         </div>
                     </div>
 
-                    <!-- Toggle Status Button -->
-                    <button wire:click="toggleStatus({{ $kajian->id }})"
-                        class="w-full py-2.5 rounded-xl font-medium text-sm transition-colors flex items-center justify-center gap-2
-                                    {{ $kajian->status === 'open' ? 'bg-red-50 text-red-600 hover:bg-red-100' : 'bg-green-50 text-green-600 hover:bg-green-100' }}">
-                        <span
-                            class="material-symbols-rounded text-lg">{{ $kajian->status === 'open' ? 'lock' : 'lock_open' }}</span>
-                        {{ $kajian->status === 'open' ? 'Tutup Presensi' : 'Buka Presensi' }}
-                    </button>
-                    <p class="mt-2 text-center text-xs text-slate-500">
-                        {{ $kajian->status === 'open'
-                            ? 'Data realtime; Alfa baru dihitung saat ditutup.'
-                            : 'Hasil Alfa final. Buka kembali jika ada presensi yang tertinggal.' }}
-                    </p>
+                    @if($showTrash)
+                        <p class="text-sm text-gray-500">Dihapus {{ $kajian->deleted_at?->translatedFormat('d M Y, H:i') }}</p>
+                    @else
+                        <!-- Toggle Status Button -->
+                        <button wire:click="toggleStatus({{ $kajian->id }})"
+                            class="w-full py-2.5 rounded-xl font-medium text-sm transition-colors flex items-center justify-center gap-2
+                                        {{ $kajian->status === 'open' ? 'bg-red-50 text-red-600 hover:bg-red-100' : 'bg-green-50 text-green-600 hover:bg-green-100' }}">
+                            <span
+                                class="material-symbols-rounded text-lg">{{ $kajian->status === 'open' ? 'lock' : 'lock_open' }}</span>
+                            {{ $kajian->status === 'open' ? 'Tutup Presensi' : 'Buka Presensi' }}
+                        </button>
+                        <p class="mt-2 text-center text-xs text-slate-500">
+                            {{ $kajian->status === 'open'
+                                ? 'Data realtime; Alfa baru dihitung saat ditutup.'
+                                : 'Hasil Alfa final. Buka kembali jika ada presensi yang tertinggal.' }}
+                        </p>
+                    @endif
                 </div>
             </div>
         @empty
             <div class="col-span-full bg-white rounded-2xl shadow-sm border border-gray-100 p-12 text-center">
-                <span class="material-symbols-rounded text-5xl text-gray-300">event_busy</span>
-                <p class="mt-2 text-gray-500">Belum ada kegiatan</p>
-                <button wire:click="openCreateModal"
-                    class="mt-4 px-6 py-2 bg-primary-500 text-white rounded-xl font-medium hover:bg-primary-600 transition-colors">
-                    Buat Kegiatan Pertama
-                </button>
+                <span class="material-symbols-rounded text-5xl text-gray-300">{{ $showTrash ? 'delete' : 'event_busy' }}</span>
+                <p class="mt-2 text-gray-500">{{ $showTrash ? 'Sampah kajian kosong' : 'Belum ada kegiatan' }}</p>
+                @if($showTrash)
+                    <button wire:click="showActiveList"
+                        class="mt-4 px-6 py-2 border border-gray-200 text-gray-700 rounded-xl font-medium hover:bg-gray-50 transition-colors">
+                        Kembali ke Kegiatan
+                    </button>
+                @else
+                    <button wire:click="openCreateModal"
+                        class="mt-4 px-6 py-2 bg-primary-500 text-white rounded-xl font-medium hover:bg-primary-600 transition-colors">
+                        Buat Kegiatan Pertama
+                    </button>
+                @endif
             </div>
         @endforelse
     </div>
@@ -415,8 +460,8 @@
                     <div class="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
                         <span class="material-symbols-rounded text-red-600 text-3xl">delete</span>
                     </div>
-                    <h3 class="text-xl font-bold text-gray-900 mb-2">Arsipkan Kegiatan?</h3>
-                    <p class="text-gray-500 mb-6">Kegiatan ditutup dan disembunyikan dari proses aktif. Histori presensi serta file bukti tetap tersimpan.</p>
+                    <h3 class="text-xl font-bold text-gray-900 mb-2">Hapus kajian?</h3>
+                    <p class="text-gray-500 mb-6">Kajian akan hilang dari akun wali. Data presensi dan detailnya tetap tersimpan, dan kajian bisa dipulihkan dari Sampah Kajian.</p>
 
                     <div class="flex gap-3">
                         <button wire:click="$set('showDeleteModal', false)"
@@ -425,7 +470,7 @@
                         </button>
                         <button wire:click="delete"
                             class="flex-1 px-4 py-2.5 bg-red-500 text-white rounded-xl font-medium hover:bg-red-600 transition-colors">
-                            Arsipkan
+                            Pindahkan ke Sampah
                         </button>
                     </div>
                 </div>
