@@ -54,7 +54,8 @@
                         </div>
 
                         <div id="scanner-container" class="panitia-camera__frame"
-                            :class="{ 'mirror-cam': facingMode === 'user', 'scanner-fullscreen-mode': isFullscreen, 'has-camera-error': !hasCamera }">
+                            :class="{ 'mirror-cam': facingMode === 'user', 'scanner-fullscreen-mode': isFullscreen, 'has-camera-error': !hasCamera, 'uses-digital-zoom': usesDigitalZoom }"
+                            :style="{ '--camera-zoom': usesDigitalZoom ? zoomValue : 1 }">
                             <div id="qr-reader" wire:ignore aria-label="Tampilan kamera untuk memindai QR"></div>
 
                             <div class="panitia-camera__guide" x-show="scanning" aria-hidden="true">
@@ -85,12 +86,19 @@
                                 <span class="material-symbols-rounded" aria-hidden="true">flip_camera_ios</span>
                             </button>
 
-                            <div class="panitia-camera__zoom" x-show="scanning && hasZoom" x-cloak>
-                                <span class="material-symbols-rounded" aria-hidden="true">zoom_out</span>
+                            <div class="panitia-camera__zoom" x-show="cameraActive && hasZoom" x-cloak>
+                                <button type="button" class="panitia-camera__zoom-button" @click="adjustZoom(-1)"
+                                    :disabled="Number(zoomValue) <= Number(minZoom)" aria-label="Perkecil kamera" title="Perkecil">
+                                    <span class="material-symbols-rounded" aria-hidden="true">zoom_out</span>
+                                </button>
                                 <label class="visually-hidden" for="camera-zoom">Perbesar kamera</label>
                                 <input id="camera-zoom" type="range" x-model="zoomValue" @input="applyZoom()"
-                                    :min="minZoom" :max="maxZoom" step="0.1" aria-label="Perbesar kamera">
-                                <span class="material-symbols-rounded" aria-hidden="true">zoom_in</span>
+                                    :min="minZoom" :max="maxZoom" :step="zoomStep" aria-label="Perbesar kamera">
+                                <span class="panitia-camera__zoom-value" x-text="Number(zoomValue).toFixed(1) + '×'" aria-hidden="true"></span>
+                                <button type="button" class="panitia-camera__zoom-button" @click="adjustZoom(1)"
+                                    :disabled="Number(zoomValue) >= Number(maxZoom)" aria-label="Perbesar kamera" title="Perbesar">
+                                    <span class="material-symbols-rounded" aria-hidden="true">zoom_in</span>
+                                </button>
                             </div>
 
                             <span class="panitia-camera__mode" x-show="cameraActive" x-cloak>

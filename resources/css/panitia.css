@@ -123,6 +123,8 @@
 #qr-reader__scan_region video { display: block; width: 100% !important; height: 100% !important; object-fit: cover !important; }
 #qr-reader__scan_region img { max-width: 100% !important; }
 .mirror-cam #qr-reader video { transform: scaleX(-1) !important; }
+.uses-digital-zoom #qr-reader__scan_region video { transform: scale(var(--camera-zoom, 1)) !important; transform-origin: center; }
+.uses-digital-zoom.mirror-cam #qr-reader__scan_region video { transform: scale(var(--camera-zoom, 1)) scaleX(-1) !important; }
 .scanner-fullscreen-mode { position: fixed !important; z-index: 9999 !important; inset: 0 !important; width: 100vw !important; height: 100dvh !important; max-height: none !important; min-height: 0 !important; aspect-ratio: auto !important; border-radius: 0 !important; }
 .scanner-fullscreen-mode #qr-reader { height: 100% !important; }
 .panitia-camera__guide { position: absolute; z-index: 2; inset: 50% auto auto 50%; width: min(62vw, 260px); aspect-ratio: 1; transform: translate(-50%, -50%); pointer-events: none; }
@@ -139,9 +141,12 @@
 .panitia-camera__tool:disabled { opacity: .55; cursor: not-allowed; }
 .panitia-camera__mode { position: absolute; z-index: 3; right: 12px; bottom: 12px; left: 12px; display: flex; width: fit-content; max-width: calc(100% - 24px); min-height: 30px; align-items: center; gap: 7px; margin-inline: auto; border: 1px solid rgb(255 255 255 / 22%); border-radius: 999px; padding: 3px 10px; background: rgb(17 23 19 / 72%); color: white; font-size: 13px; }
 .panitia-camera__mode .material-symbols-rounded { font-size: 17px; }
-.panitia-camera__zoom { position: absolute; z-index: 4; right: 14px; bottom: 52px; left: 14px; display: flex; min-height: 44px; align-items: center; gap: 10px; border-radius: 9px; padding: 4px 10px; background: rgb(17 23 19 / 72%); color: white; }
+.panitia-camera__zoom { position: absolute; z-index: 6; right: 14px; bottom: 52px; left: 14px; display: flex; min-height: 48px; align-items: center; gap: 8px; border-radius: 9px; padding: 4px 8px; background: rgb(17 23 19 / 88%); color: white; }
 .panitia-camera__zoom .material-symbols-rounded { font-size: 19px; }
-.panitia-camera__zoom input { width: 100%; accent-color: #a7e4b4; }
+.panitia-camera__zoom-button { display: grid; width: 40px; height: 40px; flex: 0 0 40px; place-items: center; border: 1px solid rgb(255 255 255 / 25%); border-radius: 8px; background: rgb(255 255 255 / 10%); color: white; cursor: pointer; touch-action: manipulation; }
+.panitia-camera__zoom-button:disabled { opacity: .45; cursor: not-allowed; }
+.panitia-camera__zoom input { width: auto; min-width: 0; height: 40px; min-height: 40px; flex: 1 1 auto; margin: 0; padding: 0; accent-color: #a7e4b4; cursor: pointer; pointer-events: auto; touch-action: pan-x; }
+.panitia-camera__zoom-value { min-width: 36px; color: white; font-size: 12px; font-variant-numeric: tabular-nums; text-align: right; }
 .panitia-camera__error { position: absolute; z-index: 5; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; padding: 22px; background: #141a16; color: white; text-align: center; }
 .panitia-camera__error > .material-symbols-rounded { font-size: 34px; color: #c5d1c7; }
 .panitia-camera__error > span:not(.material-symbols-rounded) { max-width: 360px; color: #d1d8d1; font-size: 14px; }
@@ -242,31 +247,46 @@
 }
 
 @media (max-width: 640px) {
-    .panitia-brand__icon { width: 38px; height: 38px; }
+    .panitia-header__inner, .panitia-main { width: min(100% - 24px, 1120px); }
+    .panitia-header__inner { min-height: 64px; gap: 8px; }
+    .panitia-brand { gap: 8px; }
+    .panitia-brand__icon { width: 36px; height: 36px; }
+    .panitia-brand__copy strong { font-size: 14px; }
+    .panitia-brand__copy span { font-size: 12px; }
+    .panitia-header__tools { gap: 4px; }
     .panitia-header__link { width: 48px; min-width: 48px; padding: 0; font-size: 0; }
-    .panitia-page .panitia-header__tools [x-data] > button { width: 48px; min-width: 48px; }
+    .panitia-header__logout { width: 44px; min-width: 44px; }
+    .panitia-page .panitia-header__tools [x-data] > button { width: 44px; min-width: 44px; min-height: 44px; }
+    .panitia-main { padding-top: 16px; }
+    .panitia-event, .panitia-camera, .panitia-history { padding: 16px; }
+    .panitia-event__heading { gap: 10px; }
+    .panitia-event h2 { font-size: 18px; }
+    .panitia-count { min-width: 0; min-height: 44px; flex-direction: row; gap: 6px; padding: 5px 9px; }
+    .panitia-count strong { font-size: 19px; }
+    .panitia-count span { font-size: 12px; }
     .panitia-event__details { grid-template-columns: repeat(2, minmax(0, 1fr)); }
     .panitia-event__details > div:last-child { grid-column: 1 / -1; }
+    .panitia-camera .panitia-section-heading { align-items: center; }
 }
 
 @media (max-width: 380px) {
-    .panitia-header__inner, .panitia-main { width: min(100% - 24px, 1120px); }
-    .panitia-brand { gap: 7px; }
-    .panitia-brand__icon { width: 36px; height: 36px; }
-    .panitia-brand__copy strong { font-size: 12px; }
+    .panitia-brand__icon { width: 34px; height: 34px; }
+    .panitia-brand__copy strong { font-size: 13px; }
     .panitia-brand__copy span { font-size: 11px; }
-    .panitia-header__link { width: 44px; min-width: 44px; padding: 0; font-size: 0; }
+    .panitia-header__link, .panitia-header__logout { width: 42px; min-width: 42px; padding: 0; }
     .panitia-header__link .material-symbols-rounded { font-size: 21px; }
-    .panitia-header__logout { width: 44px; min-width: 44px; }
-    .panitia-page .panitia-header__tools [x-data] > button { width: 48px; min-width: 48px; }
-    .panitia-header__tools { gap: 4px; }
+    .panitia-page .panitia-header__tools [x-data] > button { width: 42px; min-width: 42px; min-height: 42px; }
     .panitia-event, .panitia-camera, .panitia-history { padding: 14px; }
+    .panitia-event__heading { gap: 8px; }
+    .panitia-event h2 { font-size: 17px; }
     .panitia-event__details { gap: 8px; }
     .panitia-event__details dt { font-size: 14px; }
     .panitia-event__details dd { font-size: 14px; }
     .panitia-scanner__actions { gap: 8px; }
     .panitia-button { padding-inline: 9px; font-size: 14px; }
-    .panitia-camera .panitia-section-heading { align-items: flex-start; flex-direction: column; gap: 8px; }
+    .panitia-section-heading { gap: 8px; }
+    .panitia-section-heading h2 { font-size: 18px; }
+    .panitia-camera__state { gap: 5px; padding: 4px 7px; font-size: 12px; }
     .panitia-camera__frame { min-height: 170px; aspect-ratio: 16 / 10; }
     .panitia-camera__guide { width: min(52vw, 168px); }
     .panitia-camera__frame.has-camera-error { min-height: 196px; aspect-ratio: auto; }

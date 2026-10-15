@@ -17,9 +17,10 @@ window.qrScannerComponent = () => ({
     isFullscreen: false,
     zoomValue: 1,
     minZoom: 1,
-    maxZoom: 5,
+    maxZoom: 3,
+    zoomStep: 0.1,
     hasZoom: false,
-    track: null,
+    usesDigitalZoom: true,
     feedback: null,
     feedbackTimer: null,
     zoomTimer: null,
@@ -122,9 +123,15 @@ window.qrScannerComponent = () => ({
             this.scanning = true;
             this.decodePaused = false;
             this.hasCamera = true;
+            this.hasZoom = true;
+            this.usesDigitalZoom = true;
+            this.minZoom = 1;
+            this.maxZoom = 3;
+            this.zoomStep = 0.1;
+            this.zoomValue = 1;
             this.pauseReasons.hidden = document.visibilityState === 'hidden';
             this.syncDecodeState(document.visibilityState === 'hidden');
-            window.setTimeout(() => this.checkZoomCapability(), 700);
+            this.checkZoomCapability();
         } catch (error) {
             console.error('Camera error:', error);
             this.cameraActive = false;
@@ -181,7 +188,7 @@ window.qrScannerComponent = () => ({
         this.cameraActive = false;
         this.scanning = false;
         this.decodePaused = false;
-        this.track = null;
+        this.usesDigitalZoom = true;
         this.hasZoom = false;
     },
 
@@ -203,28 +210,51 @@ window.qrScannerComponent = () => ({
 
     checkZoomCapability() {
         try {
-            const video = this.$el.querySelector('#qr-reader video');
-            const track = video?.srcObject?.getVideoTracks?.()[0];
-            const zoom = track?.getCapabilities?.().zoom;
-            if (!zoom) return;
-            this.track = track;
+            const zoom = this.scanner?.getRunningTrackCapabilities?.().zoom;
+            const min = Number(zoom?.min);
+            const max = Number(zoom?.max);
+            if (Number.isFinite(min) && Number.isFinite(max) && max > min) {
+                this.usesDigitalZoom = false;
+                this.minZoom = min;
+                this.maxZoom = max;
+                this.zoomStep = Number(zoom.step) > 0 ? Number(zoom.step) : 0.1;
+                const current = Number(this.scanner.getRunningTrackSettings?.().zoom ?? min);
+                this.zoomValue = Math.min(max, Math.max(min, Number.isFinite(current) ? current : min));
+            } else {
+                this.usesDigitalZoom = true;
+                this.minZoom = 1;
+                this.maxZoom = 3;
+                this.zoomStep = 0.1;
+                this.zoomValue = 1;
+            }
             this.hasZoom = true;
-            this.minZoom = zoom.min;
-            this.maxZoom = zoom.max;
-            this.zoomValue = zoom.min;
         } catch (error) {
-            console.info('Camera zoom is not supported on this device.');
+            // Keep an on-screen digital zoom control available when the camera
+            // does not expose native zoom capabilities.
+            this.usesDigitalZoom = true;
+            this.minZoom = 1;
+            this.maxZoom = 3;
+            this.zoomStep = 0.1;
+            this.zoomValue = 1;
+            this.hasZoom = true;
         }
     },
 
+    adjustZoom(direction) {
+        const next = Number(this.zoomValue) + (direction * Number(this.zoomStep));
+        this.zoomValue = Math.min(Number(this.maxZoom), Math.max(Number(this.minZoom), Number(next.toFixed(2))));
+        this.applyZoom();
+    },
+
     applyZoom() {
-        if (!this.track) return;
+        if (!this.cameraActive || !this.scanner || this.usesDigitalZoom) return;
         clearTimeout(this.zoomTimer);
         this.zoomTimer = window.setTimeout(async () => {
             try {
-                await this.track.applyConstraints({ advanced: [{ zoom: Number(this.zoomValue) }] });
+                await this.scanner.applyVideoConstraints({ advanced: [{ zoom: Number(this.zoomValue) }] });
             } catch (error) {
                 console.warn('Could not apply camera zoom:', error);
+                this.usesDigitalZoom = true;
             }
         }, 80);
     },

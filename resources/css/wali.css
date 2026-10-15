@@ -184,4 +184,38 @@
 @media (min-width:1024px) { .wali-page { padding-bottom:32px; } .wali-page .wali-header { padding-block:20px; } .wali-page .wali-nav-mobile { display:none; } .wali-page .wali-nav-desktop { display:flex; } .wali-page .wali-header-tools { gap:8px; } .wali-page .wali-dashboard { grid-template-columns:minmax(0,1.15fr) minmax(0,1fr); } .wali-page .wali-current { grid-column:1; grid-row:1/span 2; } .wali-page .wali-history { grid-column:2; grid-row:1; } .wali-page .wali-extras { grid-column:2; grid-row:2; } .wali-page .wali-calendar-layout { grid-template-columns:420px minmax(0,1fr); } .wali-page .wali-profile { grid-template-columns:minmax(0,1.15fr) minmax(0,1fr); align-items:start; } .wali-page .wali-profile-side { display:grid; gap:24px; grid-column:2; grid-row:1/span 3; align-content:start; } .wali-page .wali-profile-contact { grid-column:1; grid-row:1; } .wali-page .wali-profile-security { grid-column:1; grid-row:2; } .wali-page .wali-profile-logout { grid-column:1; grid-row:3; } .wali-page .wali-profile section { order:initial; } .wali-page .wali-avatar-grid { grid-template-columns:repeat(4,minmax(0,1fr)); } }
 @media (max-width:359px) { .wali-page .wali-brand img { width:32px; height:32px; } .wali-page .wali-brand { gap:8px; } .wali-page .wali-header { gap:8px; } .wali-page .wali-header-tools { gap:2px; } .wali-page .wali-panel,.wali-page .wali-dialog-content { padding:16px; } .wali-page .wali-event-details > div { grid-template-columns:76px minmax(0,1fr); gap:8px; } .wali-page .wali-button { padding-inline:12px; } .wali-page .wali-calendar-grid { gap:2px; } }
 @media (min-width:1280px) { .wali-page .wali-header-name { display:block; font-size:14px; max-width:16ch; overflow-wrap:anywhere; } }
+@media (max-width:639px) {
+  .wali-page .wali-container { width:min(1120px,calc(100% - 24px)); }
+  .wali-page .wali-header { gap:8px; padding-block:10px; }
+  .wali-page .wali-brand { gap:8px; font-size:13px; }
+  .wali-page .wali-brand img { width:32px; height:32px; }
+  .wali-page .wali-header-tools { gap:3px; }
+  .wali-page .wali-icon-button { width:44px; height:44px; }
+  .wali-page .wali-main { padding-block:16px; }
+  .wali-page-heading { margin-bottom:16px; }
+  .wali-page h1 { font-size:clamp(22px,6vw,26px); }
+  .wali-page .wali-dashboard { gap:16px; }
+  .wali-page .wali-stack { gap:14px; }
+  .wali-page .wali-dashboard .wali-panel { padding:16px; border-radius:14px; }
+  .wali-page .wali-panel-heading { gap:8px; margin-bottom:10px; }
+  .wali-page .wali-dashboard .wali-current > .wali-panel > .wali-panel-heading { flex-wrap:wrap; align-items:center; }
+  .wali-page .wali-event-title { font-size:20px; margin-bottom:12px!important; }
+  .wali-page .wali-dashboard .wali-event-details { gap:10px; }
+  .wali-page .wali-dashboard .wali-event-details > div { grid-template-columns:84px minmax(0,1fr); gap:8px; }
+  .wali-page .wali-actions { gap:10px; margin-top:14px; }
+  .wali-page .wali-action-options { gap:8px; }
+  .wali-page .wali-dashboard .wali-button { min-width:0; padding:10px 11px; font-size:15px; line-height:1.4; overflow-wrap:anywhere; }
+  .wali-page .wali-history-list > li,.wali-page .wali-rejected-list > li { padding-block:14px; }
+  .wali-page .wali-nav-mobile.wali-container { width:100%; margin-inline:0; padding-inline:12px; }
+}
+@media (max-width:359px) {
+  .wali-page .wali-header-avatar { display:none; }
+  .wali-page .wali-header { gap:6px; }
+  .wali-page .wali-brand { gap:7px; font-size:12px; }
+  .wali-page .wali-header-tools { gap:2px; }
+  .wali-page .wali-dashboard .wali-panel { padding:14px; }
+  .wali-page .wali-dashboard .wali-event-details > div { grid-template-columns:76px minmax(0,1fr); gap:8px; }
+  .wali-page .wali-dashboard .wali-action-options { grid-template-columns:minmax(0,1fr); }
+  .wali-page .wali-dashboard .wali-button { font-size:14px; }
+}
 @media (prefers-reduced-motion:reduce) { .wali-page *, .wali-page *::before, .wali-page *::after { scroll-behavior:auto!important; } }
