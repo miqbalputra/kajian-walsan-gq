@@ -17,8 +17,11 @@
     @if(session()->has('error'))<p class="wali-notice wali-notice-error" role="alert">{{ session('error') }}</p>@endif
 
     @if($parent?->isGuardian() && auth()->user()->hasTemporaryEmail())
-        <section class="wali-panel wali-prompt" aria-labelledby="gmail-login-title">
-            <h2 id="gmail-login-title">Tambahkan Gmail untuk login lebih mudah</h2>
+        <section x-data="{ visible: sessionStorage.getItem('dismiss-gmail-prompt') !== 'true' }" x-show="visible" x-cloak class="wali-panel wali-prompt" aria-labelledby="gmail-login-title">
+            <div class="wali-panel-heading">
+                <h2 id="gmail-login-title">Tambahkan Gmail untuk login lebih mudah</h2>
+                <button type="button" class="wali-icon-button" aria-label="Tutup pengingat Gmail" @click="visible = false; sessionStorage.setItem('dismiss-gmail-prompt', 'true')"><span class="material-symbols-rounded" aria-hidden="true">close</span></button>
+            </div>
             <p>Email akun Bapak/Ibu masih berupa alamat sementara. Hubungkan akun Google agar Gmail tersimpan otomatis dan bisa digunakan untuk login.</p>
             <a href="{{ route('google.link') }}" class="wali-button wali-button-primary">Hubungkan Gmail</a>
         </section>

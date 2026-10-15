@@ -15,8 +15,12 @@
         <section class="wali-panel wali-profile-contact" aria-labelledby="contact-title">
             <div class="wali-panel-heading"><h2 id="contact-title">Informasi Kontak</h2></div>
             @if(auth()->user()->hasTemporaryEmail())
-                <div class="wali-notice" role="status">
-                    <strong>Gmail belum ditambahkan.</strong> Hubungkan akun Google Bapak/Ibu untuk menyimpan Gmail dan memudahkan login.
+                <div x-data="{ visible: sessionStorage.getItem('dismiss-gmail-prompt') !== 'true' }" x-show="visible" x-cloak class="wali-notice" role="status">
+                    <div class="wali-panel-heading">
+                        <strong>Gmail belum ditambahkan.</strong>
+                        <button type="button" class="wali-icon-button" aria-label="Tutup pengingat Gmail" @click="visible = false; sessionStorage.setItem('dismiss-gmail-prompt', 'true')"><span class="material-symbols-rounded" aria-hidden="true">close</span></button>
+                    </div>
+                    <p>Hubungkan akun Google Bapak/Ibu untuk menyimpan Gmail dan memudahkan login.</p>
                     <a href="{{ route('google.link') }}" class="wali-button wali-button-primary wali-button-full">Hubungkan Gmail</a>
                 </div>
             @endif
