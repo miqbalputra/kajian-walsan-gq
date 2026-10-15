@@ -114,6 +114,10 @@ class Profile extends Component
         $user = auth()->user();
         $this->email = Str::lower(trim((string) $this->email));
 
+        if ($user->isWaliSantri()) {
+            $this->username = $user->username;
+        }
+
         if (! collect($this->avatarPresets)->contains(
             fn (array $preset): bool => "icon:{$preset['icon']}|{$preset['color']}" === $this->avatar
         )) {

@@ -30,9 +30,13 @@
                         <label for="profile-{{ $field }}">{{ $label }}</label>
                         <input id="profile-{{ $field }}" type="{{ $type }}"
                             @if($field==='email' && auth()->user()->isWaliSantri()) wire:model.live.debounce.400ms="email" placeholder="nama@gmail.com" @else wire:model="{{ $field }}" @endif
+                            @if($field==='username' && auth()->user()->isWaliSantri()) readonly aria-readonly="true" @endif
                             autocomplete="{{ $autocomplete }}" required aria-invalid="{{ $errors->has($field) ? 'true' : 'false' }}" aria-describedby="profile-{{ $field }}-error"
                             @if($field==='phone') placeholder="08..." @endif @if($field==='username') autocapitalize="none" spellcheck="false" @endif>
                         <p id="profile-{{ $field }}-error" class="wali-error" role="alert">@error($field){{ $message }}@enderror</p>
+                        @if($field==='username' && auth()->user()->isWaliSantri())
+                            <p class="wali-small">Username ditetapkan admin dan tidak dapat diubah. Hubungi admin jika perlu diperbarui.</p>
+                        @endif
                         @if($field==='email' && auth()->user()->isWaliSantri())
                             <p class="wali-small">Wajib menggunakan Gmail dengan akhiran @gmail.com.</p>
                             @unless(\App\Models\User::isGmailAddress($email))
