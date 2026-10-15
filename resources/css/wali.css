@@ -142,12 +142,19 @@
 .wali-page .wali-calendar-weekdays { margin-bottom:8px; font-size:14px; color:var(--wali-muted); text-align:center; }
 .wali-page .wali-calendar-day { min-height:52px; display:flex; flex-direction:column; align-items:center; justify-content:center; border:1px solid transparent; border-radius:8px; font-size:16px; color:var(--wali-text); }
 .wali-page button.wali-calendar-day { background:var(--wali-soft); border-color:var(--wali-border); cursor:pointer; color:var(--wali-green); font-weight:600; }
+.wali-page button.wali-calendar-day:hover { background:var(--wali-green); border-color:var(--wali-green); color:var(--wali-on-green); }
 .wali-page .wali-calendar-day.is-outside { color:var(--wali-muted); }
 .wali-page .wali-calendar-day.is-today { outline:2px solid var(--wali-green); outline-offset:-2px; }
 .wali-page .wali-calendar-day small { font-size:14px; font-weight:500; }
+.wali-page .wali-calendar-legend { display:flex; flex-wrap:wrap; align-items:center; gap:8px 16px; margin-top:16px; padding-top:14px; border-top:1px solid var(--wali-border); color:var(--wali-muted); font-size:13px; }
+.wali-page .wali-calendar-legend > span { display:inline-flex; align-items:center; gap:7px; }
+.wali-page .wali-calendar-legend-dot { width:10px; height:10px; border:1px solid var(--wali-border); border-radius:3px; background:var(--wali-soft); }
+.wali-page .wali-calendar-legend-today { width:12px; height:12px; border:2px solid var(--wali-green); border-radius:3px; }
+.wali-page .wali-calendar-legend-count { margin-left:auto; }
 .wali-page .wali-agenda-list { display:grid; gap:12px; margin-top:20px; }
 .wali-page .wali-agenda-item { width:100%; display:grid; grid-template-columns:48px minmax(0,1fr) 20px; gap:12px; align-items:start; padding:16px; border:1px solid var(--wali-border); border-radius:12px; background:var(--wali-panel); text-align:left; color:var(--wali-text); cursor:pointer; }
 .wali-page .wali-agenda-item:hover { border-color:var(--wali-green); }
+.wali-page .wali-agenda-item > span:nth-child(2) { min-width:0; }
 .wali-page .wali-date-tile { display:flex; flex-direction:column; align-items:center; padding:6px; background:var(--wali-soft); border-radius:8px; }
 .wali-page .wali-date-tile > small { font-size:14px; color:var(--wali-muted); }
 .wali-page .wali-date-tile > strong { font-size:22px; line-height:1.2; }
@@ -217,5 +224,35 @@
   .wali-page .wali-dashboard .wali-event-details > div { grid-template-columns:76px minmax(0,1fr); gap:8px; }
   .wali-page .wali-dashboard .wali-action-options { grid-template-columns:minmax(0,1fr); }
   .wali-page .wali-dashboard .wali-button { font-size:14px; }
+}
+@media (max-width:639px) {
+  .wali-page .wali-calendar-layout { gap:16px; }
+  .wali-page .wali-calendar-layout > .wali-panel { padding:16px; }
+  .wali-page .wali-calendar-controls { gap:8px; margin-bottom:16px; }
+  .wali-page .wali-calendar-controls h2 { font-size:18px; line-height:1.25; }
+  .wali-page .wali-calendar-controls > div { gap:4px; }
+  .wali-page .wali-calendar-controls .wali-icon-button { width:44px; height:44px; }
+  .wali-page .wali-calendar-grid { gap:3px; }
+  .wali-page .wali-calendar-weekdays { margin-bottom:6px; font-size:12px; font-weight:600; }
+  .wali-page .wali-calendar-day { min-height:46px; border-radius:7px; font-size:15px; }
+  .wali-page .wali-calendar-day small { font-size:11px; line-height:1; }
+  .wali-page .wali-calendar-legend { gap:8px 12px; margin-top:14px; padding-top:12px; font-size:12px; }
+  .wali-page .wali-calendar-legend-count { margin-left:0; flex-basis:100%; }
+  .wali-page .wali-agenda-list { gap:10px; margin-top:14px; }
+  .wali-page .wali-agenda-item { grid-template-columns:42px minmax(0,1fr) 18px; gap:8px; padding:12px; }
+  .wali-page .wali-date-tile { min-height:48px; justify-content:center; padding:4px; }
+  .wali-page .wali-date-tile > small { font-size:12px; }
+  .wali-page .wali-date-tile > strong { font-size:20px; }
+  .wali-page .wali-agenda-item > span:nth-child(2) > strong { display:block; font-size:15px; line-height:1.35; }
+  .wali-page .wali-agenda-item p { margin-top:4px; font-size:13px; line-height:1.4; }
+  .wali-page .wali-agenda-item .material-symbols-rounded { margin-top:5px; }
+}
+@media (max-width:359px) {
+  .wali-page .wali-calendar-controls h2 { font-size:17px; }
+  .wali-page .wali-calendar-controls .wali-icon-button { width:42px; height:42px; }
+  .wali-page .wali-calendar-grid { gap:2px; }
+  .wali-page .wali-calendar-weekdays { font-size:11px; }
+  .wali-page .wali-calendar-day { min-height:44px; font-size:14px; }
+  .wali-page .wali-calendar-day small { font-size:10px; }
 }
 @media (prefers-reduced-motion:reduce) { .wali-page *, .wali-page *::before, .wali-page *::after { scroll-behavior:auto!important; } }

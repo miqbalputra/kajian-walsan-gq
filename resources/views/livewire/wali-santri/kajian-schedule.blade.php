@@ -1,9 +1,13 @@
 <div>
-    <div class="wali-page-heading"><h1 data-wali-return-focus tabindex="-1">Jadwal Kajian</h1><p>Pilih tanggal atau kajian untuk melihat rincian.</p></div>
+    <div class="wali-page-heading">
+        <p class="wali-eyebrow">Kalender dan agenda</p>
+        <h1 data-wali-return-focus tabindex="-1">Jadwal Kajian</h1>
+        <p>Pilih tanggal atau kajian untuk melihat rincian.</p>
+    </div>
     <div class="wali-calendar-layout">
         <section class="wali-panel" aria-labelledby="calendar-month">
             <div class="wali-calendar-controls"><h2 id="calendar-month" aria-live="polite">{{ \Carbon\Carbon::create($currentYear, $currentMonth, 1)->translatedFormat('F Y') }}</h2>
-                <div><button type="button" wire:click="prevMonth" class="wali-icon-button" aria-label="Bulan sebelumnya"><span class="material-symbols-rounded" aria-hidden="true">chevron_left</span></button><button type="button" wire:click="nextMonth" class="wali-icon-button" aria-label="Bulan berikutnya"><span class="material-symbols-rounded" aria-hidden="true">chevron_right</span></button></div>
+                <div role="group" aria-label="Navigasi bulan"><button type="button" wire:click="prevMonth" class="wali-icon-button" aria-label="Bulan sebelumnya"><span class="material-symbols-rounded" aria-hidden="true">chevron_left</span></button><button type="button" wire:click="nextMonth" class="wali-icon-button" aria-label="Bulan berikutnya"><span class="material-symbols-rounded" aria-hidden="true">chevron_right</span></button></div>
             </div>
             <div class="wali-calendar-grid wali-calendar-weekdays" aria-hidden="true">@foreach(['Min','Sen','Sel','Rab','Kam','Jum','Sab'] as $day)<span>{{ $day }}</span>@endforeach</div>
             <div class="wali-calendar-grid">
@@ -23,7 +27,11 @@
                     @endif
                 @endforeach
             </div>
-            <p class="wali-small" style="margin-top:16px">Tanggal berwarna memiliki jadwal kajian. Angka kecil menunjukkan jumlah acara.</p>
+            <div class="wali-calendar-legend" role="group" aria-label="Keterangan kalender">
+                <span><span class="wali-calendar-legend-dot" aria-hidden="true"></span>Ada kajian</span>
+                <span><span class="wali-calendar-legend-today" aria-hidden="true"></span>Hari ini</span>
+                <span class="wali-calendar-legend-count">Angka menunjukkan jumlah kajian</span>
+            </div>
         </section>
         <section aria-labelledby="agenda-title">
             <div class="wali-panel-heading"><h2 id="agenda-title">Daftar kajian</h2><span class="wali-chip">{{ collect($events)->flatten(1)->count() }} acara</span></div>
