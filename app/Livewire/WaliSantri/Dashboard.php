@@ -307,10 +307,11 @@ class Dashboard extends Component
 
     protected function deleteTemporaryUpload(string $property): void
     {
-        $files = collect((array) $this->{$property})->filter();
+        $upload = $this->{$property};
+        $files = is_array($upload) ? $upload : [$upload];
 
         foreach ($files as $file) {
-            if (is_object($file) && method_exists($file, 'delete')) {
+            if ($file instanceof \Livewire\Features\SupportFileUploads\TemporaryUploadedFile) {
                 $file->delete();
             }
         }
