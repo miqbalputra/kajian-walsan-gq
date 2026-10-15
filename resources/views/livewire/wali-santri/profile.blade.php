@@ -14,10 +14,10 @@
     <div class="wali-profile">
         <section class="wali-panel wali-profile-contact" aria-labelledby="contact-title">
             <div class="wali-panel-heading"><h2 id="contact-title">Informasi Kontak</h2></div>
-            @if(auth()->user()->hasTemporaryEmail())
+            @if(auth()->user()->isWaliSantri() && !auth()->user()->hasGmailEmail())
                 <div x-data="{ visible: sessionStorage.getItem('dismiss-gmail-prompt') !== 'true' }" x-show="visible" x-cloak class="wali-notice" role="status">
                     <div class="wali-panel-heading">
-                        <strong>Gmail belum ditambahkan.</strong>
+                        <strong>Email belum menggunakan Gmail.</strong>
                         <button type="button" class="wali-icon-button" aria-label="Tutup pengingat Gmail" @click="visible = false; sessionStorage.setItem('dismiss-gmail-prompt', 'true')"><span class="material-symbols-rounded" aria-hidden="true">close</span></button>
                     </div>
                     <p>Hubungkan akun Google Bapak/Ibu untuk menyimpan Gmail dan memudahkan login.</p>
@@ -25,8 +25,21 @@
                 </div>
             @endif
             <form wire:submit="updateProfile">
-                @foreach(['name'=>['Nama Lengkap','text','name'], 'username'=>['Username','text','username'], 'email'=>['Email','email','email'], 'phone'=>['Nomor WhatsApp','tel','tel']] as $field=>[$label,$type,$autocomplete])
-                    <div class="wali-field"><label for="profile-{{ $field }}">{{ $label }}</label><input id="profile-{{ $field }}" type="{{ $type }}" wire:model="{{ $field }}" autocomplete="{{ $autocomplete }}" required aria-invalid="{{ $errors->has($field) ? 'true' : 'false' }}" aria-describedby="profile-{{ $field }}-error" @if($field==='phone') placeholder="08..." @endif @if($field==='username') autocapitalize="none" spellcheck="false" @endif><p id="profile-{{ $field }}-error" class="wali-error" role="alert">@error($field){{ $message }}@enderror</p></div>
+                @foreach(['name'=>['Nama Lengkap','text','name'], 'username'=>['Username','text','username'], 'email'=>[auth()->user()->isWaliSantri() ? 'Email Gmail' : 'Email','email','email'], 'phone'=>['Nomor WhatsApp','tel','tel']] as $field=>[$label,$type,$autocomplete])
+                    <div class="wali-field">
+                        <label for="profile-{{ $field }}">{{ $label }}</label>
+                        <input id="profile-{{ $field }}" type="{{ $type }}"
+                            @if($field==='email' && auth()->user()->isWaliSantri()) wire:model.live.debounce.400ms="email" placeholder="nama@gmail.com" @else wire:model="{{ $field }}" @endif
+                            autocomplete="{{ $autocomplete }}" required aria-invalid="{{ $errors->has($field) ? 'true' : 'false' }}" aria-describedby="profile-{{ $field }}-error"
+                            @if($field==='phone') placeholder="08..." @endif @if($field==='username') autocapitalize="none" spellcheck="false" @endif>
+                        <p id="profile-{{ $field }}-error" class="wali-error" role="alert">@error($field){{ $message }}@enderror</p>
+                        @if($field==='email' && auth()->user()->isWaliSantri())
+                            <p class="wali-small">Wajib menggunakan Gmail dengan akhiran @gmail.com.</p>
+                            @unless(\App\Models\User::isGmailAddress($email))
+                                <p class="wali-error" role="alert">Alamat ini bukan Gmail. Masukkan alamat yang berakhiran @gmail.com.</p>
+                            @endunless
+                        @endif
+                    </div>
                 @endforeach
                 <div class="wali-dialog-actions"><button type="submit" class="wali-button wali-button-primary wali-button-full" wire:loading.attr="disabled" wire:target="updateProfile"><span wire:loading.remove wire:target="updateProfile">Simpan Perubahan</span><span wire:loading wire:target="updateProfile">Menyimpan...</span></button></div>
             </form>

@@ -228,6 +228,10 @@ class GoogleController extends Controller
             return redirect()->route('wali-santri.profile')->with('google-error', 'Akun Google tidak mengirim alamat email. Pastikan izin email aktif, lalu coba lagi.');
         }
 
+        if ($targetUser->isWaliSantri() && ! User::isGmailAddress($googleEmail)) {
+            return redirect()->route('wali-santri.profile')->with('google-error', 'Untuk akun wali santri, hubungkan akun Gmail dengan alamat yang berakhiran @gmail.com.');
+        }
+
         // Cek apakah google_id sudah dipakai akun lain
         $existing = User::where('google_id', $googleUser->getId())->where('id', '!=', $targetUser->id)->first();
         if ($existing) {

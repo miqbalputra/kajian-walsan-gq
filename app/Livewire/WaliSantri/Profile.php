@@ -11,6 +11,7 @@ use BaconQrCode\Renderer\RendererStyle\RendererStyle;
 use BaconQrCode\Writer;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Str;
 use Livewire\Component;
 
 class Profile extends Component
@@ -75,9 +76,43 @@ class Profile extends Component
         $this->avatar = "icon:{$icon}|{$color}";
     }
 
+    public function updatedEmail(): void
+    {
+        $user = auth()->user();
+        if (! $user?->isWaliSantri()) {
+            return;
+        }
+
+        $this->validateOnly('email', [
+            'email' => $this->emailRules($user),
+        ], [
+            'email.required' => 'Masukkan alamat Gmail yang aktif.',
+            'email.email' => 'Format email belum benar.',
+            'email.unique' => 'Alamat Gmail ini sudah digunakan akun lain.',
+        ]);
+    }
+
+    private function emailRules(User $user): array
+    {
+        $rules = ['bail', 'required', 'email'];
+
+        if ($user->isWaliSantri()) {
+            $rules[] = function (string $attribute, mixed $value, \Closure $fail): void {
+                if (! User::isGmailAddress((string) $value)) {
+                    $fail('Email wali santri wajib menggunakan Gmail dengan akhiran @gmail.com.');
+                }
+            };
+        }
+
+        $rules[] = 'unique:users,email,'.$user->id;
+
+        return $rules;
+    }
+
     public function updateProfile()
     {
         $user = auth()->user();
+        $this->email = Str::lower(trim((string) $this->email));
 
         if (! collect($this->avatarPresets)->contains(
             fn (array $preset): bool => "icon:{$preset['icon']}|{$preset['color']}" === $this->avatar
@@ -85,14 +120,19 @@ class Profile extends Component
             $this->avatar = 'icon:mosque|bg-indigo-500';
         }
 
+        $messages = [
+            'phone.regex' => 'Nomor telepon harus format Indonesia, contoh 081234567890 atau 6281234567890.',
+            'email.required' => $user->isWaliSantri() ? 'Masukkan alamat Gmail yang aktif.' : 'Masukkan alamat email.',
+            'email.email' => 'Format email belum benar.',
+            'email.unique' => $user->isWaliSantri() ? 'Alamat Gmail ini sudah digunakan akun lain.' : 'Alamat email ini sudah digunakan akun lain.',
+        ];
+
         $this->validate([
             'name' => 'required|string|max:255',
             'username' => 'required|string|max:50|unique:users,username,'.$user->id,
-            'email' => 'required|email|unique:users,email,'.$user->id,
+            'email' => $this->emailRules($user),
             'phone' => ['required', 'string', 'max:20', 'regex:/^(\+62|62|0)?[0-9]{8,13}$/'],
-        ], [
-            'phone.regex' => 'Nomor telepon harus format Indonesia, contoh 081234567890 atau 6281234567890.',
-        ]);
+        ], $messages);
 
         $user->update([
             'name' => $this->name,

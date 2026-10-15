@@ -72,6 +72,16 @@ class User extends Authenticatable
         return Str::endsWith(Str::lower(trim((string) $this->email)), '@walsan.local');
     }
 
+    public static function isGmailAddress(?string $email): bool
+    {
+        return Str::lower(Str::afterLast(trim((string) $email), '@')) === 'gmail.com';
+    }
+
+    public function hasGmailEmail(): bool
+    {
+        return self::isGmailAddress($this->email);
+    }
+
     /**
      * Get the role for this user.
      */
