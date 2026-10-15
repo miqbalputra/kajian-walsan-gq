@@ -16,6 +16,14 @@
     @if(session()->has('message'))<p class="wali-notice wali-notice-success" role="status">{{ session('message') }}</p>@endif
     @if(session()->has('error'))<p class="wali-notice wali-notice-error" role="alert">{{ session('error') }}</p>@endif
 
+    @if($parent?->isGuardian() && auth()->user()->hasTemporaryEmail())
+        <section class="wali-panel wali-prompt" aria-labelledby="gmail-login-title">
+            <h2 id="gmail-login-title">Tambahkan Gmail untuk login lebih mudah</h2>
+            <p>Email akun Bapak/Ibu masih berupa alamat sementara. Hubungkan akun Google agar Gmail tersimpan otomatis dan bisa digunakan untuk login.</p>
+            <a href="{{ route('google.link') }}" class="wali-button wali-button-primary">Hubungkan Gmail</a>
+        </section>
+    @endif
+
     <div class="wali-dashboard">
         <div class="wali-current wali-stack">
             <section class="wali-panel" aria-labelledby="current-kajian-title">

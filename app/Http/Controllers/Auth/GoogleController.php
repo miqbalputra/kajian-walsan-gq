@@ -223,20 +223,34 @@ class GoogleController extends Controller
         }
 
         // 3. Proses linking normal (Token berhasil ditukar)
+        $googleEmail = Str::lower(trim((string) $googleUser->getEmail()));
+        if ($googleEmail === '') {
+            return redirect()->route('wali-santri.profile')->with('google-error', 'Akun Google tidak mengirim alamat email. Pastikan izin email aktif, lalu coba lagi.');
+        }
+
         // Cek apakah google_id sudah dipakai akun lain
         $existing = User::where('google_id', $googleUser->getId())->where('id', '!=', $targetUser->id)->first();
         if ($existing) {
             return redirect()->route('wali-santri.profile')->with('google-error', 'Akun Google ini sudah terhubung ke akun lain.');
         }
 
+        // The Google account is linked while the user is authenticated, so its
+        // provider email can safely replace the temporary/imported address.
+        $emailOwner = User::whereRaw('LOWER(email) = ?', [$googleEmail])
+            ->where('id', '!=', $targetUser->id)
+            ->exists();
+        if ($emailOwner) {
+            return redirect()->route('wali-santri.profile')->with('google-error', 'Email Google ini sudah digunakan akun lain di aplikasi. Hubungi admin jika ini akun Bapak/Ibu.');
+        }
+
         $targetUser->update([
             'google_id' => $googleUser->getId(),
-            'email' => $targetUser->email ?? $googleUser->getEmail(),
+            'email' => $googleEmail,
         ]);
 
         Log::info('[Google Link] Success', ['user_id' => $targetUser->id, 'google_id' => $googleUser->getId()]);
 
-        return redirect()->route('wali-santri.profile')->with('google-success', 'Akun Google berhasil dihubungkan! Sekarang Anda bisa login dengan Google.');
+        return redirect()->route('wali-santri.profile')->with('google-success', 'Gmail berhasil disimpan dan akun Google terhubung. Sekarang Bapak/Ibu bisa login dengan Google.');
     }
 
     private function buildCallbackUrl(?string $configuredUrl, string $fallbackPath): string

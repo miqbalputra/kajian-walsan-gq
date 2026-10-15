@@ -8,10 +8,18 @@
     </div>
     @if(session()->has('message'))<p class="wali-notice wali-notice-success" role="status">{{ session('message') }}</p>@endif
     @if(session()->has('password-message'))<p class="wali-notice wali-notice-success" role="status">{{ session('password-message') }}</p>@endif
+    @if(session()->has('google-success'))<p class="wali-notice wali-notice-success" role="status">{{ session('google-success') }}</p>@endif
+    @if(session()->has('google-error'))<p class="wali-notice wali-notice-error" role="alert">{{ session('google-error') }}</p>@endif
 
     <div class="wali-profile">
         <section class="wali-panel wali-profile-contact" aria-labelledby="contact-title">
             <div class="wali-panel-heading"><h2 id="contact-title">Informasi Kontak</h2></div>
+            @if(auth()->user()->hasTemporaryEmail())
+                <div class="wali-notice" role="status">
+                    <strong>Gmail belum ditambahkan.</strong> Hubungkan akun Google Bapak/Ibu untuk menyimpan Gmail dan memudahkan login.
+                    <a href="{{ route('google.link') }}" class="wali-button wali-button-primary wali-button-full">Hubungkan Gmail</a>
+                </div>
+            @endif
             <form wire:submit="updateProfile">
                 @foreach(['name'=>['Nama Lengkap','text','name'], 'username'=>['Username','text','username'], 'email'=>['Email','email','email'], 'phone'=>['Nomor WhatsApp','tel','tel']] as $field=>[$label,$type,$autocomplete])
                     <div class="wali-field"><label for="profile-{{ $field }}">{{ $label }}</label><input id="profile-{{ $field }}" type="{{ $type }}" wire:model="{{ $field }}" autocomplete="{{ $autocomplete }}" required aria-invalid="{{ $errors->has($field) ? 'true' : 'false' }}" aria-describedby="profile-{{ $field }}-error" @if($field==='phone') placeholder="08..." @endif @if($field==='username') autocapitalize="none" spellcheck="false" @endif><p id="profile-{{ $field }}-error" class="wali-error" role="alert">@error($field){{ $message }}@enderror</p></div>
