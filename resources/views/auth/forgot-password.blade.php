@@ -1,91 +1,49 @@
-<x-layouts.app title="Lupa Password">
-    <div
-        class="min-h-screen flex items-center justify-center p-4 bg-gradient-to-br from-primary-600 via-primary-700 to-secondary-700 overflow-hidden">
-        <!-- Modern Decorative Background -->
-        <div class="absolute inset-0 z-0">
-            <div
-                class="absolute top-[10%] right-[5%] w-96 h-96 bg-primary-400/30 rounded-full blur-[120px] animate-pulse">
-            </div>
-            <div class="absolute bottom-[10%] left-[5%] w-80 h-80 bg-secondary-400/20 rounded-full blur-[100px] animate-pulse"
-                style="animation-delay: 2s"></div>
-        </div>
+<x-layouts.app title="Lupa Password" surface="public" :force-light="true">
+    <x-public.header :login="true" />
 
-        <div class="relative z-10 w-full max-w-md">
-            <!-- Logo & Title -->
-            <div class="text-center mb-8">
-                <div
-                    class="inline-flex items-center justify-center w-20 h-20 bg-white/10 backdrop-blur-xl rounded-3xl mb-4 border border-white/20 shadow-2xl">
-                    <span class="material-symbols-rounded text-5xl text-white">lock_reset</span>
-                </div>
-                <h1 class="text-3xl font-extrabold text-white tracking-tight">Lupa Password</h1>
-                <p class="text-white/70 text-sm mt-2 font-medium tracking-wide">Kami akan mengirimkan instruksi reset
-                    melalui email atau WhatsApp terdaftar</p>
+    <main id="main-content" class="public-container public-login-main" tabindex="-1">
+        <div class="public-login-grid">
+            <div class="public-login-intro">
+                <p class="public-eyebrow">Pemulihan akun</p>
+                <h2>Presensi Wali Santri</h2>
+                <p class="public-lead">Masukkan username atau email akun yang terdaftar. Tautan untuk membuat kata sandi baru akan dikirim ke Gmail yang terdaftar.</p>
             </div>
 
-            <!-- Glassmorphism Card -->
-            <div
-                class="bg-white/95 backdrop-blur-2xl rounded-[2.5rem] p-8 shadow-[0_20px_50px_rgba(0,0,0,0.15)] border border-white/50">
+            <section class="public-panel public-login-panel" aria-labelledby="forgot-password-title">
+                <h1 id="forgot-password-title">Lupa kata sandi?</h1>
+                <p class="public-form-intro">Masukkan username atau email Anda untuk menerima tautan reset.</p>
 
-                <!-- Success Message -->
                 @if (session('status'))
-                    <div class="mb-6 p-4 bg-green-50 border border-green-200 rounded-2xl">
-                        <div class="flex items-center gap-3">
-                            <span class="material-symbols-rounded text-green-600">check_circle</span>
-                            <p class="text-green-700 text-sm font-medium">{{ session('status') }}</p>
-                        </div>
-                    </div>
+                    <p class="public-message" role="status">{{ session('status') }}</p>
                 @endif
 
-                <form method="POST" action="{{ route('password.email') }}">
+                <form class="public-login-form" method="POST" action="{{ route('password.email') }}">
                     @csrf
-
-                    <div class="mb-6">
-                        <label for="identifier"
-                            class="block text-[13px] font-bold text-gray-700 mb-2 ml-1 uppercase tracking-wider">
-                            Username, Email, atau Nomor HP
-                        </label>
-                        <div class="group relative">
-                            <span
-                                class="material-symbols-rounded absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-primary-500 transition-colors text-xl">manage_accounts</span>
-                            <input type="text" id="identifier" name="identifier" value="{{ old('identifier') }}"
-                                class="w-full pl-12 pr-4 py-3.5 bg-gray-50 border border-gray-200 rounded-2xl focus:bg-white focus:ring-4 focus:ring-primary-500/10 focus:border-primary-500 transition-all outline-none text-gray-900 font-medium"
-                                placeholder="Contoh: A0214460290 / email@gmail.com / 0812..." required autofocus>
-                        </div>
-                        <p class="text-gray-500 text-xs mt-2">
-                            Jika nomor HP cocok, pesan reset akan dikirim melalui WhatsApp. Jika email cocok, link juga bisa dikirim melalui email.
-                        </p>
+                    <div class="public-field">
+                        <label for="identifier">Isi Username atau Email Anda (pilih salah satu)</label>
+                        <input type="text" id="identifier" name="identifier" value="{{ old('identifier') }}"
+                            placeholder="Masukkan username atau email Anda" required autofocus autocomplete="username"
+                            autocapitalize="none" autocorrect="off" spellcheck="false"
+                            aria-invalid="{{ $errors->has('identifier') ? 'true' : 'false' }}"
+                            aria-describedby="identifier-help{{ $errors->has('identifier') ? ' identifier-error' : '' }}">
+                        <p id="identifier-help" class="public-form-intro">Link reset akan dikirim melalui Gmail yang sudah terdaftar.</p>
                         @error('identifier')
-                            <p class="text-red-500 text-xs mt-2 ml-1 font-medium">{{ $message }}</p>
+                            <p id="identifier-error" class="public-field-error" role="alert">{{ $message }}</p>
                         @enderror
                     </div>
 
-                    <!-- Submit Button -->
-                    <button type="submit"
-                        class="w-full bg-gradient-to-r from-primary-600 to-primary-700 text-white py-4 px-6 rounded-2xl font-bold text-lg
-                               hover:from-primary-700 hover:to-primary-800 focus:outline-none focus:ring-4 focus:ring-primary-500/30
-                               active:scale-[0.98] transition-all duration-200 flex items-center justify-center gap-3 shadow-xl shadow-primary-600/20">
-                        <span class="material-symbols-rounded">send</span>
-                        Kirim Instruksi Reset
+                    <button type="submit" class="public-button public-button-primary">
+                        <span>Kirim Instruksi Reset</span>
+                        <x-public.icon name="arrow-right" />
                     </button>
                 </form>
 
-                <!-- Back to Login -->
-                <div class="mt-8 text-center">
-                    <a href="{{ route('login') }}"
-                        class="inline-flex items-center gap-2 text-gray-500 hover:text-primary-600 font-semibold transition-colors group">
-                        <span
-                            class="material-symbols-rounded text-lg group-hover:-translate-x-1 transition-transform">arrow_back</span>
-                        Kembali ke Login
-                    </a>
-                </div>
-            </div>
-
-            <!-- Footer -->
-            <div class="mt-6 text-center">
-                <p class="text-white/50 text-xs">
-                    &copy; {{ date('Y') }} Kelompok Tahfidz Griya Qur'an "Tunas Ilmu"
+                <p class="public-login-help">
+                    <a class="public-link" href="{{ route('login') }}"><x-public.icon name="arrow-left" /> Kembali ke Login</a>
                 </p>
-            </div>
+            </section>
         </div>
-    </div>
+    </main>
+
+    <x-public.footer />
 </x-layouts.app>
