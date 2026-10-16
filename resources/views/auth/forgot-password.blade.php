@@ -38,6 +38,35 @@
                     </button>
                 </form>
 
+                @php
+                    $adminPhone = trim((string) \App\Models\Setting::get('admin_whatsapp', config('kajian.admin_whatsapp')));
+                    if (preg_match('/^0[0-9]{9,12}$/', $adminPhone)) {
+                        $adminPhone = '62' . substr($adminPhone, 1);
+                    }
+                    $supportMessage = "Assalamu'alaikum Admin, saya kesulitan reset password akun Presensi Wali Santri.\n\nNama Bapak/Ibu:\nNama Ananda:\nKelas:\n\nMohon bantuannya. Terima kasih.";
+                    $supportUrl = preg_match('/^62[0-9]{8,13}$/', $adminPhone) && $adminPhone !== '6281234567890'
+                        ? 'https://wa.me/' . $adminPhone . '?text=' . urlencode($supportMessage)
+                        : null;
+                @endphp
+
+                <aside class="public-password-support" aria-labelledby="password-support-title">
+                    <h2 id="password-support-title"><x-public.icon name="message" /> Kesulitan reset password?</h2>
+                    <p>Khusus Bapak/Ibu yang masih kesulitan, silakan hubungi Admin melalui WhatsApp. Mohon sertakan:</p>
+                    <ul>
+                        <li>Nama Bapak/Ibu</li>
+                        <li>Nama Ananda</li>
+                        <li>Kelas Ananda</li>
+                    </ul>
+                    @if ($supportUrl)
+                        <a class="public-button public-password-support-button" href="{{ $supportUrl }}" target="_blank" rel="noopener noreferrer">
+                            <x-public.icon name="message" />
+                            Hubungi Admin via WhatsApp
+                        </a>
+                    @else
+                        <p class="public-password-support-unavailable">Kontak WhatsApp Admin belum tersedia. Silakan hubungi petugas kajian atau wali kelas Ananda.</p>
+                    @endif
+                </aside>
+
                 <p class="public-login-help">
                     <a class="public-link" href="{{ route('login') }}"><x-public.icon name="arrow-left" /> Kembali ke Login</a>
                 </p>

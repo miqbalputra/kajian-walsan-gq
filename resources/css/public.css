@@ -161,6 +161,13 @@
 .public-page .public-google-mark { width: 20px; height: 20px; flex-shrink: 0; }
 .public-page .public-login-help { text-align: center; margin-top: 20px; color: var(--public-muted); }
 .public-page .public-login-help .public-link { display: inline-flex; align-items: center; min-height: 48px; }
+.public-page .public-password-support { margin-top: 20px; padding: 16px; border: 1px solid #dce8dc; border-radius: 12px; background: #f6faf5; }
+.public-page .public-password-support h2 { display: flex; align-items: center; gap: 8px; font-size: 16px; font-weight: 650; color: var(--public-green); }
+.public-page .public-password-support > p { margin-top: 8px; color: var(--public-muted); font-size: 14px; }
+.public-page .public-password-support ul { display: grid; gap: 4px; margin: 10px 0 0; padding-left: 22px; color: var(--public-text); font-size: 14px; }
+.public-page .public-password-support-button { width: 100%; margin-top: 14px; border-color: #b6d8c1; background: #fff; color: var(--public-green); }
+.public-page .public-password-support-button:hover { background: #edf5ea; border-color: #8fbe9b; }
+.public-page .public-password-support .public-password-support-unavailable { font-size: 13px; }
 .public-page .public-login-benefits { list-style: none; padding: 0; margin: 32px 0 0; display: grid; gap: 16px; color: var(--public-muted); }
 .public-page .public-login-benefits li { display: flex; gap: 12px; align-items: start; }
 .public-page .public-login-benefits .public-icon { color: var(--public-green); margin-top: 3px; }
