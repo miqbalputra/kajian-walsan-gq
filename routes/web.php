@@ -163,6 +163,7 @@ Route::middleware('auth')->group(function () {
     Route::prefix('wali-kelas')->name('wali-kelas.')->middleware('role:admin,wali_kelas')->group(function () {
         Route::get('/', App\Livewire\WaliKelas\Dashboard::class)->name('dashboard');
         Route::get('/reports', App\Livewire\WaliKelas\ReportIndex::class)->name('reports');
+        Route::get('/santri/{student}', App\Livewire\WaliKelas\StudentProfile::class)->whereNumber('student')->name('students.show');
     });
 
     // Wali Santri Routes - Only Wali Santri and Guru can access

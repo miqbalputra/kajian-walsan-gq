@@ -2,141 +2,62 @@
 
 namespace App\Livewire\WaliKelas;
 
-use App\Models\Attendance;
-use App\Models\ClassRoom;
-use App\Models\KajianEvent;
-use App\Models\Student;
+use App\Livewire\WaliKelas\Concerns\WithAttendanceData;
+use App\Models\AcademicYear;
+use Livewire\Attributes\Computed;
 use Livewire\Component;
 use Livewire\WithPagination;
-use Illuminate\Support\Facades\DB;
 
 class Dashboard extends Component
 {
-    use WithPagination;
+    use WithAttendanceData, WithPagination;
 
-    public $filterPeriod = 'monthly';
-    public $filterKajian = '';
-    public $search = '';
-
-    // Modal State
-    public $showDetailModal = false;
-    public $selectedStudent = null;
-
-    public function mount()
+    public function mount(): void
     {
-        $user = auth()->user();
-        if (!$user->isWaliKelas() && !$user->isAdmin()) {
-            abort(403);
+        $this->reportService()->managedClass();
+        if (! request()->has('tahun')) {
+            $this->academicYearId = (string) (AcademicYear::active()?->id ?? '');
+        }
+        if (! request()->has('kajian')) {
+            $this->kajianId = (string) ($this->dataset['events']->first(fn ($event) => $event->status === 'closed'
+                && $event->date->lte(today()) && ($this->academicYearId === '' || $event->academic_year_id == $this->academicYearId)
+                && $this->dataset['rows']->contains('event_id', $event->id))?->id ?? '');
         }
     }
 
-    public function openDetail($id)
+    #[Computed]
+    public function dataset(): array
     {
-        $query = Student::with(['parents.user', 'attendances.kajianEvent', 'attendances.parent.user']);
-        if (! auth()->user()->isAdmin()) {
-            $query->where('class_id', auth()->user()->managedClass?->id);
-        }
-
-        $this->selectedStudent = $query->findOrFail($id);
-        $this->showDetailModal = true;
-    }
-
-    public function closeDetail()
-    {
-        $this->showDetailModal = false;
-        $this->selectedStudent = null;
+        return $this->reportService()->dataset();
     }
 
     public function render()
     {
-        $class = auth()->user()->managedClass;
-
-        if (!$class) {
-            return view('livewire.wali-kelas.no-class')
-                ->layout('components.layouts.wali-kelas', ['title' => 'Dashboard']);
+        $data = $this->dataset;
+        if (! $data['class']) {
+            return view('livewire.wali-kelas.no-class')->layout('components.layouts.wali-kelas', ['title' => 'Kelas saya']);
         }
+        $baseRows = $this->reportService()->filter($data['rows'], $this->academicYearId, $this->kajianId);
+        if ($this->kajianId === '') {
+            $baseRows = $baseRows->where('event_state', 'ended');
+        }
+        $filtered = $this->reportService()->filter($baseRows, status: $this->status, search: $this->search);
+        $students = $data['students']->filter(function ($student) use ($filtered) {
+            $needle = mb_strtolower(trim($this->search));
+            $text = $student->name.' '.$student->nis.' '.$student->parents->pluck('user.name')->join(' ');
 
-        $students = Student::active()
-            ->where('class_id', $class->id)
-            ->with(['parents.user', 'attendances.kajianEvent'])
-            ->when($this->search, function ($q) {
-                $q->where(function ($searchQuery) {
-                    $searchQuery->where('name', 'like', '%' . $this->search . '%')
-                        ->orWhere('nis', 'like', '%' . $this->search . '%');
-                });
-            })
-            ->paginate(10);
+            return ($this->status === '' || $filtered->contains('student_id', $student->id))
+                && ($needle === '' || str_contains(mb_strtolower($text), $needle) || $filtered->contains('student_id', $student->id));
+        })->values();
+        $trend = $data['events']->filter(fn ($event) => $event->status === 'closed' && $event->date->lte(today())
+            && ($this->academicYearId === '' || $event->academic_year_id == $this->academicYearId)
+            && $data['rows']->contains('event_id', $event->id))->take(6)->reverse()->values()
+            ->map(fn ($event) => ['event' => $event, 'summary' => $this->reportService()->summary($data['rows']->where('event_id', $event->id))]);
 
-        $totalStudents = $class->students()->active()->count();
-        $kajianEvents = KajianEvent::orderBy('date', 'desc')->get();
-
-        // Stats
-        $stats = [
-            'total_students' => $totalStudents,
-            'attendance_rate' => $this->calculateAttendanceRate($class->id),
-            'top_attendees' => $this->getTopAttendees($class->id),
-            'needs_attention' => $this->getNeedsAttention($class->id),
-        ];
-
-        return view('livewire.wali-kelas.dashboard', [
-            'students' => $students,
-            'class' => $class,
-            'kajianEvents' => $kajianEvents,
-            'stats' => $stats,
-        ])->layout('components.layouts.wali-kelas', ['title' => 'Dashboard Wali Kelas']);
-    }
-
-    private function calculateAttendanceRate($classId)
-    {
-        $totalStudents = Student::active()->where('class_id', $classId)->count();
-        if ($totalStudents == 0)
-            return 0;
-
-        $latestEvent = KajianEvent::where('status', 'closed')->orderBy('date', 'desc')->first();
-        if (!$latestEvent)
-            return 0;
-
-        $presentCount = Attendance::where('kajian_event_id', $latestEvent->id)
-            ->where(function ($q) use ($classId) {
-                $q->whereHas('studentEnrollment', function ($enrollmentQuery) use ($classId) {
-                    $enrollmentQuery->where('class_id', $classId);
-                })->orWhere(function ($legacyQuery) use ($classId) {
-                    $legacyQuery->whereNull('student_enrollment_id')
-                        ->whereHas('student', function ($studentQuery) use ($classId) {
-                            $studentQuery->where('class_id', $classId);
-                        });
-                });
-            })
-            ->where('validation_status', 'approved')
-            ->count();
-
-        return round(($presentCount / $totalStudents) * 100);
-    }
-
-    private function getTopAttendees($classId)
-    {
-        return Student::active()->where('class_id', $classId)
-            ->withCount([
-                'attendances' => function ($q) {
-                    $q->where('validation_status', 'approved');
-                }
-            ])
-            ->orderBy('attendances_count', 'desc')
-            ->take(5)
-            ->get();
-    }
-
-    private function getNeedsAttention($classId)
-    {
-        // Students with 0 or few attendances
-        return Student::active()->where('class_id', $classId)
-            ->withCount([
-                'attendances' => function ($q) {
-                    $q->where('validation_status', 'approved');
-                }
-            ])
-            ->orderBy('attendances_count', 'asc')
-            ->take(5)
-            ->get();
+        return view('livewire.wali-kelas.dashboard', $data + [
+            'studentPage' => $this->paginateRows($students), 'displayRows' => $baseRows,
+            'summary' => $this->reportService()->summary($baseRows), 'trend' => $trend,
+            'attentionPage' => $this->paginateRows($data['attention'], 8, 'attentionPage'),
+        ])->layout('components.layouts.wali-kelas', ['title' => 'Dashboard wali kelas']);
     }
 }
