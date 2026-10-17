@@ -119,15 +119,35 @@
 #qr-reader { width: 100% !important; height: 100% !important; border: 0 !important; color: white; }
 #qr-reader a, #qr-reader__dashboard { display: none !important; }
 #qr-reader span { border: 0 !important; }
+#qr-shaded-region { display: none !important; }
 #qr-reader__scan_region { width: 100% !important; height: 100% !important; min-height: 0 !important; }
-#qr-reader__scan_region video { display: block; width: 100% !important; height: 100% !important; object-fit: cover !important; }
+#qr-reader video { position: absolute; top: 50%; left: 50%; display: block; width: var(--camera-video-width, 100%) !important; height: var(--camera-video-height, 100%) !important; max-width: none !important; transform: translate(-50%, -50%); transform-origin: center; }
 #qr-reader__scan_region img { max-width: 100% !important; }
-.mirror-cam #qr-reader video { transform: scaleX(-1) !important; }
-.uses-digital-zoom #qr-reader__scan_region video { transform: scale(var(--camera-zoom, 1)) !important; transform-origin: center; }
-.uses-digital-zoom.mirror-cam #qr-reader__scan_region video { transform: scale(var(--camera-zoom, 1)) scaleX(-1) !important; }
-.scanner-fullscreen-mode { position: fixed !important; z-index: 9999 !important; inset: 0 !important; width: 100vw !important; height: 100dvh !important; max-height: none !important; min-height: 0 !important; aspect-ratio: auto !important; border-radius: 0 !important; }
-.scanner-fullscreen-mode #qr-reader { height: 100% !important; }
-.panitia-camera__guide { position: absolute; z-index: 2; inset: 50% auto auto 50%; width: min(62vw, 260px); aspect-ratio: 1; transform: translate(-50%, -50%); pointer-events: none; }
+.mirror-cam #qr-reader video { transform: translate(-50%, -50%) scaleX(-1) !important; }
+.uses-digital-zoom #qr-reader video { transform: translate(-50%, -50%) scale(var(--camera-zoom, 1)) !important; }
+.uses-digital-zoom.mirror-cam #qr-reader video { transform: translate(-50%, -50%) scale(var(--camera-zoom, 1)) scaleX(-1) !important; }
+.panitia-scanner-fullscreen { overflow: hidden !important; overscroll-behavior: none; }
+.panitia-camera.scanner-fullscreen-mode {
+    position: fixed !important;
+    z-index: 9999 !important;
+    inset: 0 !important;
+    display: grid;
+    grid-template-rows: minmax(0, 1fr) auto;
+    width: 100%;
+    height: 100vh;
+    height: 100dvh;
+    min-height: 0;
+    margin: 0;
+    border: 0;
+    border-radius: 0;
+    padding: env(safe-area-inset-top, 0px) env(safe-area-inset-right, 0px) env(safe-area-inset-bottom, 0px) env(safe-area-inset-left, 0px);
+    background: var(--panitia-bg);
+}
+.scanner-fullscreen-mode > .panitia-section-heading, .scanner-fullscreen-mode > .panitia-camera__help { display: none; }
+.scanner-fullscreen-mode .panitia-camera__frame { grid-area: 1 / 1; height: 100%; min-height: 0 !important; max-height: none; aspect-ratio: auto; border-radius: 0; }
+.scanner-fullscreen-mode .panitia-scanner__actions { grid-area: 2 / 1; margin: 0; padding: 10px 12px; }
+.scanner-fullscreen-mode .panitia-feedback { position: relative; z-index: 10; grid-area: 1 / 1; align-self: end; max-height: 45%; overflow: auto; margin: 12px; }
+.panitia-camera__guide { position: absolute; z-index: 2; inset: 50% auto auto 50%; width: var(--qr-guide-size, min(62vw, 260px)); aspect-ratio: 1; transform: translate(-50%, -50%); pointer-events: none; }
 .panitia-camera__corner { position: absolute; width: 27px; height: 27px; border-color: #a7e4b4; border-style: solid; }
 .panitia-camera__corner--tl { top: 0; left: 0; border-width: 3px 0 0 3px; border-radius: 9px 0 0; }
 .panitia-camera__corner--tr { top: 0; right: 0; border-width: 3px 3px 0 0; border-radius: 0 9px 0 0; }
@@ -288,7 +308,6 @@
     .panitia-section-heading h2 { font-size: 18px; }
     .panitia-camera__state { gap: 5px; padding: 4px 7px; font-size: 12px; }
     .panitia-camera__frame { min-height: 170px; aspect-ratio: 16 / 10; }
-    .panitia-camera__guide { width: min(52vw, 168px); }
     .panitia-camera__frame.has-camera-error { min-height: 196px; aspect-ratio: auto; }
     .panitia-camera__error { gap: 6px; padding: 14px; }
     .panitia-camera__error > .material-symbols-rounded { font-size: 28px; }

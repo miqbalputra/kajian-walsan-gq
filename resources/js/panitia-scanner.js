@@ -15,6 +15,11 @@ window.qrScannerComponent = () => ({
     pauseReasons: { manual: false, hidden: false, feedback: false, request: false, user: false },
     facingMode: window.localStorage?.getItem('scanner_camera_pref') || 'environment',
     isFullscreen: false,
+    nativeFullscreen: false,
+    fullscreenChanging: false,
+    cameraRestarting: false,
+    destroyed: false,
+    layoutTimer: null,
     zoomValue: 1,
     minZoom: 1,
     maxZoom: 3,
@@ -34,12 +39,35 @@ window.qrScannerComponent = () => ({
             this.setPauseReason('hidden', document.visibilityState === 'hidden', true);
         };
         this.onFullscreenChange = () => {
-            this.isFullscreen = Boolean(document.fullscreenElement || document.webkitFullscreenElement);
+            const wasNative = this.nativeFullscreen;
+            this.nativeFullscreen = this.fullscreenElement() === this.$refs.scannerContainer;
+            if (this.nativeFullscreen || wasNative) this.setFullscreen(this.nativeFullscreen);
+        };
+        this.onKeydown = event => {
+            if (event.key === 'Escape' && this.isFullscreen) this.exitFullscreen();
         };
 
         document.addEventListener('visibilitychange', this.onVisibilityChange);
         document.addEventListener('fullscreenchange', this.onFullscreenChange);
         document.addEventListener('webkitfullscreenchange', this.onFullscreenChange);
+        document.addEventListener('keydown', this.onKeydown);
+
+        if (!this.$refs.scannerContainer) return;
+
+        this.onVideoMetadata = event => {
+            if (event.target.tagName === 'VIDEO') this.sizeCameraVideo(event.target);
+        };
+        this.$refs.qrReader.addEventListener('loadedmetadata', this.onVideoMetadata, true);
+
+        if (window.ResizeObserver) {
+            let previousSize = '';
+            this.layoutObserver = new ResizeObserver(([entry]) => {
+                const size = `${Math.round(entry.contentRect.width)}x${Math.round(entry.contentRect.height)}`;
+                if (previousSize && size !== previousSize) this.refreshScannerLayout();
+                previousSize = size;
+            });
+            this.layoutObserver.observe(this.$refs.cameraFrame);
+        }
 
         if (window.Livewire) {
             this.livewireCleanup = [
@@ -66,13 +94,19 @@ window.qrScannerComponent = () => ({
     },
 
     destroy() {
+        this.destroyed = true;
         document.removeEventListener('visibilitychange', this.onVisibilityChange);
         document.removeEventListener('fullscreenchange', this.onFullscreenChange);
         document.removeEventListener('webkitfullscreenchange', this.onFullscreenChange);
+        document.removeEventListener('keydown', this.onKeydown);
+        this.layoutObserver?.disconnect();
+        this.$refs.qrReader?.removeEventListener('loadedmetadata', this.onVideoMetadata, true);
+        clearTimeout(this.layoutTimer);
+        this.exitFullscreen();
         this.livewireCleanup?.forEach(cleanup => cleanup?.());
         clearTimeout(this.feedbackTimer);
         clearTimeout(this.zoomTimer);
-        if (this.cameraActive && this.scanner) {
+        if (this.cameraActive && this.scanner && !this.cameraRestarting) {
             this.scanner.stop().catch(() => {});
         }
     },
@@ -84,12 +118,12 @@ window.qrScannerComponent = () => ({
         return event || {};
     },
 
-    async startScanner() {
-        if (this.starting || this.cameraActive) return;
+    async startScanner(resetFeedback = true) {
+        if (this.destroyed || this.starting || this.cameraActive) return;
         this.starting = true;
         this.hasCamera = true;
         this.cameraError = '';
-        this.feedback = null;
+        if (resetFeedback) this.feedback = null;
 
         try {
             if (!this.scanner) {
@@ -102,7 +136,9 @@ window.qrScannerComponent = () => ({
             const config = {
                 fps: 8,
                 qrbox: (viewfinderWidth, viewfinderHeight) => {
-                    const size = Math.floor(Math.min(viewfinderWidth, viewfinderHeight) * 0.72);
+                    const frame = this.$refs.cameraFrame;
+                    const size = Math.floor(Math.min(viewfinderWidth, viewfinderHeight, frame.clientWidth, frame.clientHeight) * 0.72);
+                    this.$refs.cameraFrame.style.setProperty('--qr-guide-size', `${size}px`);
                     return { width: size, height: size };
                 },
                 experimentalFeatures: { useBarCodeDetectorIfSupported: true },
@@ -119,6 +155,10 @@ window.qrScannerComponent = () => ({
                 await this.scanner.start(fallbackCameraId, config, onDecoded, onDecodeError);
             }
 
+            if (this.destroyed) {
+                await this.scanner.stop();
+                return;
+            }
             this.cameraActive = true;
             this.scanning = true;
             this.decodePaused = false;
@@ -193,6 +233,7 @@ window.qrScannerComponent = () => ({
     },
 
     async toggleScanner() {
+        if (this.cameraRestarting) return;
         if (!this.cameraActive) {
             await this.startScanner();
             return;
@@ -201,7 +242,7 @@ window.qrScannerComponent = () => ({
     },
 
     async switchCamera() {
-        if (!this.cameraActive) return;
+        if (!this.cameraActive || this.starting || this.cameraRestarting) return;
         this.facingMode = this.facingMode === 'environment' ? 'user' : 'environment';
         try { window.localStorage?.setItem('scanner_camera_pref', this.facingMode); } catch (_) {}
         await this.stopScanner();
@@ -259,21 +300,81 @@ window.qrScannerComponent = () => ({
         }, 80);
     },
 
+    fullscreenElement() {
+        return document.fullscreenElement || document.webkitFullscreenElement;
+    },
+
+    sizeCameraVideo(video) {
+        if (!video.videoWidth || !video.videoHeight) return;
+        const frame = this.$refs.cameraFrame;
+        const scale = Math.max(frame.clientWidth / video.videoWidth, frame.clientHeight / video.videoHeight);
+        // Preserve the video's aspect ratio so the decoder and visible QR agree.
+        frame.style.setProperty('--camera-video-width', `${video.videoWidth * scale}px`);
+        frame.style.setProperty('--camera-video-height', `${video.videoHeight * scale}px`);
+    },
+
+    setFullscreen(enabled) {
+        enabled = enabled && !this.destroyed;
+        this.isFullscreen = enabled;
+        document.documentElement.classList.toggle('panitia-scanner-fullscreen', enabled);
+        document.body.classList.toggle('panitia-scanner-fullscreen', enabled);
+    },
+
     async toggleFullscreen() {
-        const container = this.$el.querySelector('#scanner-container');
+        if (this.fullscreenChanging) return;
+        if (this.isFullscreen) return this.exitFullscreen();
+        const container = this.$refs.scannerContainer;
+        if (!container) return;
+
+        // Fill the viewport even when native fullscreen is unsupported or denied.
+        this.setFullscreen(true);
+        this.fullscreenChanging = true;
         try {
-            if (!document.fullscreenElement && !document.webkitFullscreenElement) {
-                if (container?.requestFullscreen) await container.requestFullscreen();
-                else if (container?.webkitRequestFullscreen) container.webkitRequestFullscreen();
-            } else if (document.exitFullscreen) {
-                await document.exitFullscreen();
-            } else if (document.webkitExitFullscreen) {
-                document.webkitExitFullscreen();
-            }
+            if (container.requestFullscreen) await container.requestFullscreen();
+            else if (container.webkitRequestFullscreen) await container.webkitRequestFullscreen();
+            this.nativeFullscreen = this.fullscreenElement() === container;
+            if (!this.isFullscreen || this.destroyed) await this.exitFullscreen();
         } catch (error) {
-            console.info('Fullscreen mode is unavailable:', error);
+            console.info('Using viewport fullscreen:', error);
+        } finally {
+            this.fullscreenChanging = false;
         }
-        this.isFullscreen = Boolean(document.fullscreenElement || document.webkitFullscreenElement);
+    },
+
+    async exitFullscreen() {
+        const container = this.$refs.scannerContainer;
+        this.setFullscreen(false);
+        this.nativeFullscreen = false;
+        if (!container || this.fullscreenElement() !== container) return;
+
+        try {
+            if (document.exitFullscreen) await document.exitFullscreen();
+            else if (document.webkitExitFullscreen) await document.webkitExitFullscreen();
+        } catch (error) {
+            // Keep the exit control available if the browser remains fullscreen.
+            this.nativeFullscreen = this.fullscreenElement() === container;
+            this.setFullscreen(this.nativeFullscreen);
+        }
+    },
+
+    refreshScannerLayout() {
+        clearTimeout(this.layoutTimer);
+        this.layoutTimer = window.setTimeout(async () => {
+            if (this.destroyed) return;
+            if (this.cameraRestarting) return this.refreshScannerLayout();
+            if (!this.cameraActive || this.starting) return;
+            const zoom = Number(this.zoomValue);
+            // html5-qrcode calculates its decode region only when starting.
+            this.cameraRestarting = true;
+            try {
+                await this.stopScanner();
+                await this.startScanner(false);
+                this.zoomValue = Math.min(this.maxZoom, Math.max(this.minZoom, zoom));
+                this.applyZoom();
+            } finally {
+                this.cameraRestarting = false;
+            }
+        }, 200);
     },
 
     async onScanSuccess(qrCode) {
@@ -329,8 +430,9 @@ window.qrScannerComponent = () => ({
         }, duration);
     },
 
-    openManualDialog() {
+    async openManualDialog() {
         this.setPauseReason('manual', true);
+        await this.exitFullscreen();
         const dialog = this.$refs.manualDialog;
         if (dialog && !dialog.open) dialog.showModal();
         this.$nextTick(() => this.$refs.manualSearch?.focus());

@@ -41,7 +41,8 @@
                         </dl>
                     </section>
 
-                    <section class="panitia-camera panel" aria-labelledby="camera-title">
+                    <section id="scanner-container" x-ref="scannerContainer" class="panitia-camera panel"
+                        :class="{ 'scanner-fullscreen-mode': isFullscreen }" aria-labelledby="camera-title">
                         <div class="panitia-section-heading">
                             <div>
                                 <p class="panitia-eyebrow">Arahkan kamera ke kartu wali</p>
@@ -53,10 +54,10 @@
                             </span>
                         </div>
 
-                        <div id="scanner-container" class="panitia-camera__frame"
-                            :class="{ 'mirror-cam': facingMode === 'user', 'scanner-fullscreen-mode': isFullscreen, 'has-camera-error': !hasCamera, 'uses-digital-zoom': usesDigitalZoom }"
+                        <div x-ref="cameraFrame" class="panitia-camera__frame"
+                            :class="{ 'mirror-cam': facingMode === 'user', 'has-camera-error': !hasCamera, 'uses-digital-zoom': usesDigitalZoom }"
                             :style="{ '--camera-zoom': usesDigitalZoom ? zoomValue : 1 }">
-                            <div id="qr-reader" wire:ignore aria-label="Tampilan kamera untuk memindai QR"></div>
+                            <div id="qr-reader" x-ref="qrReader" wire:ignore aria-label="Tampilan kamera untuk memindai QR"></div>
 
                             <div class="panitia-camera__guide" x-show="scanning" aria-hidden="true">
                                 <span class="panitia-camera__corner panitia-camera__corner--tl"></span>
@@ -77,12 +78,13 @@
                             </div>
 
                             <button type="button" class="panitia-camera__tool panitia-camera__tool--left" @click="toggleFullscreen()"
+                                aria-controls="scanner-container" :aria-pressed="isFullscreen" :disabled="fullscreenChanging"
                                 :aria-label="isFullscreen ? 'Keluar dari layar penuh' : 'Buka layar penuh'"
                                 :title="isFullscreen ? 'Keluar dari layar penuh' : 'Layar penuh'">
                                 <span class="material-symbols-rounded" x-text="isFullscreen ? 'fullscreen_exit' : 'fullscreen'" aria-hidden="true"></span>
                             </button>
                             <button type="button" class="panitia-camera__tool panitia-camera__tool--right" @click="switchCamera()"
-                                aria-label="Ganti kamera" title="Ganti kamera" :disabled="!cameraActive">
+                                aria-label="Ganti kamera" title="Ganti kamera" :disabled="!cameraActive || starting || cameraRestarting">
                                 <span class="material-symbols-rounded" aria-hidden="true">flip_camera_ios</span>
                             </button>
 
@@ -121,7 +123,7 @@
                         </div>
 
                         <div class="panitia-scanner__actions">
-                            <button type="button" class="panitia-button panitia-button--primary" @click="toggleScanner()" :disabled="starting || Boolean(feedback)">
+                            <button type="button" class="panitia-button panitia-button--primary" @click="toggleScanner()" :disabled="starting || cameraRestarting || Boolean(feedback)">
                                 <span class="material-symbols-rounded" x-text="scanning ? 'stop' : 'play_arrow'" aria-hidden="true"></span>
                                 <span x-text="scanning ? 'Jeda scan' : (cameraActive ? 'Lanjutkan scan' : 'Mulai scan')"></span>
                             </button>

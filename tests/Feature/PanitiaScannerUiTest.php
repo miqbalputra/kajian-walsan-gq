@@ -54,13 +54,20 @@ class PanitiaScannerUiTest extends TestCase
             'status' => 'open',
         ]);
 
-        $this->actingAs($this->panitia())->get(route('panitia.scanner'))
+        $response = $this->actingAs($this->panitia())->get(route('panitia.scanner'))
             ->assertOk()
             ->assertSee('Scan QR presensi')
             ->assertSee('Arahkan kamera ke kartu wali')
             ->assertSee('Input manual')
             ->assertSee('Presensi terakhir')
             ->assertSee('Ketik minimal 2 huruf untuk mencari wali atau santri.');
+
+        $dom = new \DOMDocument;
+        @$dom->loadHTML($response->getContent());
+        $xpath = new \DOMXPath($dom);
+        foreach (['panitia-camera__frame', 'panitia-feedback', 'panitia-scanner__actions'] as $class) {
+            $this->assertSame(1, $xpath->query('//*[@id="scanner-container"]//*[contains(concat(" ", normalize-space(@class), " "), " '.$class.' ")]')->length);
+        }
 
         $this->assertStringContainsString('fps: 8', file_get_contents(resource_path('js/panitia-scanner.js')));
     }
