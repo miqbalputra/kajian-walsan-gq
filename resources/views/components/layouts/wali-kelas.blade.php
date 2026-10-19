@@ -22,6 +22,9 @@
                 <span><strong>Ruang wali kelas</strong><small>Presensi Wali Santri</small></span>
             </a>
             <nav class="wc-nav" aria-label="Menu utama">
+                @unless(auth()->user()->isAdmin())
+                    <a href="{{ route('wali-santri.dashboard') }}">Presensi Saya</a>
+                @endunless
                 <a href="{{ route('wali-kelas.dashboard') }}" @if(!request()->routeIs('wali-kelas.reports')) aria-current="page" @endif>Kelas saya</a>
                 <a href="{{ route('wali-kelas.reports') }}" @if(request()->routeIs('wali-kelas.reports')) aria-current="page" @endif>Laporan presensi</a>
             </nav>

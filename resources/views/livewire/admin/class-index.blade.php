@@ -141,7 +141,7 @@
                                     class="w-full px-4 py-2.5 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-transparent">
                                     <option value="">Pilih Wali Kelas</option>
                                     @foreach($teachers as $teacher)
-                                        <option value="{{ $teacher->id }}">{{ $teacher->name }}</option>
+                                        <option value="{{ $teacher->id }}">{{ $teacher->name }}{{ $teacher->managedClass ? ' · '.$teacher->managedClass->name : '' }}</option>
                                     @endforeach
                                 </select>
                                 @error('teacher_id') <span class="text-red-500 text-sm">{{ $message }}</span> @enderror

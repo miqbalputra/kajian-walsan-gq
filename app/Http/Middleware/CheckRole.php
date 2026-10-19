@@ -31,7 +31,13 @@ class CheckRole
             // Support comma-separated roles
             $roleList = explode(',', $role);
             foreach ($roleList as $r) {
-                if ($user->hasRole(trim($r))) {
+                $allowed = match (trim($r)) {
+                    'wali_kelas' => $user->isWaliKelas(),
+                    'guru' => $user->isGuru(),
+                    'wali_santri' => $user->isWaliSantri(),
+                    default => $user->hasRole(trim($r)),
+                };
+                if ($allowed) {
                     return $next($request);
                 }
             }

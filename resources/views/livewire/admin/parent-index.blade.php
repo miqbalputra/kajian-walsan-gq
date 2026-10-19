@@ -457,8 +457,10 @@
                                             class="text-red-500">*</span></label>
                                     <select wire:model="type"
                                         class="w-full px-4 py-2.5 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-transparent">
-                                        @if($isTeacherMode && !$editMode)
-                                            <option value="teacher">Guru</option>
+                                        @if($isTeacherMode)
+                                            <option value="teacher">Guru saja</option>
+                                            <option value="father">Ayah + Guru</option>
+                                            <option value="mother">Ibu + Guru</option>
                                         @else
                                             <option value="father">Ayah</option>
                                             <option value="mother">Ibu</option>
@@ -483,7 +485,7 @@
                             @if(!$isTeacherMode)
                                 <div class="bg-indigo-50 border border-indigo-100 p-4 rounded-xl">
                                     <label class="flex items-center gap-3 cursor-pointer">
-                                        <input type="checkbox" wire:model="is_teacher"
+                                        <input type="checkbox" wire:model.live="is_teacher"
                                             @disabled($editingTeacherArchived)
                                             class="w-5 h-5 rounded border-indigo-300 text-indigo-600 focus:ring-indigo-500">
                                         <div>
@@ -491,6 +493,27 @@
                                             <p class="text-sm text-indigo-700">{{ $editingTeacherArchived ? 'Status guru sudah diarsipkan. Akun ini tetap digunakan sebagai orang tua.' : 'Satu scan QR tetap dipakai, lalu wajib upload catatan kajian.' }}</p>
                                         </div>
                                     </label>
+                                </div>
+                            @endif
+                            @if($isTeacherMode || $is_teacher || $isClassTeacher)
+                                <div class="space-y-3 rounded-xl border border-emerald-100 bg-emerald-50 p-4">
+                                    <label class="flex cursor-pointer items-start gap-3">
+                                        <input type="checkbox" wire:model.live="isClassTeacher" @disabled($editingTeacherArchived) class="mt-1 h-5 w-5 rounded border-emerald-300 text-emerald-700">
+                                        <span><span class="block font-semibold text-emerald-950">Juga sebagai Wali Kelas</span><span class="block text-sm text-emerald-800">{{ $editingTeacherArchived ? 'Penugasan wali kelas berhenti setelah guru diarsipkan.' : 'Presensi pribadi tetap tersedia, ditambah presensi orang tua di kelas binaannya.' }}</span></span>
+                                    </label>
+                                    @error('isClassTeacher')<p class="text-sm text-red-600">{{ $message }}</p>@enderror
+                                    @if($isClassTeacher)
+                                        <div>
+                                            <label for="teacher-class-id" class="mb-1 block text-sm font-medium text-gray-700">Kelas yang dibina</label>
+                                            <select id="teacher-class-id" wire:model="teacherClassId" class="w-full rounded-xl border border-gray-200 bg-white px-4 py-3">
+                                                <option value="">Pilih kelas</option>
+                                                @foreach($classTeacherOptions as $assignedClassOption)
+                                                    <option value="{{ $assignedClassOption->id }}" @disabled($assignedClassOption->teacher_id && $assignedClassOption->teacher_id != $editingUserId)>{{ $assignedClassOption->name }}{{ $assignedClassOption->teacher_id && $assignedClassOption->teacher_id != $editingUserId ? ' — sudah memiliki wali kelas' : '' }}</option>
+                                                @endforeach
+                                            </select>
+                                            @error('teacherClassId')<p class="mt-1 text-sm text-red-600">{{ $message }}</p>@enderror
+                                        </div>
+                                    @endif
                                 </div>
                             @endif
                             <div>

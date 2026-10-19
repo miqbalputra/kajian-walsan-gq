@@ -1,6 +1,6 @@
 <div class="wc-stack">
     <section class="wc-heading">
-        <div><p class="wc-eyebrow">Kelas saya · {{ auth()->user()->name }}</p><h1>{{ $class->name }}</h1><p class="wc-muted">Kenali kehadiran setiap wali, lalu dampingi yang perlu perhatian.</p></div>
+        <div><p class="wc-eyebrow">Kelas saya · {{ auth()->user()->name }}</p>@if($embedded)<h2>{{ $class->name }}</h2>@else<h1>{{ $class->name }}</h1>@endif<p class="wc-muted">Kenali kehadiran setiap wali, lalu dampingi yang perlu perhatian.</p></div>
         <div class="wc-actions"><a class="wc-button wc-button--secondary" href="#attention-title">Tindak lanjut ({{ $attention->count() }}) ↓</a><a class="wc-button wc-button--secondary" href="{{ route('wali-kelas.reports') }}">Lihat laporan <span aria-hidden="true">↗</span></a></div>
     </section>
     @include('livewire.wali-kelas._filters')

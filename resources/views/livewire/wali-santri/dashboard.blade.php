@@ -1,6 +1,8 @@
 <div>
     @php
         $parent = $this->parent;
+        $assignedClass = auth()->user()->hasClassTeacherAssignment()
+            ? auth()->user()->managedClass()->where('is_active', true)->first() : null;
         $active = $this->activeEvent;
         $attendance = $this->myAttendanceToday;
         $attendanceNames = ['hadir_fisik' => 'Hadir Langsung', 'hadir_online' => 'Hadir Online', 'izin' => 'Izin', 'alpha' => 'Tidak hadir'];
@@ -8,11 +10,22 @@
     @endphp
     <div class="wali-page-heading">
         <p class="wali-eyebrow">Assalamu'alaikum,</p>
-        <h1 data-wali-return-focus tabindex="-1">{{ \Illuminate\Support\Str::title(auth()->user()->name) }} @if($this->isGuru)<span class="wali-chip">Guru</span>@endif</h1>
+        <h1 data-wali-return-focus tabindex="-1">{{ \Illuminate\Support\Str::title(auth()->user()->name) }} @if($this->isGuru)<span class="wali-chip">Guru</span>@endif @if($assignedClass)<span class="wali-chip">Wali Kelas</span>@endif @if($parent?->isGuardian())<span class="wali-chip">Orang Tua</span>@endif</h1>
         @if($parent?->students->count() > 0)
-            <div class="wali-children" aria-label="Ananda">@foreach($parent->students as $child)<span>{{ $child->name }}</span>@endforeach</div>
+            <div class="wali-children" aria-label="Ananda">@foreach($parent->students as $child)<span>{{ $child->name }}@if($child->classRoom) · {{ $child->classRoom->name }}@endif</span>@endforeach</div>
         @endif
     </div>
+    @if($assignedClass)
+        <nav class="wali-dashboard-switch" aria-label="Bagian dashboard">
+            <button type="button" wire:click="selectDashboardSection('presensi')" aria-pressed="{{ $dashboardSection === 'presensi' ? 'true' : 'false' }}" wire:loading.attr="disabled">Presensi Saya</button>
+            <button type="button" wire:click="selectDashboardSection('kelas')" aria-pressed="{{ $dashboardSection === 'kelas' ? 'true' : 'false' }}" wire:loading.attr="disabled">Kelas Saya · {{ $assignedClass->name }}</button>
+        </nav>
+    @endif
+    @if($dashboardSection === 'kelas' && $assignedClass)
+        <section class="wc-page wc-embedded" aria-label="Presensi kelas binaan">
+            <livewire:wali-kelas.dashboard :embedded="true" :key="'class-dashboard-'.$assignedClass->id" />
+        </section>
+    @else
     @if(session()->has('message'))<p class="wali-notice wali-notice-success" role="status">{{ session('message') }}</p>@endif
     @if(session()->has('error'))<p class="wali-notice wali-notice-error" role="alert">{{ session('error') }}</p>@endif
 
@@ -197,5 +210,6 @@
                 <div class="wali-dialog-actions"><button type="button" @click="requestClose()" class="wali-button wali-button-secondary">Nanti Saja</button><button type="submit" class="wali-button wali-button-primary" wire:loading.attr="disabled"><span wire:loading.remove wire:target="submitFeedback">Kirim Feedback</span><span wire:loading wire:target="submitFeedback">Mengirim...</span></button></div>
             </form>
         </x-wali.dialog>
+    @endif
     @endif
 </div>

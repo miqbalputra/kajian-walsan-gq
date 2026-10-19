@@ -22,7 +22,8 @@ class WaliKelasReportService
         $user = auth()->user();
         abort_unless($user && ($user->isWaliKelas() || $user->isAdmin()), 403);
 
-        return ClassRoom::where('teacher_id', $user->id)->when($lock, fn ($q) => $q->lockForUpdate())->first();
+        return ClassRoom::where('teacher_id', $user->id)->where('is_active', true)
+            ->when($lock, fn ($q) => $q->lockForUpdate())->first();
     }
 
     public function authorizedStudent(int $id, bool $lock = false): Student

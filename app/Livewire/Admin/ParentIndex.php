@@ -15,6 +15,7 @@ use App\Services\CloudinaryService;
 use App\Services\ParentDataExportService;
 use App\Services\ParentArchiveService;
 use App\Services\TeacherArchiveService;
+use App\Services\ClassTeacherAssignmentService;
 use App\Services\ParentLoginAliasService;
 use App\Services\ParentQrCodeService;
 use App\Services\StudentFamilyImportService;
@@ -26,6 +27,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rules\File;
+use Illuminate\Validation\Rule;
 use Livewire\Component;
 use Livewire\Attributes\Locked;
 use Livewire\WithFileUploads;
@@ -98,6 +100,10 @@ class ParentIndex extends Component
     public $type = 'father';
 
     public $is_teacher = false;
+
+    public bool $isClassTeacher = false;
+
+    public string $teacherClassId = '';
 
     public bool $showTeacherArchiveModal = false;
 
@@ -181,11 +187,7 @@ class ParentIndex extends Component
 
     protected function rules()
     {
-        $allowedTypes = match (true) {
-            $this->isTeacherMode() && $this->editMode => 'father,mother,teacher',
-            $this->isTeacherMode() => 'teacher',
-            default => 'father,mother',
-        };
+        $allowedTypes = $this->isTeacherMode() ? 'father,mother,teacher' : 'father,mother';
 
         $phoneRules = ['nullable', 'string', 'max:20'];
         if (! $this->hasUnchangedStoredPhone()) {
@@ -205,6 +207,8 @@ class ParentIndex extends Component
             'phone' => $phoneRules,
             'type' => 'required|in:'.$allowedTypes,
             'is_teacher' => 'boolean',
+            'isClassTeacher' => ['boolean'],
+            'teacherClassId' => ['nullable', Rule::requiredIf($this->isClassTeacher), 'integer', 'exists:classes,id'],
             'occupation' => 'nullable|string|max:100',
             'address' => 'nullable|string|max:500',
             'is_single_parent' => 'boolean',
@@ -271,6 +275,8 @@ class ParentIndex extends Component
         $this->reset(['name', 'username', 'email', 'password', 'phone', 'nik', 'type', 'is_teacher', 'occupation', 'address', 'is_single_parent', 'selectedChildren', 'editMode', 'parentId']);
         $this->type = $this->typeFilter === 'teacher' ? 'teacher' : 'father';
         $this->is_teacher = $this->type === 'teacher';
+        $this->isClassTeacher = false;
+        $this->teacherClassId = '';
         $this->showModal = true;
     }
 
@@ -286,6 +292,8 @@ class ParentIndex extends Component
         $this->nik = $parent->nik;
         $this->type = $parent->type;
         $this->is_teacher = (bool) $parent->is_teacher;
+        $this->teacherClassId = (string) ($parent->user->managedClass()->where('is_active', true)->value('id') ?? '');
+        $this->isClassTeacher = $this->teacherClassId !== '';
         $this->occupation = $parent->occupation;
         $this->address = $parent->address;
         $this->is_single_parent = $parent->is_single_parent;
@@ -303,14 +311,17 @@ class ParentIndex extends Component
             if ($storedParent->isTeacherArchived()) {
                 $this->type = $storedParent->type;
                 $this->is_teacher = (bool) $storedParent->is_teacher;
+                $this->isClassTeacher = false;
+                $this->teacherClassId = '';
             }
         }
         if ($this->isTeacherMode()) {
-            if (! $this->editMode) {
-                $this->type = 'teacher';
-            }
-
             $this->is_teacher = true;
+        }
+
+        if ($this->isClassTeacher && ! ($this->is_teacher || $this->type === 'teacher')) {
+            $this->addError('isClassTeacher', 'Centang Guru/Pengajar sebelum menugaskan akun sebagai wali kelas.');
+            return;
         }
 
         $this->validate();
@@ -376,6 +387,7 @@ class ParentIndex extends Component
                 $parent->students()->syncWithoutDetaching($this->selectedChildren);
                 $parent->refresh()->syncQrCode();
                 app(ParentArchiveService::class)->syncForParent($parent->fresh(), auth()->user());
+                app(ClassTeacherAssignmentService::class)->assign($user, $this->isClassTeacher ? (int) $this->teacherClassId : null);
             });
 
             $this->dispatch('notify', ['type' => 'success', 'message' => 'Data orang tua berhasil diperbarui!']);
@@ -419,6 +431,7 @@ class ParentIndex extends Component
                 }
 
                 $parent->refresh()->syncQrCode();
+                app(ClassTeacherAssignmentService::class)->assign($user, $this->isClassTeacher ? (int) $this->teacherClassId : null);
             });
 
             $this->dispatch('notify', ['type' => 'success', 'message' => 'Orang tua berhasil ditambahkan!']);
@@ -1049,6 +1062,8 @@ class ParentIndex extends Component
             'parents' => $parents,
             'allStudents' => $allStudents,
             'allClasses' => $allClasses,
+            'classTeacherOptions' => ClassRoom::with('teacher')->where('is_active', true)->orderBy('name')->get(),
+            'editingUserId' => $this->editMode && $this->parentId ? ParentModel::whereKey($this->parentId)->value('user_id') : null,
             'allKajianEvents' => $allKajianEvents,
             'isTeacherMode' => $this->isTeacherMode(),
             'editingTeacherArchived' => $this->editMode && $this->parentId

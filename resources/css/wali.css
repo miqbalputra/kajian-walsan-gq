@@ -1,4 +1,8 @@
 /* Wali UI only. The printed ID card deliberately keeps its physical design. */
+.wali-dashboard-switch { display:flex; flex-wrap:wrap; gap:8px; margin-bottom:24px; }
+.wali-dashboard-switch button { flex:1 1 180px; min-width:0; min-height:48px; padding:12px 16px; border:1px solid var(--wali-border); border-radius:12px; background:var(--wali-panel); color:var(--wali-text); font-weight:650; cursor:pointer; overflow-wrap:anywhere; }
+.wali-dashboard-switch button[aria-pressed="true"] { background:var(--wali-green); color:var(--wali-on-green); border-color:var(--wali-green); }
+.wc-page.wc-embedded { min-height:0; background:transparent; }
 .wali-page { --wali-bg:#fafaf7; --wali-panel:#fff; --wali-text:#26322b; --wali-muted:#5c655e; --wali-border:#e3e6df; --wali-soft:#f3f4ee; --wali-green:#166534; --wali-on-green:#fff; --wali-red:#a52a21; --wali-amber:#79540c; background:var(--wali-bg); color:var(--wali-text); font-size:16px; line-height:1.6; min-height:100dvh; padding-bottom:calc(88px + env(safe-area-inset-bottom)); }
 .dark body.wali-page { --wali-bg:#101713; --wali-panel:#19211c; --wali-text:#f3f5f0; --wali-muted:#b7c1b7; --wali-border:#364139; --wali-soft:#202b23; --wali-green:#4ade80; --wali-on-green:#052e16; --wali-red:#fca5a5; --wali-amber:#f8d783; background:var(--wali-bg)!important; color:var(--wali-text)!important; }
 .wali-page :where(h1,h2,h3,h4,p,dl) { margin:0; }

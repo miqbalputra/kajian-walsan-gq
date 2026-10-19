@@ -92,11 +92,9 @@ Route::middleware('auth')->group(function () {
             return redirect()->route('admin.dashboard');
         } elseif ($user->isPanitia()) {
             return redirect()->route('panitia.scanner');
-        } elseif ($user->isWaliKelas()) {
-            return redirect()->route('wali-kelas.dashboard');
         } elseif ($user->isKepsek()) {
             return redirect()->route('kepsek.dashboard');
-        } elseif ($user->isGuru()) {
+        } elseif ($user->isGuru() || $user->isWaliKelas()) {
             return redirect()->route('wali-santri.dashboard');
         } else {
             return redirect()->route('wali-santri.dashboard');
@@ -169,7 +167,7 @@ Route::middleware('auth')->group(function () {
     });
 
     // Wali Santri Routes - Only Wali Santri and Guru can access
-    Route::prefix('wali-santri')->name('wali-santri.')->middleware('role:wali_santri,guru')->group(function () {
+    Route::prefix('wali-santri')->name('wali-santri.')->middleware('role:wali_santri,guru,wali_kelas')->group(function () {
         Route::get('/', WaliSantriDashboard::class)->name('dashboard');
         Route::get('/schedule', KajianSchedule::class)->name('schedule');
         Route::get('/profile', Profile::class)->name('profile');

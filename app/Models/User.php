@@ -159,7 +159,21 @@ class User extends Authenticatable
      */
     public function isWaliKelas(): bool
     {
-        return $this->hasRole('wali_kelas');
+        return ! $this->parentProfile?->isTeacherArchived()
+            && ($this->hasRole('wali_kelas') || $this->hasClassTeacherAssignment());
+    }
+
+    public function hasClassTeacherAssignment(): bool
+    {
+        return ! $this->parentProfile?->isTeacherArchived()
+            && $this->managedClass()->where('is_active', true)->exists();
+    }
+
+    public function isTeachingStaff(): bool
+    {
+        $parent = $this->parentProfile;
+
+        return $parent ? $parent->isTeacher() : ($this->hasRole('guru') || $this->hasRole('wali_kelas'));
     }
 
     /**
@@ -167,7 +181,7 @@ class User extends Authenticatable
      */
     public function isGuru(): bool
     {
-        return $this->hasRole('guru');
+        return $this->isTeachingStaff();
     }
 
     /**
@@ -175,7 +189,7 @@ class User extends Authenticatable
      */
     public function isWaliSantri(): bool
     {
-        return $this->hasRole('wali_santri');
+        return $this->hasRole('wali_santri') || (bool) $this->parentProfile?->isGuardian();
     }
 
     /**

@@ -17,11 +17,22 @@ use BaconQrCode\Writer;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\Rules\File;
 use Livewire\Component;
+use Livewire\Attributes\Url;
 use Livewire\WithFileUploads;
 
 class Dashboard extends Component
 {
     use WithFileUploads;
+
+    #[Url(as: 'bagian', except: 'presensi')]
+    public string $dashboardSection = 'presensi';
+
+    public function selectDashboardSection(string $section): void
+    {
+        abort_unless(in_array($section, ['presensi', 'kelas'], true), 422);
+        abort_if($section === 'kelas' && ! auth()->user()->hasClassTeacherAssignment(), 403);
+        $this->dashboardSection = $section;
+    }
 
     public ?int $notificationEventId = null;
 
@@ -63,6 +74,10 @@ class Dashboard extends Component
 
     public function mount(): void
     {
+        if (! in_array($this->dashboardSection, ['presensi', 'kelas'], true)
+            || ($this->dashboardSection === 'kelas' && ! auth()->user()->hasClassTeacherAssignment())) {
+            $this->dashboardSection = 'presensi';
+        }
         $eventId = request()->integer('kajian');
         $action = request()->query('action');
 
@@ -95,13 +110,14 @@ class Dashboard extends Component
 
     public function getParentProperty()
     {
-        $parent = ParentModel::where('user_id', auth()->id())->first();
+        $parent = ParentModel::with('students.classRoom')->where('user_id', auth()->id())->first();
 
         // Auto-create teacher profile if not exists
-        if (! $parent && auth()->check() && auth()->user()->isGuru()) {
+        if (! $parent && auth()->check() && auth()->user()->isTeachingStaff()) {
             $parent = ParentModel::create([
                 'user_id' => auth()->id(),
                 'type' => 'teacher',
+                'is_teacher' => true,
                 'occupation' => 'Guru / Pengajar',
             ]);
         }
@@ -163,7 +179,7 @@ class Dashboard extends Component
     public function getIsGuruProperty()
     {
         return (bool) $this->parent?->isTeacher()
-            || (auth()->check() && auth()->user()->isGuru());
+            || (auth()->check() && auth()->user()->isTeachingStaff());
     }
 
     public function getIsPureGuruProperty()
@@ -825,6 +841,9 @@ class Dashboard extends Component
 
     public function render()
     {
+        if ($this->dashboardSection === 'kelas' && ! auth()->user()->hasClassTeacherAssignment()) {
+            $this->dashboardSection = 'presensi';
+        }
         return view('livewire.wali-santri.dashboard')
             ->layout('components.layouts.wali-santri', ['title' => 'Dashboard']);
     }

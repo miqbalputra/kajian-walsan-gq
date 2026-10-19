@@ -12,6 +12,8 @@ class Dashboard extends Component
 {
     use WithAttendanceData, WithPagination;
 
+    public bool $embedded = false;
+
     public function mount(): void
     {
         $this->reportService()->managedClass();
