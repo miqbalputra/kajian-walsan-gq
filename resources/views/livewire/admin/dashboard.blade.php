@@ -90,11 +90,11 @@
 
     <!-- Charts Section -->
     <div class="grid grid-cols-1 xl:grid-cols-2 gap-6 mb-6">
-        <!-- Attendance Trend Chart -->
+        <!-- Guardian Attendance Trend Chart -->
         <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
             <div class="flex items-center justify-between mb-6">
                 <div>
-                    <h3 class="font-semibold text-gray-900 text-lg">Tren Kehadiran</h3>
+                    <h3 class="font-semibold text-gray-900 text-lg">Tren Kehadiran Orang Tua</h3>
                     <p class="text-sm text-gray-500 flex items-center gap-1.5">
                         <span class="inline-flex w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
                         Realtime — diperbarui setiap 15 detik
@@ -104,6 +104,24 @@
             <div wire:ignore id="attendanceTrendChart" class="w-full" style="height: 300px;"></div>
         </div>
 
+        <!-- Teacher Attendance Trend Chart -->
+        <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
+            <div class="flex items-center justify-between mb-6">
+                <div>
+                    <h3 class="font-semibold text-gray-900 text-lg">Tren Kehadiran Guru</h3>
+                    <p class="text-sm text-gray-500 flex items-center gap-1.5">
+                        <span class="inline-flex w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                        Realtime — diperbarui setiap 15 detik
+                    </p>
+                </div>
+            </div>
+            <div wire:ignore id="teacherAttendanceTrendChart" class="w-full" style="height: 300px;"></div>
+        </div>
+    </div>
+    <p class="text-sm text-gray-500 -mt-2 mb-6">Orang tua yang juga guru dihitung pada kedua tren kehadiran.</p>
+
+    <!-- Attendance Distribution & Monthly Performance -->
+    <div class="grid grid-cols-1 xl:grid-cols-2 gap-6 mb-6">
         <!-- Attendance Status Distribution -->
         <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
             <div class="flex items-center justify-between mb-6">
@@ -114,12 +132,9 @@
             </div>
             <div wire:ignore id="attendanceStatusChart" class="w-full" style="height: 300px;"></div>
         </div>
-    </div>
 
-    <!-- Monthly Trend & Class Performance -->
-    <div class="grid grid-cols-1 xl:grid-cols-2 gap-6 mb-6">
         <!-- Monthly Comparison -->
-        <div class="xl:col-span-2 bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
+        <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
             <div class="flex items-center justify-between mb-6">
                 <div>
                     <h3 class="font-semibold text-gray-900 text-lg">Performa Bulanan {{ date('Y') }}</h3>
@@ -357,19 +372,27 @@
                 pink: '#EC4899'
             };
             let trendChart;
+            let teacherTrendChart;
             let statusChart;
             let monthlyChart;
 
-            const updateRealtimeCharts = ({ trendData, statusData, monthlyData }) => {
-                if (trendChart) {
-                    trendChart.updateOptions({ xaxis: { categories: trendData.labels } });
-                    trendChart.updateSeries([
-                        { name: 'Hadir Fisik', data: trendData.hadirFisik },
-                        { name: 'Hadir Online', data: trendData.hadirOnline },
-                        { name: 'Izin', data: trendData.izin },
-                        { name: 'Alpha', data: trendData.alpha }
-                    ]);
+            const attendanceSeries = (data) => [
+                { name: 'Hadir Fisik', data: data.hadirFisik },
+                { name: 'Hadir Online', data: data.hadirOnline },
+                { name: 'Izin', data: data.izin },
+                { name: 'Alpha', data: data.alpha }
+            ];
+
+            const updateTrendChart = (chart, data) => {
+                if (chart) {
+                    chart.updateOptions({ xaxis: { categories: data.labels } });
+                    chart.updateSeries(attendanceSeries(data));
                 }
+            };
+
+            const updateRealtimeCharts = ({ trendData, teacherTrendData, statusData, monthlyData }) => {
+                updateTrendChart(trendChart, trendData);
+                updateTrendChart(teacherTrendChart, teacherTrendData);
 
                 if (statusChart) {
                     statusChart.updateSeries([
@@ -400,15 +423,9 @@
 
             registerRealtimeChartListener();
 
-            // 1. Attendance Trend Chart (Stacked Area)
-            const trendData = @json($attendanceTrendData);
-            const trendOptions = {
-                series: [
-                    { name: 'Hadir Fisik', data: trendData.hadirFisik },
-                    { name: 'Hadir Online', data: trendData.hadirOnline },
-                    { name: 'Izin', data: trendData.izin },
-                    { name: 'Alpha', data: trendData.alpha }
-                ],
+            // 1. Guardian and Teacher Attendance Trends (Stacked Bars)
+            const trendOptions = (data) => ({
+                series: attendanceSeries(data),
                 chart: {
                     type: 'bar',
                     height: 300,
@@ -427,7 +444,7 @@
                 stroke: { show: true, width: 2, colors: ['transparent'] },
                 fill: { opacity: 1 },
                 xaxis: {
-                    categories: trendData.labels,
+                    categories: data.labels,
                     labels: {
                         style: { colors: '#64748B', fontSize: '12px' }
                     },
@@ -456,11 +473,16 @@
                     theme: 'light',
                     y: { formatter: val => val + ' orang' }
                 }
-            };
+            });
 
             if (document.getElementById('attendanceTrendChart')) {
-                trendChart = new ApexCharts(document.getElementById('attendanceTrendChart'), trendOptions);
+                trendChart = new ApexCharts(document.getElementById('attendanceTrendChart'), trendOptions(@json($attendanceTrendData)));
                 trendChart.render();
+            }
+
+            if (document.getElementById('teacherAttendanceTrendChart')) {
+                teacherTrendChart = new ApexCharts(document.getElementById('teacherAttendanceTrendChart'), trendOptions(@json($teacherAttendanceTrendData)));
+                teacherTrendChart.render();
             }
 
             // 2. Attendance Status Distribution (Donut)

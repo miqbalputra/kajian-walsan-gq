@@ -58,6 +58,7 @@ class Dashboard extends Component
                     ->take(10)
                     ->get(),
                 'attendanceTrendData' => $this->getAttendanceTrendData(),
+                'teacherAttendanceTrendData' => $this->getAttendanceTrendData(forTeachers: true),
                 'attendanceByStatus' => $this->getAttendanceByStatus(),
                 'attendanceByClass' => $this->getAttendanceByClass(),
                 'monthlyComparison' => $this->getMonthlyComparison(),
@@ -78,6 +79,7 @@ class Dashboard extends Component
     {
         $this->dispatch('dashboard-charts-updated',
             trendData: $this->getAttendanceTrendData(),
+            teacherTrendData: $this->getAttendanceTrendData(forTeachers: true),
             statusData: $this->getAttendanceByStatus(),
             monthlyData: $this->getMonthlyComparison(),
         );
@@ -128,22 +130,33 @@ class Dashboard extends Component
     }
 
     /**
-     * Get attendance trend for the last 6 kajian events
+     * Get attendance trend for the last 6 kajian events. A guardian who is
+     * also a teacher participates in both trends using the same record.
      */
-    private function getAttendanceTrendData(): array
+    private function getAttendanceTrendData(bool $forTeachers = false): array
     {
         $events = KajianEvent::where(function ($q) {
             $q->where('status', 'closed')
-                ->orWhere('date', '<=', now()->toDateString());
+                ->orWhereDate('date', '<=', today());
         })
             ->with('targetClasses')
             ->orderByDesc('date')
+            ->orderByDesc('time_start')
+            ->orderByDesc('id')
             ->take(6)
             ->get()
             ->reverse()
             ->values();
 
-        $attendanceByEvent = $this->guardianAttendances()
+        $teachers = ParentModel::query()->where(function ($query) {
+            $query->where('type', 'teacher')->orWhere('is_teacher', true);
+        });
+        $totalTeachers = $forTeachers ? (clone $teachers)->count() : 0;
+        $attendances = $forTeachers
+            ? Attendance::query()->whereIn('parent_id', $teachers->select('id'))
+            : $this->guardianAttendances();
+
+        $attendanceByEvent = $attendances
             ->whereIn('kajian_event_id', $events->pluck('id'))
             ->select('kajian_event_id', 'status', DB::raw('count(*) as total'))
             ->groupBy('kajian_event_id', 'status')
@@ -167,7 +180,7 @@ class Dashboard extends Component
             $storedAlphaCount = (int) ($eventStats->get(Attendance::STATUS_ALPHA)->total ?? 0);
             $recordedCount = (int) $eventStats->sum('total');
             $alphaCount = $event->status === 'closed'
-                ? $storedAlphaCount + max(0, $this->targetedParentCount($event) - $recordedCount)
+                ? $storedAlphaCount + max(0, ($forTeachers ? $totalTeachers : $this->targetedParentCount($event)) - $recordedCount)
                 : 0;
 
             $hadirFisik[] = $hadirFisikCount;
