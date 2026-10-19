@@ -22,7 +22,9 @@ class CheckRole
             return redirect()->route('login');
         }
 
-        $user = auth()->user();
+        $user = auth()->user()->fresh();
+        abort_unless($user?->is_active, 403, 'Akun ini tidak aktif atau sudah diarsipkan.');
+        abort_if($user->parentProfile()->where('type', 'teacher')->whereNotNull('teacher_archived_at')->exists(), 403, 'Akun guru sudah diarsipkan.');
 
         // Check if user has any of the allowed roles
         foreach ($roles as $role) {

@@ -67,6 +67,7 @@ class UserIndex extends Component
     public function openEditModal($id)
     {
         $user = User::findOrFail($id);
+        abort_if($user->parentProfile()->where('type', 'teacher')->whereNotNull('teacher_archived_at')->exists(), 403, 'Akun guru arsip hanya dapat dibaca.');
         $this->userId = $id;
         $this->name = $user->name;
         $this->username = $user->username;
@@ -182,6 +183,7 @@ class UserIndex extends Component
     public function render()
     {
         $query = User::with('role')
+            ->whereDoesntHave('parentProfile', fn ($query) => $query->where('type', 'teacher')->whereNotNull('teacher_archived_at'))
             ->where(function ($query) {
                 if ($this->search) {
                     $query->where('name', 'like', '%' . $this->search . '%')

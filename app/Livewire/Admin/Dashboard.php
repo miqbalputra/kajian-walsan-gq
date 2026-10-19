@@ -20,7 +20,8 @@ class Dashboard extends Component
             $totalSiswa = Student::active()->count();
             $totalWaliSantri = ParentModel::guardians()->withActiveChild()->count();
             $totalWaliArsip = ParentModel::archivedGuardians()->count();
-            $pendingValidation = Attendance::where('validation_status', 'pending')->count();
+            $pendingValidation = Attendance::where('validation_status', 'pending')
+                ->whereHas('parent', fn ($query) => $query->availableParticipants())->count();
 
             // Only completed/current events should be used as the latest
             // attendance reference; a future event must not show 0%.
@@ -148,9 +149,7 @@ class Dashboard extends Component
             ->reverse()
             ->values();
 
-        $teachers = ParentModel::query()->where(function ($query) {
-            $query->where('type', 'teacher')->orWhere('is_teacher', true);
-        });
+        $teachers = ParentModel::activeTeachers();
         $totalTeachers = $forTeachers ? (clone $teachers)->count() : 0;
         $attendances = $forTeachers
             ? Attendance::query()->whereIn('parent_id', $teachers->select('id'))

@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Str;
+use Illuminate\Validation\ValidationException;
 
 class ParentModel extends Model
 {
@@ -32,6 +33,7 @@ class ParentModel extends Model
 
     protected $casts = [
         'is_teacher' => 'boolean',
+        'teacher_archived_at' => 'datetime',
         'is_single_parent' => 'boolean',
     ];
 
@@ -46,6 +48,20 @@ class ParentModel extends Model
         static::creating(function ($parent) {
             if (empty($parent->qr_code_string)) {
                 $parent->qr_code_string = static::generateForParent($parent);
+            }
+        });
+
+        static::updating(function (ParentModel $parent) {
+            $stored = static::select(['id', 'type', 'teacher_archived_at'])->find($parent->id);
+            if ($stored?->isTeacherArchived()
+                && ($stored->isPureTeacher()
+                    || $parent->isDirty(['type', 'is_teacher', 'teacher_archived_at']))) {
+                throw ValidationException::withMessages(['archive' => 'Data guru arsip hanya dapat dibaca.']);
+            }
+        });
+        static::deleting(function (ParentModel $parent) {
+            if (static::whereKey($parent->id)->whereNotNull('teacher_archived_at')->exists()) {
+                throw ValidationException::withMessages(['archive' => 'Data guru arsip tidak dapat dihapus.']);
             }
         });
 
@@ -174,7 +190,26 @@ class ParentModel extends Model
      */
     public function isTeacher(): bool
     {
-        return $this->type === 'teacher' || (bool) $this->is_teacher;
+        return ! $this->isTeacherArchived() && ($this->type === 'teacher' || (bool) $this->is_teacher);
+    }
+
+    public function isTeacherArchived(): bool
+    {
+        return $this->teacher_archived_at !== null;
+    }
+
+    public function scopeActiveTeachers($query)
+    {
+        return $query->whereNull('teacher_archived_at')->where(function ($query) {
+            $query->where('type', 'teacher')->orWhere('is_teacher', true);
+        });
+    }
+
+    public function scopeAvailableParticipants($query)
+    {
+        return $query->where(function ($query) {
+            $query->whereIn('type', ['father', 'mother'])->orWhereNull('teacher_archived_at');
+        });
     }
 
     /**
@@ -190,7 +225,7 @@ class ParentModel extends Model
      */
     public function isWaliTeacher(): bool
     {
-        return $this->isGuardian() && (bool) $this->is_teacher;
+        return $this->isGuardian() && $this->isTeacher();
     }
 
     /**

@@ -312,7 +312,7 @@ class AiProviderService
             ->values()
             ->toJson(JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
 
-        $parents = ParentModel::with(['user', 'students.classRoom'])
+        $parents = ParentModel::with(['user', 'students.classRoom'])->availableParticipants()
             ->orderBy('id')
             ->limit($peopleLimit)
             ->get()
@@ -397,6 +397,7 @@ class AiProviderService
         $event->loadMissing('targetClasses');
 
         $parents = ParentModel::with(['user', 'students.classRoom'])
+            ->availableParticipants()
             ->when(! $event->targetsAllClasses(), function ($query) use ($event) {
                 $targetClassIds = $event->targetClassIds()->all();
 
@@ -405,7 +406,7 @@ class AiProviderService
                         $guardianQuery->whereIn('type', ['father', 'mother'])
                             ->whereHas('students', fn ($studentQuery) => $studentQuery->whereIn('students.class_id', $targetClassIds));
                     })->orWhere(function ($teacherQuery) {
-                        $teacherQuery->where('type', 'teacher')->orWhere('is_teacher', true);
+                        $teacherQuery->activeTeachers();
                     });
                 });
             })

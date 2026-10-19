@@ -179,7 +179,7 @@ class WaliPagesTest extends TestCase
     {
         [$user] = $this->guardian();
         Livewire::actingAs($user)->test(Profile::class)->call('selectAvatar', 'menu_book', 'bg-emerald-500')->assertSet('avatar', 'icon:menu_book|bg-emerald-500')
-            ->set('phone', 'tidak valid')->call('updateProfile')->assertHasErrors('phone')->set('phone', '081390001122')->set('name', 'Wali Uji Diperbarui')->call('updateProfile')->assertHasNoErrors()
+            ->set('phone', 'tidak valid')->call('updateProfile')->assertHasErrors('phone')->set('phone', '081390001122')->set('email', 'wali.uji@gmail.com')->set('name', 'Wali Uji Diperbarui')->call('updateProfile')->assertHasNoErrors()
             ->call('showCard')->assertSet('showCardModal', true)->assertSee('Download Kartu');
         $this->assertSame('icon:menu_book|bg-emerald-500', $user->fresh()->avatar);
         $this->actingAs($user)->get(route('wali-santri.kartu.download'))->assertOk();

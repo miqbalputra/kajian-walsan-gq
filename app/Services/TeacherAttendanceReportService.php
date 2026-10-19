@@ -13,10 +13,7 @@ class TeacherAttendanceReportService
     public function teachers(): Collection
     {
         return ParentModel::with('user')
-            ->where(function ($query) {
-                $query->where('type', 'teacher')
-                    ->orWhere('is_teacher', true);
-            })
+            ->activeTeachers()
             ->orderBy('id')
             ->get();
     }
@@ -46,10 +43,7 @@ class TeacherAttendanceReportService
     {
         return Attendance::query()
             ->with(['parent.user', 'validator', 'kajianEvent'])
-            ->whereHas('parent', function ($query) {
-                $query->where('type', 'teacher')
-                    ->orWhere('is_teacher', true);
-            })
+            ->whereHas('parent', fn ($query) => $query->activeTeachers())
             ->when($kajianId, fn ($query) => $query->where('kajian_event_id', $kajianId))
             ->when($fromDate, function ($query) use ($fromDate) {
                 $query->whereHas('kajianEvent', fn ($eventQuery) => $eventQuery->whereDate('date', '>=', $fromDate));

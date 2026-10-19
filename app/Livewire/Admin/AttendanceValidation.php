@@ -217,7 +217,7 @@ class AttendanceValidation extends Component
             return;
         }
 
-        $attendances = Attendance::where(function ($query) {
+        $attendances = Attendance::whereHas('parent', fn ($query) => $query->availableParticipants())->where(function ($query) {
                 $query->whereIn('method', [
                     Attendance::METHOD_UPLOAD,
                     Attendance::METHOD_PUBLIC_FORM,
@@ -259,6 +259,7 @@ class AttendanceValidation extends Component
     public function render()
     {
         $attendances = Attendance::with(['parent.user', 'parent.students', 'student', 'kajianEvent'])
+            ->whereHas('parent', fn ($query) => $query->availableParticipants())
             ->where(function ($query) {
                 $query->where('method', Attendance::METHOD_GOOGLE_FORM)
                     ->orWhereIn('method', [

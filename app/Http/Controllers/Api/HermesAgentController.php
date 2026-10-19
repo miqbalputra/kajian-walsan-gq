@@ -126,9 +126,7 @@ class HermesAgentController extends Controller
             'totals' => [
                 'users' => User::count(),
                 'wali_santri' => ParentModel::whereIn('type', ['father', 'mother'])->count(),
-                'guru' => ParentModel::where(function (Builder $query) {
-                    $query->where('type', 'teacher')->orWhere('is_teacher', true);
-                })->count(),
+                'guru' => ParentModel::activeTeachers()->count(),
                 'students' => Student::count(),
                 'kajian_events' => KajianEvent::count(),
                 'attendances' => Attendance::count(),
@@ -667,7 +665,7 @@ class HermesAgentController extends Controller
 
     protected function resolveParent(array $data): ?ParentModel
     {
-        $query = ParentModel::with(['user.role', 'students.classRoom']);
+        $query = ParentModel::with(['user.role', 'students.classRoom'])->availableParticipants();
 
         if (! empty($data['parent_id'])) {
             return $query->find($data['parent_id']);
@@ -737,6 +735,7 @@ class HermesAgentController extends Controller
         $event->loadMissing('targetClasses');
 
         return ParentModel::with(['user', 'students.classRoom'])
+            ->availableParticipants()
             ->when($audience, fn (Builder $query, string $audience) => $this->applyAudienceScope($query, $audience))
             ->when($audience === 'wali_santri', fn (Builder $query) => $query->targetedByEvent($event))
             ->when($audience === null && ! $event->targetsAllClasses(), function (Builder $query) use ($event) {
@@ -747,7 +746,7 @@ class HermesAgentController extends Controller
                         $guardianQuery->whereIn('type', ['father', 'mother'])
                             ->whereHas('students', fn (Builder $studentQuery) => $studentQuery->whereIn('students.class_id', $targetClassIds));
                     })->orWhere(function (Builder $teacherQuery) {
-                        $teacherQuery->where('type', 'teacher')->orWhere('is_teacher', true);
+                        $teacherQuery->activeTeachers();
                     });
                 });
             })
@@ -791,9 +790,7 @@ class HermesAgentController extends Controller
     protected function applyAudienceScope(Builder $query, string $audience): Builder
     {
         if ($audience === 'guru') {
-            return $query->where(function (Builder $query) {
-                $query->where('type', 'teacher')->orWhere('is_teacher', true);
-            });
+            return $query->activeTeachers();
         }
 
         return $query->whereIn('type', ['father', 'mother']);

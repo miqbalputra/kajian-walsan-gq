@@ -55,6 +55,7 @@ class AttendanceTrash extends Component
     public function render()
     {
         $attendances = Attendance::onlyTrashed()
+            ->whereHas('parent', fn ($query) => $query->availableParticipants())
             ->with(['parent.user', 'kajianEvent'])
             ->when($this->search, function ($query) {
                 $query->whereHas('parent.user', function ($q) {

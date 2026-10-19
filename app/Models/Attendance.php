@@ -12,6 +12,20 @@ class Attendance extends Model
 {
     use HasFactory, SoftDeletes;
 
+    protected static function booted(): void
+    {
+        $protectArchive = function (Attendance $attendance) {
+            $parentIds = array_filter([$attendance->parent_id, $attendance->getRawOriginal('parent_id')]);
+            if (ParentModel::whereIn('id', $parentIds)->where('type', 'teacher')->whereNotNull('teacher_archived_at')->exists()) {
+                throw \Illuminate\Validation\ValidationException::withMessages(['archive' => 'Presensi guru arsip hanya dapat dibaca.']);
+            }
+        };
+        static::creating($protectArchive);
+        static::updating($protectArchive);
+        static::deleting($protectArchive);
+        static::restoring($protectArchive);
+    }
+
     protected $fillable = [
         'kajian_event_id',
         'parent_id',

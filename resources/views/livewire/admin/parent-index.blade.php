@@ -6,6 +6,11 @@
             <p class="text-gray-500">{{ $isTeacherMode ? 'Kelola data guru dan pengajar' : 'Kelola data wali santri dan generate kartu ID' }}</p>
         </div>
         <div class="flex flex-wrap gap-3 sm:justify-end">
+            @if($isTeacherMode)
+                <a href="{{ route('admin.teacher-archives.index') }}" class="inline-flex items-center justify-center gap-2 rounded-xl border border-gray-200 bg-white px-4 py-3 font-semibold text-gray-700 hover:bg-gray-50">
+                    <span class="material-symbols-rounded" aria-hidden="true">inventory_2</span>Arsip Guru
+                </a>
+            @endif
             @unless($isTeacherMode)
                 <button wire:click="downloadFullData" wire:loading.attr="disabled"
                     class="inline-flex shrink-0 items-center justify-center gap-2 px-4 py-3 bg-emerald-600 text-white rounded-xl font-semibold hover:bg-emerald-700 transition-colors">
@@ -32,6 +37,32 @@
             </button>
         </div>
     </div>
+
+    @if($showTeacherArchiveModal)
+        <div class="fixed inset-0 z-50 overflow-y-auto bg-black/60 p-4" role="dialog" aria-modal="true" aria-labelledby="archive-teacher-title">
+            <form wire:submit="archiveTeacher" class="mx-auto my-8 w-full max-w-lg rounded-2xl bg-white p-6 shadow-xl">
+                <h2 id="archive-teacher-title" class="text-xl font-bold text-gray-900">Arsipkan Guru</h2>
+                <p class="mt-2 font-semibold text-gray-900">{{ $teacherArchiveName }}</p>
+                <p class="mt-3 text-sm text-gray-600">Guru tidak lagi masuk hitungan guru aktif. Profil dan riwayat presensinya tersimpan sebagai arsip yang hanya dapat dibaca admin.</p>
+                <p class="mt-2 text-sm text-gray-600">Akun guru murni dinonaktifkan. Jika masih menjadi orang tua dengan anak aktif, akses orang tuanya tetap berjalan.</p>
+                <div class="mt-5">
+                    <label for="teacher-departed-on" class="mb-2 block text-sm font-medium text-gray-700">Tanggal resign / keluar</label>
+                    <input id="teacher-departed-on" type="date" wire:model="teacherDepartedOn" max="{{ today()->toDateString() }}" required class="w-full rounded-xl border border-gray-200 px-4 py-3">
+                    @error('teacherDepartedOn')<p class="mt-1 text-sm text-red-600">{{ $message }}</p>@enderror
+                </div>
+                <div class="mt-4">
+                    <label for="teacher-archive-reason" class="mb-2 block text-sm font-medium text-gray-700">Alasan / catatan keluar</label>
+                    <textarea id="teacher-archive-reason" wire:model="teacherArchiveReason" rows="3" maxlength="2000" required class="w-full rounded-xl border border-gray-200 px-4 py-3"></textarea>
+                    @error('teacherArchiveReason')<p class="mt-1 text-sm text-red-600">{{ $message }}</p>@enderror
+                </div>
+                @error('archive')<p class="mt-3 text-sm text-red-600">{{ $message }}</p>@enderror
+                <div class="mt-6 flex flex-wrap justify-end gap-3">
+                    <button type="button" wire:click="$set('showTeacherArchiveModal', false)" class="rounded-xl border border-gray-200 px-4 py-3 font-semibold text-gray-700">Batal</button>
+                    <button type="submit" wire:loading.attr="disabled" class="rounded-xl bg-amber-600 px-4 py-3 font-semibold text-white hover:bg-amber-700 disabled:opacity-50">Arsipkan Guru</button>
+                </div>
+            </form>
+        </div>
+    @endif
 
     <!-- Flash Message -->
     @if (session()->has('message'))
@@ -323,10 +354,17 @@
                                         class="relative z-10 p-2 text-gray-600 hover:text-primary-600 hover:bg-primary-50 rounded-lg transition-colors">
                                         <span class="material-symbols-rounded text-xl">edit</span>
                                     </button>
+                                    @unless($parent->isTeacher())
                                     <button type="button" wire:click="confirmDelete({{ $parent->id }})"
                                         class="relative z-10 p-2 text-gray-600 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors">
                                         <span class="material-symbols-rounded text-xl">delete</span>
                                     </button>
+                                    @endunless
+                                    @if($parent->isTeacher())
+                                        <button type="button" wire:click="openTeacherArchiveModal({{ $parent->id }})" title="Arsipkan guru resign / keluar" aria-label="Arsipkan guru {{ $parent->user?->name }}" class="relative z-10 rounded-lg p-2 text-amber-700 transition-colors hover:bg-amber-50">
+                                            <span class="material-symbols-rounded text-xl">inventory_2</span>
+                                        </button>
+                                    @endif
                                 </div>
                             </td>
                         </tr>
@@ -446,10 +484,11 @@
                                 <div class="bg-indigo-50 border border-indigo-100 p-4 rounded-xl">
                                     <label class="flex items-center gap-3 cursor-pointer">
                                         <input type="checkbox" wire:model="is_teacher"
+                                            @disabled($editingTeacherArchived)
                                             class="w-5 h-5 rounded border-indigo-300 text-indigo-600 focus:ring-indigo-500">
                                         <div>
                                             <p class="font-semibold text-indigo-950">Wali ini juga Guru/Pengajar</p>
-                                            <p class="text-sm text-indigo-700">Satu scan QR tetap dipakai, lalu wajib upload catatan kajian.</p>
+                                            <p class="text-sm text-indigo-700">{{ $editingTeacherArchived ? 'Status guru sudah diarsipkan. Akun ini tetap digunakan sebagai orang tua.' : 'Satu scan QR tetap dipakai, lalu wajib upload catatan kajian.' }}</p>
                                         </div>
                                     </label>
                                 </div>

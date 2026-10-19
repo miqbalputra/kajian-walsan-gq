@@ -32,10 +32,7 @@ class Dashboard extends Component
             'pendingUploads' => Attendance::query()
                 ->where('validation_status', Attendance::VALIDATION_PENDING)
                 ->whereNotNull('proof_file')
-                ->whereHas('parent', function ($query) {
-                    $query->where('type', 'teacher')
-                        ->orWhere('is_teacher', true);
-                })
+                ->whereHas('parent', fn ($query) => $query->activeTeachers())
                 ->count(),
         ]);
     }

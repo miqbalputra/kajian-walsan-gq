@@ -24,6 +24,7 @@ use App\Livewire\Admin\Settings;
 use App\Livewire\Admin\StudentIndex;
 use App\Livewire\Admin\SurveyAnalysis;
 use App\Livewire\Admin\TeacherAttendanceIndex;
+use App\Livewire\Admin\TeacherArchiveIndex;
 use App\Livewire\Admin\UserIndex;
 use App\Livewire\Kepsek\Dashboard as KepsekDashboard;
 use App\Livewire\Kepsek\GuardianAttendanceReport as KepsekGuardianAttendanceReport;
@@ -132,6 +133,7 @@ Route::middleware('auth')->group(function () {
         Route::get('/announcements', AnnouncementIndex::class)->name('announcements.index');
         Route::get('/chat-ai', ChatAi::class)->name('chat-ai');
         Route::get('/teacher-attendance', TeacherAttendanceIndex::class)->name('teacher-attendance.index');
+        Route::get('/teacher-archives', TeacherArchiveIndex::class)->name('teacher-archives.index');
         Route::get('/classes', ClassIndex::class)->name('classes.index');
         Route::get('/reports', ReportIndex::class)->name('reports.index');
         Route::get('/backups', BackupIndex::class)->name('backups.index');

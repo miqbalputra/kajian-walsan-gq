@@ -16,6 +16,17 @@ class User extends Authenticatable
     /** @use HasFactory<\Database\Factories\UserFactory> */
     use HasFactory, Notifiable;
 
+    protected static function booted(): void
+    {
+        $protectArchive = function (User $user) {
+            if ($user->parentProfile()->where('type', 'teacher')->whereNotNull('teacher_archived_at')->exists()) {
+                throw \Illuminate\Validation\ValidationException::withMessages(['archive' => 'Akun guru arsip hanya dapat dibaca.']);
+            }
+        };
+        static::updating($protectArchive);
+        static::deleting($protectArchive);
+    }
+
     /**
      * The attributes that are mass assignable.
      *

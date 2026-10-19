@@ -14,6 +14,7 @@ use App\Models\User;
 use App\Services\CloudinaryService;
 use App\Services\ParentDataExportService;
 use App\Services\ParentArchiveService;
+use App\Services\TeacherArchiveService;
 use App\Services\ParentLoginAliasService;
 use App\Services\ParentQrCodeService;
 use App\Services\StudentFamilyImportService;
@@ -26,6 +27,7 @@ use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rules\File;
 use Livewire\Component;
+use Livewire\Attributes\Locked;
 use Livewire\WithFileUploads;
 use Livewire\WithPagination;
 use Maatwebsite\Excel\Facades\Excel;
@@ -96,6 +98,17 @@ class ParentIndex extends Component
     public $type = 'father';
 
     public $is_teacher = false;
+
+    public bool $showTeacherArchiveModal = false;
+
+    #[Locked]
+    public ?int $teacherArchiveParentId = null;
+
+    public string $teacherArchiveName = '';
+
+    public string $teacherDepartedOn = '';
+
+    public string $teacherArchiveReason = '';
 
     public $occupation = '';
 
@@ -264,6 +277,7 @@ class ParentIndex extends Component
     public function openEditModal($id)
     {
         $parent = ParentModel::with('user', 'students')->findOrFail($id);
+        abort_if($parent->isTeacherArchived() && ($parent->isPureTeacher() || $this->isTeacherMode()), 403, 'Data guru arsip hanya dapat dibaca.');
         $this->parentId = $id;
         $this->name = $parent->user->name;
         $this->username = $parent->user->username;
@@ -271,7 +285,7 @@ class ParentIndex extends Component
         $this->phone = $parent->user->phone;
         $this->nik = $parent->nik;
         $this->type = $parent->type;
-        $this->is_teacher = $parent->isTeacher();
+        $this->is_teacher = (bool) $parent->is_teacher;
         $this->occupation = $parent->occupation;
         $this->address = $parent->address;
         $this->is_single_parent = $parent->is_single_parent;
@@ -283,6 +297,14 @@ class ParentIndex extends Component
 
     public function save()
     {
+        if ($this->editMode) {
+            $storedParent = ParentModel::findOrFail($this->parentId);
+            abort_if($storedParent->isTeacherArchived() && ($storedParent->isPureTeacher() || $this->isTeacherMode()), 403, 'Data guru arsip hanya dapat dibaca.');
+            if ($storedParent->isTeacherArchived()) {
+                $this->type = $storedParent->type;
+                $this->is_teacher = (bool) $storedParent->is_teacher;
+            }
+        }
         if ($this->isTeacherMode()) {
             if (! $this->editMode) {
                 $this->type = 'teacher';
@@ -408,6 +430,10 @@ class ParentIndex extends Component
 
     public function confirmDelete($id)
     {
+        if (ParentModel::findOrFail($id)->isTeacher()) {
+            $this->openTeacherArchiveModal((int) $id);
+            return;
+        }
         $this->parentId = $id;
         $this->showDeleteModal = true;
     }
@@ -525,7 +551,13 @@ class ParentIndex extends Component
 
     public function delete(ParentArchiveService $archiveService)
     {
+        if (ParentModel::findOrFail($this->parentId)->isTeacher()) {
+            $this->showDeleteModal = false;
+            $this->openTeacherArchiveModal((int) $this->parentId);
+            return;
+        }
         $parent = ParentModel::with(['user', 'attendances', 'students'])->findOrFail($this->parentId);
+        abort_if($parent->isTeacherArchived() && $parent->isPureTeacher(), 403, 'Data guru arsip hanya dapat dibaca.');
 
         if ($parent->isGuardian() && $parent->hasActiveChildren()) {
             $this->showDeleteModal = false;
@@ -573,6 +605,7 @@ class ParentIndex extends Component
     public function openManualAttendanceModal($id)
     {
         $this->manualParent = ParentModel::with('user', 'students.classRoom')->findOrFail($id);
+        abort_if($this->manualParent->isTeacherArchived() && ($this->manualParent->isPureTeacher() || $this->isTeacherMode()), 403, 'Data guru arsip hanya dapat dibaca.');
         $this->parentId = $id;
         $this->manualKajianEventId = KajianEvent::orderBy('date', 'desc')->first()?->id ?? '';
         $this->manualStatus = 'hadir_fisik';
@@ -596,6 +629,7 @@ class ParentIndex extends Component
 
         $event = KajianEvent::with('targetClasses')->findOrFail($this->manualKajianEventId);
         $parent = ParentModel::with('user', 'students.classRoom')->findOrFail($this->parentId);
+        abort_if($parent->isTeacherArchived() && ($parent->isPureTeacher() || $this->isTeacherMode()), 403, 'Data guru arsip hanya dapat dibaca.');
 
         if (! $event->isOpen()) {
             $this->dispatch('notify', ['type' => 'error', 'message' => 'Presensi kajian ini sudah ditutup. Buka kembali presensi sebelum menambah data.']);
@@ -936,6 +970,33 @@ class ParentIndex extends Component
         ]);
     }
 
+    public function openTeacherArchiveModal(int $parentId): void
+    {
+        abort_unless(auth()->user()?->isAdmin(), 403);
+        $teacher = ParentModel::activeTeachers()->with('user')->findOrFail($parentId);
+        $this->teacherArchiveParentId = $teacher->id;
+        $this->teacherArchiveName = $teacher->user?->name ?? '-';
+        $this->teacherDepartedOn = today()->toDateString();
+        $this->teacherArchiveReason = '';
+        $this->resetValidation();
+        $this->showTeacherArchiveModal = true;
+    }
+
+    public function archiveTeacher(TeacherArchiveService $archives): void
+    {
+        abort_unless(auth()->user()?->isAdmin(), 403);
+        $this->validate([
+            'teacherArchiveParentId' => ['required', 'integer', 'exists:parents,id'],
+            'teacherDepartedOn' => ['required', 'date_format:Y-m-d', 'before_or_equal:today'],
+            'teacherArchiveReason' => ['required', 'string', 'max:2000'],
+        ]);
+        $archives->archive(ParentModel::findOrFail($this->teacherArchiveParentId), $this->teacherDepartedOn, $this->teacherArchiveReason, auth()->user());
+        $this->showTeacherArchiveModal = false;
+        $this->teacherArchiveParentId = null;
+        $this->resetPage();
+        $this->dispatch('notify', ['type' => 'success', 'message' => 'Guru berhasil diarsipkan dan tidak lagi dihitung sebagai guru aktif.']);
+    }
+
     public function render()
     {
         $query = ParentModel::with(['user', 'students.classRoom', 'qrCodes.sourceStudent'])
@@ -957,10 +1018,7 @@ class ParentIndex extends Component
             });
 
         if ($this->isTeacherMode()) {
-            $query->where(function ($query) {
-                $query->where('type', 'teacher')
-                    ->orWhere('is_teacher', true);
-            });
+            $query->activeTeachers();
         } else {
             $query->whereIn('type', ['father', 'mother']);
 
@@ -993,6 +1051,8 @@ class ParentIndex extends Component
             'allClasses' => $allClasses,
             'allKajianEvents' => $allKajianEvents,
             'isTeacherMode' => $this->isTeacherMode(),
+            'editingTeacherArchived' => $this->editMode && $this->parentId
+                && ParentModel::whereKey($this->parentId)->whereNotNull('teacher_archived_at')->exists(),
         ])->layout('components.layouts.admin', ['title' => 'Manajemen Orang Tua']);
     }
 }
