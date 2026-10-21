@@ -1,4 +1,5 @@
-FROM php:8.2-fpm-alpine
+# PHP 8.2.35 includes fixes for CVE-2026-109618 and CVE-2026-109619.
+FROM php:8.2.35-fpm-alpine
 
 # Install system dependencies and helper script
 ADD https://github.com/mlocati/docker-php-extension-installer/releases/download/2.11.12/install-php-extensions /usr/local/bin/
