@@ -76,6 +76,9 @@ return [
     */
     'telegram_review' => [
         'enabled' => env('TELEGRAM_REVIEW_ENABLED', false),
+        'delivery' => env('TELEGRAM_REVIEW_DELIVERY', 'direct'),
+        'n8n_url' => env('TELEGRAM_REVIEW_N8N_URL', ''),
+        'n8n_secret' => env('TELEGRAM_REVIEW_N8N_SECRET', ''),
         'bot_token' => env('TELEGRAM_REVIEW_BOT_TOKEN', ''),
         'chat_id' => env('TELEGRAM_REVIEW_CHAT_ID', ''),
         'webhook_secret' => env('TELEGRAM_REVIEW_WEBHOOK_SECRET', ''),

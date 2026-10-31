@@ -28,7 +28,16 @@ class TelegramReviewService
     {
         return (bool) config('services.telegram_review.enabled', false)
             && filled(config('services.telegram_review.bot_token'))
-            && filled(config('services.telegram_review.chat_id'));
+            && filled(config('services.telegram_review.chat_id'))
+            && (! $this->usesN8n() || (
+                filled(config('services.telegram_review.n8n_url'))
+                && filled(config('services.telegram_review.n8n_secret'))
+            ));
+    }
+
+    private function usesN8n(): bool
+    {
+        return config('services.telegram_review.delivery', 'direct') === 'n8n';
     }
 
     public function validWebhookSecret(?string $provided): bool
@@ -105,7 +114,7 @@ class TelegramReviewService
 
     public function sendReview(int $requestId): void
     {
-        $request = TelegramReviewRequest::with(['attendance.parent.user', 'attendance.student', 'attendance.kajianEvent'])
+        $request = TelegramReviewRequest::with(['attendance.parent.user', 'attendance.parent.students.classRoom', 'attendance.student.classRoom', 'attendance.kajianEvent'])
             ->find($requestId);
 
         if (! $request || $request->delivery_status !== TelegramReviewRequest::DELIVERY_QUEUED) {
@@ -124,12 +133,32 @@ class TelegramReviewService
 
         $request->increment('delivery_attempts');
 
-        $result = $this->call('sendPhoto', [
+        $payload = [
             'chat_id' => $request->chat_id,
             'photo' => CloudinaryService::getDisplayUrl($request->proof_file),
             'caption' => $this->caption($request, 'pending'),
             'reply_markup' => json_encode($this->mainKeyboard($request), JSON_THROW_ON_ERROR),
-        ]);
+        ];
+
+        if ($this->usesN8n()) {
+            $payload['reply_markup'] = $this->mainKeyboard($request);
+            $payload['request_token'] = $request->token;
+            $response = Http::acceptJson()
+                ->withHeaders(['X-Kajian-Review-Secret' => config('services.telegram_review.n8n_secret')])
+                ->timeout(45)
+                ->post(config('services.telegram_review.n8n_url'), $payload);
+
+            if (! $response->successful() || $response->json('ok') !== true) {
+                throw new RuntimeException('n8n gagal mengirim bukti kajian ke Telegram.');
+            }
+            $result = (array) $response->json('result', []);
+        } else {
+            $result = $this->call('sendPhoto', $payload);
+        }
+
+        if (! is_numeric($result['message_id'] ?? null) || (int) $result['message_id'] <= 0) {
+            throw new RuntimeException('Pengiriman bukti tidak mengembalikan ID pesan Telegram yang valid.');
+        }
 
         $request->update([
             'delivery_status' => TelegramReviewRequest::DELIVERY_SENT,
@@ -297,7 +326,7 @@ class TelegramReviewService
 
     public function updateMessage(int $requestId): void
     {
-        $request = TelegramReviewRequest::with(['attendance.parent.user', 'attendance.student', 'attendance.kajianEvent'])
+        $request = TelegramReviewRequest::with(['attendance.parent.user', 'attendance.parent.students.classRoom', 'attendance.student.classRoom', 'attendance.kajianEvent'])
             ->find($requestId);
 
         if (! $request || ! $request->message_id || ! $this->enabled()) {
@@ -353,6 +382,9 @@ class TelegramReviewService
 
     public function registerWebhook(bool $dropPendingUpdates = false): void
     {
+        if ($this->usesN8n()) {
+            throw new RuntimeException('Mode n8n aktif. Publish Telegram Trigger di n8n; jangan timpa webhook bot dengan endpoint aplikasi.');
+        }
         if (! $this->enabled() || blank(config('services.telegram_review.webhook_secret'))) {
             throw new RuntimeException('Konfigurasi Telegram review belum lengkap.');
         }
@@ -392,7 +424,10 @@ class TelegramReviewService
     {
         $attendance = $request->attendance;
         $guardian = $attendance?->parent?->user?->name ?? '-';
-        $student = $attendance?->student?->name ?? '-';
+        $children = $attendance?->student
+            ? collect([$attendance->student])
+            : ($attendance?->parent?->students ?? collect())->filter(fn ($child) => $child->is_active);
+        $student = $children->map(fn ($child) => $child->name.' ('.($child->classRoom?->name ?? 'kelas belum ditentukan').')')->implode(', ');
         $event = $attendance?->kajianEvent;
         $kind = $attendance?->status === Attendance::STATUS_IZIN ? 'Izin' : 'Hadir Online';
 
@@ -408,7 +443,8 @@ class TelegramReviewService
             '',
             "Jenis: {$kind}",
             "Wali: {$guardian}",
-            "Ananda: {$student}",
+            'Ananda: '.Str::limit($student ?: '-', 250, '…'),
+            'ID presensi: #'.$attendance?->id,
             'Kajian: '.($event?->title ?? '-'),
             'Tanggal: '.($event?->date?->translatedFormat('d M Y') ?? '-'),
         ];

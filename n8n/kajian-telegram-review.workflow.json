@@ -1,0 +1,243 @@
+{
+  "name": "Kajian Walsan - Persetujuan Bukti Online dan Izin",
+  "nodes": [
+    {
+      "id": "3bddfe27-3b51-4e3e-a422-5838d03bba93",
+      "name": "Webhook Bukti Kajian",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.2,
+      "position": [
+        0,
+        200
+      ],
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "kajian-walsan-review",
+        "authentication": "headerAuth",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "webhookId": "115e0f2e-dd6a-4554-a608-9df513427694"
+    },
+    {
+      "id": "a244c1c4-3f47-475f-8e27-abc6935c4f9d",
+      "name": "Normalisasi Bukti",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        280,
+        200
+      ],
+      "parameters": {
+        "mode": "raw",
+        "jsonOutput": "={{ $json.body ?? $json }}",
+        "options": {}
+      }
+    },
+    {
+      "id": "9d01cf51-4b21-4f7d-8873-3312fe0e0306",
+      "name": "Kirim Foto dan Tombol",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        560,
+        200
+      ],
+      "parameters": {
+        "resource": "message",
+        "operation": "sendPhoto",
+        "chatId": "1024607302",
+        "file": "={{ $json.photo }}",
+        "replyMarkup": "inlineKeyboard",
+        "inlineKeyboard": {
+          "rows": [
+            {
+              "row": {
+                "buttons": [
+                  {
+                    "text": "✅ Setujui",
+                    "additionalFields": {
+                      "callback_data": "={{ $json.reply_markup.inline_keyboard[0][0].callback_data }}"
+                    }
+                  },
+                  {
+                    "text": "❌ Tolak",
+                    "additionalFields": {
+                      "callback_data": "={{ $json.reply_markup.inline_keyboard[0][1].callback_data }}"
+                    }
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        "additionalFields": {
+          "caption": "={{ $json.caption.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;') }}",
+          "parse_mode": "HTML"
+        }
+      },
+      "webhookId": "3cd0ebb9-7da3-42a7-877f-6bcaf395b0e8",
+      "credentials": {
+        "telegramApi": {
+          "id": "GM9dxJk9zAP0w9UX",
+          "name": "GQ Admin Bot"
+        }
+      }
+    },
+    {
+      "id": "b8afe4cc-e512-4fe2-adc7-b690f7b3dc81",
+      "name": "Konfirmasi Pengiriman",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        840,
+        200
+      ],
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { ok: Number($json.result?.message_id ?? $json.message_id ?? 0) > 0, result: $json.result ?? $json } }}",
+        "options": {
+          "responseCode": 200
+        }
+      }
+    },
+    {
+      "id": "ec977d09-7476-4c15-ac0e-47543d082d24",
+      "name": "Klik dan Start Admin",
+      "type": "n8n-nodes-base.telegramTrigger",
+      "typeVersion": 1.5,
+      "position": [
+        0,
+        700
+      ],
+      "parameters": {
+        "updates": [
+          "callback_query",
+          "message"
+        ],
+        "additionalFields": {
+          "userIds": "1024607302"
+        }
+      },
+      "webhookId": "0b4bdae3-c1cb-410a-9796-69c63f4f2db5",
+      "credentials": {
+        "telegramApi": {
+          "id": "GM9dxJk9zAP0w9UX",
+          "name": "GQ Admin Bot"
+        }
+      }
+    },
+    {
+      "id": "6f72e757-3f82-4ea4-94f5-64196664c570",
+      "name": "Simpan Keputusan di Aplikasi",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        300,
+        700
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "https://kajian.griyaquran.web.id/telegram/review/webhook",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpTemplatedCustomAuth",
+        "sendBody": true,
+        "contentType": "json",
+        "specifyBody": "json",
+        "jsonBody": "={{ $json }}",
+        "options": {
+          "timeout": 45000
+        }
+      }
+    },
+    {
+      "id": "a181529c-1031-4e7b-b538-a468ed8505ea",
+      "name": "Sticky Note 88249449",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        0,
+        -300
+      ],
+      "parameters": {
+        "content": "## Konfigurasi sebelum publish\nBot: GQ Admin Bot. Reviewer: 1024607302.\nHeader Webhook: X-Kajian-Review-Secret = TELEGRAM_REVIEW_N8N_SECRET pada VPS.\nHeader Callback (templated custom auth): X-Telegram-Bot-Api-Secret-Token = TELEGRAM_REVIEW_WEBHOOK_SECRET pada VPS.\nToken bot VPS harus sama dengan credential GQ Admin Bot.\nHubungkan Telegram ID 1024607302 ke akun admin aktif di Manajemen User.\nJangan jalankan telegram:review-webhook ketika memakai n8n.",
+        "color": 5
+      }
+    }
+  ],
+  "connections": {
+    "Webhook Bukti Kajian": {
+      "main": [
+        [
+          {
+            "node": "Normalisasi Bukti",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalisasi Bukti": {
+      "main": [
+        [
+          {
+            "node": "Kirim Foto dan Tombol",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Kirim Foto dan Tombol": {
+      "main": [
+        [
+          {
+            "node": "Konfirmasi Pengiriman",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Klik dan Start Admin": {
+      "main": [
+        [
+          {
+            "node": "Simpan Keputusan di Aplikasi",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "availableInMCP": true,
+    "timezone": "Asia/Jakarta",
+    "saveDataErrorExecution": "none",
+    "saveDataSuccessExecution": "none",
+    "executionTimeout": 90
+  },
+  "nodeGroups": [
+    {
+      "id": "11af8ee1-8fa7-446e-ae9d-6ff265b0bff5",
+      "name": "Kirim bukti ke admin",
+      "nodeNames": [
+        "Normalisasi Bukti",
+        "Kirim Foto dan Tombol",
+        "Konfirmasi Pengiriman"
+      ],
+      "description": "Foto dan identitas dikirim ke admin; aplikasi menerima ID pesan setelah pengiriman berhasil."
+    },
+    {
+      "id": "3c1ec83e-1ecf-4029-8c20-3e9a82d2ec7b",
+      "name": "Proses keputusan admin",
+      "nodeNames": [
+        "Simpan Keputusan di Aplikasi"
+      ],
+      "description": "Aplikasi memvalidasi admin, menyimpan keputusan, lalu menyinkronkan pesan Telegram dan status wali."
+    }
+  ],
+  "active": false
+}

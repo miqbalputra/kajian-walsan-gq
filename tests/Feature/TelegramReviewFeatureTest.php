@@ -32,10 +32,11 @@ class TelegramReviewFeatureTest extends TestCase
             'services.n8n.enabled' => false,
         ]);
 
-        Http::fake(fn () => Http::response([
+        Http::preventStrayRequests();
+        Http::fake(['api.telegram.org/*' => Http::response([
             'ok' => true,
             'result' => ['message_id' => 789],
-        ]));
+        ])]);
     }
 
     public function test_new_online_proof_is_pending_and_sent_to_telegram_but_physical_proof_is_not(): void
@@ -204,6 +205,74 @@ class TelegramReviewFeatureTest extends TestCase
             'validation_status' => Attendance::VALIDATION_REJECTED,
             'rejection_reason' => 'Foto bukti buram atau kualitasnya tidak memadai.',
         ]);
+    }
+
+    public function test_n8n_delivery_sends_proof_and_identity_then_stores_the_real_message_id(): void
+    {
+        Bus::fake();
+        config([
+            'services.telegram_review.delivery' => 'n8n',
+            'services.telegram_review.n8n_url' => 'https://n8n.example.test/webhook/kajian-walsan-review',
+            'services.telegram_review.n8n_secret' => 'outbound-test-secret',
+        ]);
+        Http::fake(['n8n.example.test/*' => Http::response(['ok' => true, 'result' => ['message_id' => 456]])]);
+        [, $guardian, $event] = $this->fixture();
+        $class = \App\Models\ClassRoom::create(['name' => 'Mustawa Identitas', 'level' => '1', 'is_active' => true]);
+        $student = \App\Models\Student::create(['nis' => 'N8N-IDENTITY', 'name' => 'Anak Contoh', 'class_id' => $class->id, 'is_active' => true]);
+        $guardian->students()->attach($student->id);
+        $attendance = Attendance::create([
+            'kajian_event_id' => $event->id, 'parent_id' => $guardian->id,
+            'status' => Attendance::STATUS_HADIR_ONLINE, 'method' => Attendance::METHOD_UPLOAD,
+            'proof_file' => 'attendance-proofs/n8n.jpg', 'validation_status' => Attendance::VALIDATION_PENDING,
+        ]);
+        $request = $attendance->telegramReviewRequests()->firstOrFail();
+        app(\App\Services\TelegramReviewService::class)->sendReview($request->id);
+        Http::assertSent(fn ($http) => $http->url() === config('services.telegram_review.n8n_url')
+            && $http->hasHeader('X-Kajian-Review-Secret', 'outbound-test-secret')
+            && $http['chat_id'] === '-1001234567890'
+            && str_contains($http['caption'], $guardian->user->name)
+            && str_contains($http['caption'], 'Anak Contoh (Mustawa Identitas)')
+            && $http['reply_markup']['inline_keyboard'][0][0]['callback_data'] === 'tr:'.$request->token.':a');
+        $this->assertSame(456, $request->fresh()->message_id);
+        $this->assertSame(TelegramReviewRequest::DELIVERY_SENT, $request->fresh()->delivery_status);
+        $this->assertSame(Attendance::VALIDATION_PENDING, $attendance->fresh()->validation_status);
+        Http::assertSentCount(1);
+    }
+
+    public function test_n8n_acknowledgement_without_message_id_does_not_mark_proof_as_sent(): void
+    {
+        Bus::fake();
+        config([
+            'services.telegram_review.delivery' => 'n8n',
+            'services.telegram_review.n8n_url' => 'https://n8n.example.test/webhook/kajian-walsan-review',
+            'services.telegram_review.n8n_secret' => 'outbound-test-secret',
+        ]);
+        Http::fake(['*' => Http::response(['ok' => true])]);
+        [, $guardian, $event] = $this->fixture();
+        $attendance = Attendance::create([
+            'kajian_event_id' => $event->id, 'parent_id' => $guardian->id,
+            'status' => Attendance::STATUS_IZIN, 'method' => Attendance::METHOD_UPLOAD,
+            'proof_file' => 'izin-documents/n8n.jpg', 'validation_status' => Attendance::VALIDATION_PENDING,
+        ]);
+        $request = $attendance->telegramReviewRequests()->firstOrFail();
+        $deliveryError = null;
+        try {
+            app(\App\Services\TelegramReviewService::class)->sendReview($request->id);
+        } catch (\RuntimeException $exception) {
+            $deliveryError = $exception;
+        }
+        $this->assertInstanceOf(\RuntimeException::class, $deliveryError);
+        $this->assertStringContainsString('ID pesan', $deliveryError->getMessage());
+        $this->assertSame(TelegramReviewRequest::DELIVERY_QUEUED, $request->fresh()->delivery_status);
+        $this->assertNull($request->fresh()->message_id);
+    }
+
+    public function test_n8n_mode_does_not_overwrite_the_telegram_trigger_webhook(): void
+    {
+        config(['services.telegram_review.delivery' => 'n8n']);
+        $this->expectException(\RuntimeException::class);
+        $this->expectExceptionMessage('Publish Telegram Trigger');
+        app(\App\Services\TelegramReviewService::class)->registerWebhook();
     }
 
     /** @return array{0: ParentModel, 1: Attendance} */
