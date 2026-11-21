@@ -24,8 +24,13 @@ else
     echo "APP_KEY already set; skipping key generation."
 fi
 
-# Jalankan migrations aplikasi
-php artisan migrate --force --no-interaction
+# Security-only deployments must not run pending schema/data migrations.
+# Opt in only for a reviewed schema deployment after a verified backup.
+if [ "${RUN_MIGRATIONS:-false}" = "true" ]; then
+    php artisan migrate --force --no-interaction
+else
+    echo "Skipping migrations (RUN_MIGRATIONS is not true)."
+fi
 
 # Hapus compiled views agar Blade/Blaze compile ulang dari source terbaru
 php artisan view:clear --no-interaction

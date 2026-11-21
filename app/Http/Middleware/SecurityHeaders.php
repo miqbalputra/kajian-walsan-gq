@@ -11,9 +11,8 @@ class SecurityHeaders
 {
     /**
      * Add safe baseline response headers and a server-side correlation ID.
-     * CSP is intentionally not forced here because the existing application
-     * still uses inline scripts and trusted CDN assets; it should be added
-     * after a nonce/hash migration is completed.
+     * Retain inline scripts and Alpine evaluation for existing Livewire pages.
+     * External executable assets are restricted to the application's CDNs.
      */
     public function handle(Request $request, Closure $next): Response
     {
@@ -28,7 +27,29 @@ class SecurityHeaders
             'X-Frame-Options' => 'SAMEORIGIN',
             'Referrer-Policy' => 'strict-origin-when-cross-origin',
             'Permissions-Policy' => 'camera=(self), geolocation=(), microphone=()',
+            'Content-Security-Policy' => implode('; ', [
+                "default-src 'self'",
+                "base-uri 'self'",
+                "object-src 'none'",
+                "frame-ancestors 'self'",
+                "form-action 'self'",
+                "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.jsdelivr.net https://unpkg.com",
+                "style-src 'self' 'unsafe-inline'",
+                "font-src 'self' data:",
+                "img-src 'self' https: data: blob:",
+                "connect-src 'self' https: wss:",
+                "media-src 'self' blob:",
+                "worker-src 'self' blob:",
+                "frame-src 'self' blob:",
+            ]),
         ];
+
+        $response->headers->remove('X-Powered-By');
+
+        // Vite's local development server uses a separate origin and WebSocket.
+        if (app()->isLocal()) {
+            unset($headers['Content-Security-Policy']);
+        }
 
         if (app()->isProduction() && $request->isSecure()) {
             $headers['Strict-Transport-Security'] = 'max-age=31536000';

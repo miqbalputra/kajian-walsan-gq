@@ -1,0 +1,7 @@
+# Merge into the Coolify proxy's watched dynamic configuration.
+# Apply this named option to this application's HTTPS router only:
+# traefik.http.routers.<existing-https-router>.tls.options=kajian-modern@file
+tls:
+  options:
+    kajian-modern:
+      minVersion: VersionTLS12

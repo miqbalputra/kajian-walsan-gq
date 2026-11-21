@@ -137,9 +137,15 @@ approve/reject. Setelah minimal 20--30 upload diuji, ubah menjadi `false`.
 
 ## 6. Verifikasi & Seeding Data
 
-Aplikasi ini sudah dikonfigurasi untuk menjalankan `php artisan migrate --force` secara otomatis saat startup.
+Startup melewati migrasi secara default untuk menjaga data lama. Untuk instalasi
+baru atau perubahan skema yang sudah direview dan dicadangkan, set
+`RUN_MIGRATIONS=true` saat deployment tersebut, lalu kembalikan ke `false`.
+Untuk perbaikan keamanan pada aplikasi yang sudah berisi data, ikuti
+[SECURITY_REPORT_FIX.md](docs/SECURITY_REPORT_FIX.md); jangan jalankan seeder.
 
-**PENTING**: Untuk mengisi data awal (Admin, Roles, dll), jalankan seeder sekali saja:
+**Hanya untuk instalasi baru dengan database kosong**: Untuk mengisi data awal
+(Admin, Roles, dll), jalankan seeder sekali saja. Jangan lakukan langkah ini pada
+database lama atau deployment perbaikan keamanan:
 1. Buka tab **Terminal** pada aplikasi di Coolify.
 2. Jalankan perintah:
    ```bash

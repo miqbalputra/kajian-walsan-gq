@@ -29,7 +29,7 @@ File ini berisi:
 1. **Instal Coolify**: `curl -fsSL https://get.coollabs.io/coolify/install.sh | bash`
 2. **Setup Resource**: Buat `MariaDB` dan `GitHub Application`.
 3. **Environment Variables**: Sesuaikan `DB_HOST`, `DB_PASSWORD`, dll di dashboard Coolify.
-4. **Deploy**: Biarkan Dockerfile menangani build dan auto-migration.
+4. **Deploy**: Dockerfile menangani build; migrasi dilewati secara default. Ikuti [panduan deployment keamanan tanpa perubahan data](docs/SECURITY_REPORT_FIX.md) untuk aplikasi yang sudah berisi data.
 
 ---
 

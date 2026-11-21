@@ -36,14 +36,18 @@ return Application::configure(basePath: dirname(__DIR__))
             $middleware->trustProxies(at: $trustedProxies);
         }
 
+        $middleware->append([
+            \App\Http\Middleware\SecurityHeaders::class,
+            \App\Http\Middleware\RequireHttps::class,
+        ]);
+
+        $middleware->web(replace: [
+            \Illuminate\Foundation\Http\Middleware\ValidateCsrfToken::class => \App\Http\Middleware\HttpOnlyCsrfCookie::class,
+        ]);
+
         // Inject PWA install prompt at response level so it still appears if a Blade view is stale.
         $middleware->web(append: [
             \App\Http\Middleware\InjectPwaInstallPrompt::class,
-            \App\Http\Middleware\SecurityHeaders::class,
-        ]);
-
-        $middleware->api(append: [
-            \App\Http\Middleware\SecurityHeaders::class,
         ]);
 
         // Register CheckRole middleware alias for RBAC
